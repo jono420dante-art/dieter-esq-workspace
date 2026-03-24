@@ -1,0 +1,25 @@
+# Web API
+fastapi
+uvicorn[standard]
+gunicorn
+pydantic
+python-multipart
+
+# Numerics / audio analysis
+numpy
+librosa>=0.10.0
+soundfile
+scipy
+audioread
+
+# FFmpeg bindings (optional helpers; production mixing also uses `ffmpeg` binary on PATH)
+ffmpeg-python
+
+# --- Pure Song: Coqui TTS + torch (large; CPU OK on MacBook Air / Windows) ---
+# If install fails, use CPU wheels: https://pytorch.org/get-started/locally/
+TTS==0.22.0
+torch>=2.0,<3
+torchaudio>=2.0,<3
+
+# Optional: stronger beat / downbeat models (heavy install)
+# madmom
