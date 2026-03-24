@@ -2,6 +2,12 @@
 
 The **full application** is one service: **React UI + FastAPI** in a **single Docker image**. You open **one HTTPS URL** — no separate static site or `?api=` setup.
 
+## Source on GitHub
+
+**https://github.com/jono420dante-art/dieter-esq-workspace**
+
+Use this repo when Railway (or Render) asks you to pick a GitHub project.
+
 ## Pathway (production)
 
 ### 1. Deploy on Railway
