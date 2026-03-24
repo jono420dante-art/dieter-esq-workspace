@@ -1,0 +1,77 @@
+# Secrets & deploy keys
+.env
+.env.*
+!.env.example
+**/.env.deploy
+mureka-clone/.env.deploy
+
+# Dependencies & build output
+**/node_modules/
+**/dist/
+**/.vite/
+**/__pycache__/
+**/*.py[cod]
+**/.venv/
+**/venv/
+*.egg-info/
+**/.pytest_cache/
+
+# IDE / tooling
+.cursor/
+mcps/
+*.log
+Thumbs.db
+Desktop.ini
+
+# Backend runtime data (regenerated on server)
+dieter-backend/storage/
+dieter-backend/data/*
+!dieter-backend/data/.gitkeep
+
+# Heavy / scraped assets in this bundle (not needed for Docker build)
+**/hqdefault*.jpg
+**/hqdefault*.jpeg
+**/*.js.download
+**/*.css.download
+favicons/
+favicons(1)/
+favicons(2)/
+favicons(3)/
+favicons(4)/
+favicons(5)/
+favicons(6)/
+favicons(7)/
+favicons(8)/
+favicons(9)/
+favicons(10)/
+favicons(11)/
+
+# Numeric junk / stray files in this download bundle
+9554678841295205
+9554678841295205/
+vcd15cbe7772f49c399c6a5babf22c1241717689176015
+thumbnail
+
+# Local SQLite (do not commit)
+**/*.db
+**/*.db-shm
+**/*.db-wal
+
+# Stray favicon paths (often files, not dirs)
+/favicons
+/favicons(1)
+/favicons(2)
+/favicons(3)
+/favicons(4)
+/favicons(5)
+/favicons(6)
+/favicons(7)
+/favicons(8)
+/favicons(9)
+/favicons(10)
+/favicons(11)
+
+# Nested git repos (keep local only; avoid broken submodule pointers in this monorepo push)
+DIETER-AND-ED-AI/
+deploy/
+platform/

@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dieter AI Music Studio</title>
+    <style>
+        :root {
+            /* SUNO + MUREKA COLOR SYSTEM */
+            --sun-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+            --mureka-dark: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            --cyan-glow: #00d4ff;
+            --glass-bg: rgba(255,255,255,0.08);
+            --glass-border: rgba(255,255,255,0.1);
+            --shadow-glow: 0 20px 40px rgba(0,212,255,0.2);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+            background: var(--mureka-dark);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* === HEADER === */
+        .header {
+            text-align: center;
+            padding: 60px 0 40px;
+        }
+
+        .logo {
+            font-size: clamp(2.5rem, 8vw, 4rem);
+            font-weight: 900;
+            background: var(--sun-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 15px;
+            letter-spacing: -2px;
+        }
+
+        .tagline {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        /* === VOICE GRID (SUNO STYLE) === */
+        .voice-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
+            margin: 60px 0;
+        }
+
+        .voice-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 36px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .voice-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0,212,255,0.2), transparent);
+            transition: left 0.6s;
+        }
+
+        .voice-card:hover::before { left: 100%; }
+        .voice-card:hover {
+            transform: translateY(-12px) scale(1.02);
+            border-color: var(--cyan-glow);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .voice-card.selected {
+            background: rgba(0,212,255,0.15);
+            border-color: var(--cyan-glow);
+            box-shadow: 0 0 40px rgba(0,212,255,0.3);
+        }
+
+        .voice-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .voice-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .voice-style {
+            font-size: 0.95rem;
+            opacity: 0.8;
+            font-weight: 400;
+        }
+
+        /* === PITCH CONTROL === */
+        .pitch-section {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 40px;
+            text-align: center;
+            margin: 50px 0;
+        }
+
+        .pitch-label {
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: var(--sun-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 30px;
+        }
+
+        .pitch-slider {
+            width: 100%;
+            max-width: 560px;
+            height: 10px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.15);
+            -webkit-appearance: none;
+            appearance: none;
+            outline: none;
+            margin: 25px 0;
+        }
+
+        .pitch-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 32px;
+            height: 32px;
+            background: var(--sun-primary);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .pitch-slider::-moz-range-thumb {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: var(--shadow-glow);
+        }
+
+        /* === INPUTS === */
+        .input-section {
+            max-width: 900px;
+            margin: 0 auto 50px;
+        }
+
+        .lyrics-input {
+            width: 100%;
+            padding: 30px;
+            border-radius: 24px;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            font-size: 18px;
+            font-family: inherit;
+            color: white;
+            resize: vertical;
+            min-height: 180px;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+        }
+
+        .lyrics-input:focus {
+            outline: none;
+            border-color: var(--cyan-glow);
+            box-shadow: var(--shadow-glow);
+            transform: translateY(-3px);
+        }
+
+        .lyrics-input::placeholder { color: rgba(255,255,255,0.5); }
+
+        .beat-upload {
+            border: 2px dashed rgba(0,212,255,0.4);
+            border-radius: 24px;
+            padding: 50px 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(0,212,255,0.05);
+        }
+
+        .beat-upload:hover,
+        .beat-upload.dragover {
+            border-color: var(--cyan-glow);
+            background: rgba(0,212,255,0.1);
+            transform: translateY(-5px);
+        }
+
+        /* === GENERATE BUTTON === */
+        .generate-section {
+            text-align: center;
+            margin: 60px 0;
+        }
+
+        .generate-btn {
+            background-image: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+            color: white;
+            border: none;
+            padding: 28px 70px;
+            font-size: 1.5rem;
+            font-weight: 800;
+            border-radius: 60px;
+            cursor: pointer;
+            transition: all 0.5s cubic-bezier(0.4,0,0.2,1);
+            box-shadow: 0 25px 50px rgba(99,102,241,0.4);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .generate-btn:hover:not(:disabled) {
+            transform: translateY(-12px);
+            box-shadow: 0 40px 80px rgba(99,102,241,0.5);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .generate-hint {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            opacity: 0.65;
+            max-width: 520px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.5;
+        }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 768px) {
+            .voice-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+            .container { padding: 15px; }
+            .generate-btn { padding: 24px 50px; font-size: 1.3rem; }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .voice-card, .pitch-section, .input-section {
+            animation: fadeInUp 0.8s ease forwards;
+            opacity: 0;
+        }
+
+        .result-block {
+            max-width: 640px;
+            margin: 2rem auto 0;
+            padding: 1.25rem 1.5rem;
+            border-radius: 20px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            display: none;
+        }
+        .result-block.visible { display: block; animation: fadeInUp 0.6s ease; }
+        .result-block p { font-size: 0.9rem; margin-bottom: 0.75rem; line-height: 1.45; opacity: 0.92; }
+        .result-block audio { width: 100%; margin-top: 0.25rem; }
+        .result-block .err { color: #fca5a5; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="logo">Dieter Studio</h1>
+            <p class="tagline">Create professional songs with AI voices • Suno + Mureka inspired</p>
+        </header>
+
+        <section class="voice-grid" id="voiceGrid" aria-label="Voice presets"></section>
+
+        <section class="pitch-section" aria-label="Pitch">
+            <div class="pitch-label">🎚️ Fine-tune Voice Pitch</div>
+            <input type="range" class="pitch-slider" id="pitchSlider" min="-12" max="12" value="0" step="0.5" aria-label="Pitch">
+            <div id="pitchValue" style="font-size:1.1rem;margin-top:20px;font-weight:500;">
+                Natural human voice
+            </div>
+        </section>
+
+        <section class="input-section">
+            <textarea
+                class="lyrics-input"
+                id="lyricsInput"
+                placeholder="Write your lyrics here...
+Drop the bass, feel the rhythm in the night
+Hands up high, we're dancing in the light..."
+                aria-label="Lyrics"></textarea>
+
+            <div class="beat-upload" id="beatUploadZone" role="button" tabindex="0" aria-label="Upload beat">
+                <div style="font-size:2rem;margin-bottom:20px;">🎵</div>
+                <h3>Upload Your Beat</h3>
+                <p>MP3, WAV, FLAC • Up to ~120MB (API limit) • Drag &amp; drop</p>
+                <input type="file" id="beatInput" accept="audio/*" hidden>
+            </div>
+            <div id="beatStatus" style="text-align:center;margin-top:15px;color:#00d4ff;min-height:1.5em;" aria-live="polite"></div>
+        </section>
+
+        <section class="generate-section">
+            <button type="button" class="generate-btn" id="generateBtn" disabled>
+                🚀 Generate My Song
+            </button>
+            <p class="generate-hint" id="generateHint">
+                Uses <code style="opacity:0.9;">POST /api/pipeline/generate-master</code> (beat + lyrics + pitch + voice presets).
+                Same origin as FastAPI, or set <code style="opacity:0.9;">window.DIETER_API_BASE = &quot;https://your-host/api&quot;</code> before load.
+            </p>
+            <div class="result-block" id="resultBlock" role="region" aria-label="Generated master">
+                <p id="resultMsg"></p>
+                <audio id="masterAudio" controls preload="metadata"></audio>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const API_BASE = (window.DIETER_API_BASE || '').replace(/\/$/, '') || '/api';
+        const MAX_BEAT_BYTES = 120 * 1024 * 1024;
+
+        const VOICES = [
+            { id:'male1', icon:'👨', name:'Man 1', style:'warm natural', vocalPreset: 'Radio', pitchPreset: 'male' },
+            { id:'male2', icon:'👨', name:'Man 2', style:'deep tone', vocalPreset: 'Trap', pitchPreset: 'deep_male' },
+            { id:'male3', icon:'👨', name:'Man 3', style:'clear voice', vocalPreset: 'Pop', pitchPreset: 'male' },
+            { id:'male4', icon:'👨', name:'Man 4', style:'friendly', vocalPreset: 'Radio', pitchPreset: 'neutral' },
+            { id:'male5', icon:'👨', name:'Man 5', style:'confident', vocalPreset: 'Rock', pitchPreset: 'male' },
+            { id:'male6', icon:'👨', name:'Man 6', style:'relaxed', vocalPreset: 'R&B Velvet', pitchPreset: 'deep_male' },
+            { id:'female1', icon:'👩', name:'Woman 1', style:'soft natural', vocalPreset: 'Female Warm', pitchPreset: 'female' },
+            { id:'female2', icon:'👩', name:'Woman 2', style:'bright tone', vocalPreset: 'Female Bright', pitchPreset: 'bright_female' },
+            { id:'female3', icon:'👩', name:'Woman 3', style:'warm voice', vocalPreset: 'Female Warm', pitchPreset: 'female' },
+            { id:'female4', icon:'👩', name:'Woman 4', style:'clear', vocalPreset: 'EDM Topline', pitchPreset: 'neutral' },
+            { id:'female5', icon:'👩', name:'Woman 5', style:'gentle', vocalPreset: 'Whisper', pitchPreset: 'female' },
+            { id:'female6', icon:'👩', name:'Woman 6', style:'natural', vocalPreset: 'K-Pop', pitchPreset: 'bright_female' }
+        ];
+
+        let selectedVoice = VOICES[0];
+        let beatFile = null;
+        let pitch = 0;
+
+        function setBeat(f) {
+            if (!f) {
+                beatFile = null;
+                document.getElementById('beatStatus').textContent = '';
+                checkReady();
+                return;
+            }
+            if (f.size > MAX_BEAT_BYTES) {
+                document.getElementById('beatStatus').textContent = '⚠️ File too large (max ~120MB).';
+                beatFile = null;
+                checkReady();
+                return;
+            }
+            if (!f.type.startsWith('audio/')) {
+                document.getElementById('beatStatus').textContent = '⚠️ Please choose an audio file.';
+                beatFile = null;
+                checkReady();
+                return;
+            }
+            beatFile = f;
+            document.getElementById('beatStatus').textContent = '✅ ' + f.name;
+            checkReady();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const grid = document.getElementById('voiceGrid');
+
+            VOICES.forEach((voice, index) => {
+                const card = document.createElement('div');
+                card.className = 'voice-card';
+                card.setAttribute('role', 'button');
+                card.tabIndex = 0;
+                card.innerHTML =
+                    '<div class="voice-icon">' + voice.icon + '</div>' +
+                    '<div class="voice-name">' + voice.name + '</div>' +
+                    '<div class="voice-style">' + voice.style + '</div>';
+                card.addEventListener('click', () => selectVoice(voice, card));
+                card.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        selectVoice(voice, card);
+                    }
+                });
+                card.style.animationDelay = (index * 0.1) + 's';
+                grid.appendChild(card);
+            });
+
+            grid.children[0].click();
+
+            document.getElementById('pitchSlider').addEventListener('input', (e) => {
+                pitch = parseFloat(e.target.value);
+                const display = document.getElementById('pitchValue');
+                if (pitch < -4) display.textContent = 'Deep male voice';
+                else if (pitch > 4) display.textContent = 'Bright female voice';
+                else display.textContent = 'Natural human voice';
+            });
+
+            document.getElementById('lyricsInput').addEventListener('input', checkReady);
+
+            const beatInput = document.getElementById('beatInput');
+            const zone = document.getElementById('beatUploadZone');
+
+            zone.addEventListener('click', () => beatInput.click());
+            zone.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    beatInput.click();
+                }
+            });
+
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                zone.classList.add('dragover');
+            });
+            zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.classList.remove('dragover');
+                const f = e.dataTransfer.files && e.dataTransfer.files[0];
+                if (f) setBeat(f);
+            });
+
+            beatInput.addEventListener('change', (e) => {
+                const f = e.target.files && e.target.files[0];
+                setBeat(f || null);
+            });
+
+            document.getElementById('generateBtn').addEventListener('click', generateSong);
+        });
+
+        function selectVoice(voice, card) {
+            document.querySelectorAll('.voice-card').forEach((c) => c.classList.remove('selected'));
+            card.classList.add('selected');
+            selectedVoice = voice;
+            checkReady();
+        }
+
+        function checkReady() {
+            const lyrics = document.getElementById('lyricsInput').value.trim();
+            document.getElementById('generateBtn').disabled = !lyrics || !beatFile;
+        }
+
+        async function generateSong() {
+            var btn = document.getElementById('generateBtn');
+            var lyrics = document.getElementById('lyricsInput').value.trim();
+            var resultBlock = document.getElementById('resultBlock');
+            var resultMsg = document.getElementById('resultMsg');
+            var masterAudio = document.getElementById('masterAudio');
+
+            if (!beatFile || !lyrics) return;
+
+            btn.disabled = true;
+            var prev = btn.textContent;
+            btn.textContent = '⏳ Generating…';
+            resultBlock.classList.add('visible');
+            resultMsg.className = '';
+            resultMsg.textContent = 'Calling ' + API_BASE + '/pipeline/generate-master …';
+            masterAudio.removeAttribute('src');
+
+            try {
+                var fd = new FormData();
+                fd.append('beat', beatFile);
+                fd.append('lyrics', lyrics);
+                fd.append('pitch_semitones', String(pitch));
+                fd.append('pitch_preset', selectedVoice.pitchPreset || '');
+                fd.append('vocal_preset', selectedVoice.vocalPreset || 'Radio');
+
+                var res = await fetch(API_BASE + '/pipeline/generate-master', { method: 'POST', body: fd });
+                var text = await res.text();
+                if (!res.ok) throw new Error(text || res.statusText);
+
+                var data = JSON.parse(text);
+                if (!data.masterUrl) throw new Error('No masterUrl in response');
+
+                var url = data.masterUrl;
+                var abs = url.indexOf('http') === 0 ? url : window.location.origin + (url.charAt(0) === '/' ? url : '/' + url);
+                masterAudio.src = abs;
+                resultMsg.innerHTML =
+                    'Master ready — BPM <strong>' + (data.bpm != null ? data.bpm : '—') + '</strong>, resolved pitch ' +
+                    '<strong>' + (data.pitch_semitones != null ? data.pitch_semitones : pitch) + '</strong> st. ' +
+                    'Voice card maps to vocal + pitch presets (procedural engine).';
+            } catch (err) {
+                resultMsg.className = 'err';
+                resultMsg.textContent = String(err.message || err);
+            } finally {
+                btn.textContent = prev;
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

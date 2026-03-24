@@ -1,0 +1,10 @@
+# Local Mureka-like stack: beat detection + vocal pipeline (no cloud APIs)
+# Python 3.10+ recommended. Install FFmpeg on your system (not via pip).
+
+librosa>=0.10.1
+soundfile>=0.12.1
+numpy>=1.24.0
+ffmpeg-python>=0.2.0
+
+# Optional later: madmom for stronger beat/downbeat (heavier install)
+# madmom>=0.16.1

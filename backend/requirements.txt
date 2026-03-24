@@ -1,0 +1,12 @@
+# FastAPI server (./backend/) + beat_detect from ../local-audio/
+# Python 3.10+ recommended. Install FFmpeg on PATH for mp3/m4a/etc.
+
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+
+# Beat detection (same stack as local-audio)
+librosa>=0.10.1
+soundfile>=0.12.1
+numpy>=1.24.0
+ffmpeg-python>=0.2.0

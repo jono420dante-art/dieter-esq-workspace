@@ -1,0 +1,18 @@
+# DIETER API + AI Beat Lab (single container: React static + FastAPI)
+# From repo root:
+#   docker compose build
+#   docker compose up
+#
+# Open http://localhost:8080  —  API: http://localhost:8080/api/health
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: dieter-backend/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      WEB_CONCURRENCY: "2"
+      DIETER_AUDIO_ENGINE: procedural

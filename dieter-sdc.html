@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DIETER SDC - Smart Distribution Center</title>
+    <style>
+      :root {
+        --bg: #f6f8fb;
+        --card: #ffffff;
+        --text: #1f2a37;
+        --muted: #5b6777;
+        --bd: rgba(17, 24, 39, 0.12);
+        --shadow: 0 14px 40px rgba(13, 26, 44, 0.1);
+        --blue: #1a73e8;
+        --blue2: #0f5fd0;
+        --critical: #dc3545;
+        --warn: #ffc107;
+        --info: #17a2b8;
+        --good: #28a745;
+        --radius: 14px;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        background: radial-gradient(1000px 640px at 20% 0%, rgba(26, 115, 232, 0.16), rgba(246, 248, 251, 1));
+        color: var(--text);
+      }
+
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: linear-gradient(180deg, rgba(26, 115, 232, 0.98), rgba(15, 95, 208, 0.92));
+        color: #fff;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+      }
+
+      .wrap {
+        max-width: 1220px;
+        margin: 0 auto;
+        padding: 14px 16px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .brand {
+        display: grid;
+        gap: 2px;
+      }
+      .brand h1 {
+        margin: 0;
+        font-size: 16px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .brand .sub {
+        font-size: 12px;
+        opacity: 0.92;
+      }
+
+      .right {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .user {
+        font-size: 12px;
+        opacity: 0.95;
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(0, 0, 0, 0.12);
+      }
+
+      nav {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      nav a {
+        color: #fff;
+        text-decoration: none;
+        font-size: 13px;
+        padding: 8px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(0, 0, 0, 0.12);
+      }
+      nav a.active {
+        background: rgba(255, 255, 255, 0.18);
+      }
+      .hamburger {
+        display: none;
+        padding: 8px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(0, 0, 0, 0.12);
+        color: #fff;
+        cursor: pointer;
+      }
+
+      main .wrap {
+        padding-top: 16px;
+        padding-bottom: 26px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 14px;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid rgba(17, 24, 39, 0.08);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 14px;
+      }
+
+      .alerts {
+        grid-column: span 12;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+      .alert {
+        padding: 14px;
+        border-radius: 16px;
+        font-weight: 750;
+        box-shadow: var(--shadow);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        color: #fff;
+        min-height: 84px;
+        display: grid;
+        align-content: center;
+        gap: 6px;
+      }
+      .alert .subline {
+        font-weight: 600;
+        opacity: 0.95;
+        font-size: 12px;
+      }
+      .alert.critical {
+        background: linear-gradient(180deg, #ea4c5b, var(--critical));
+      }
+      .alert.warning {
+        background: linear-gradient(180deg, #ffd36b, var(--warn));
+        color: #201a10;
+      }
+      .alert.info {
+        background: linear-gradient(180deg, #30c7db, var(--info));
+      }
+
+      h2 {
+        margin: 0 0 10px;
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #223042;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .col-12 {
+        grid-column: span 12;
+      }
+      .col-8 {
+        grid-column: span 8;
+      }
+      .col-4 {
+        grid-column: span 4;
+      }
+
+      .pillRow {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .pill {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        padding: 7px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(17, 24, 39, 0.12);
+        background: rgba(255, 255, 255, 0.85);
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #9aa3ad;
+      }
+      .dot.good {
+        background: var(--good);
+      }
+      .dot.warn {
+        background: #f39c12;
+      }
+      .dot.info {
+        background: #3498db;
+      }
+      .dot.bad {
+        background: var(--critical);
+      }
+
+      .toolsGrid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .tool {
+        border: 1px solid rgba(17, 24, 39, 0.1);
+        border-radius: 14px;
+        padding: 10px;
+        background: rgba(246, 248, 251, 0.8);
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+      }
+      .tool .name {
+        font-size: 13px;
+        font-weight: 650;
+      }
+      .tool .state {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .controls {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        margin-bottom: 10px;
+      }
+      .filters {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      select,
+      input,
+      button {
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(17, 24, 39, 0.14);
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 8px 18px rgba(13, 26, 44, 0.08);
+        font-size: 13px;
+        color: var(--text);
+      }
+      button {
+        cursor: pointer;
+      }
+      button.primary {
+        background: linear-gradient(180deg, #2a86ff, var(--blue2));
+        color: #fff;
+        border-color: rgba(0, 0, 0, 0.08);
+        font-weight: 700;
+      }
+      .small {
+        font-size: 12px;
+      }
+
+      .oppGrid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+      .opp {
+        border: 1px solid rgba(17, 24, 39, 0.1);
+        border-radius: 16px;
+        padding: 12px;
+        background: linear-gradient(180deg, rgba(26, 115, 232, 0.06), rgba(255, 255, 255, 0.9));
+      }
+      .oppTop {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .fit {
+        font-size: 18px;
+        font-weight: 800;
+        color: #0b6b2a;
+        letter-spacing: 0.02em;
+      }
+      .metaLine {
+        margin-top: 6px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .badges {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: 10px;
+      }
+      .badge {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        border: 1px solid rgba(17, 24, 39, 0.12);
+        background: rgba(255, 255, 255, 0.9);
+        color: var(--muted);
+      }
+      .status {
+        font-weight: 800;
+        color: #fff;
+        border: none;
+      }
+      .status.Pre-Consultation {
+        background: #6c757d;
+      }
+      .status.Public-Notice {
+        background: #17a2b8;
+      }
+      .status.Council-Review {
+        background: #f39c12;
+      }
+      .status.Approved {
+        background: #28a745;
+      }
+      .status.In-Progress {
+        background: #5b6cff;
+      }
+      .row2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 10px;
+      }
+      .box {
+        border: 1px solid rgba(17, 24, 39, 0.1);
+        background: rgba(255, 255, 255, 0.85);
+        border-radius: 14px;
+        padding: 10px;
+      }
+      .box .k {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+      .box .v {
+        margin-top: 6px;
+        font-size: 13px;
+        font-weight: 650;
+      }
+      .box small {
+        display: block;
+        margin-top: 6px;
+        color: var(--muted);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid rgba(17, 24, 39, 0.1);
+        border-radius: 14px;
+        overflow: hidden;
+      }
+      th,
+      td {
+        padding: 10px 10px;
+        border-bottom: 1px solid rgba(17, 24, 39, 0.08);
+        text-align: left;
+        font-size: 13px;
+      }
+      th {
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #223042;
+        background: rgba(26, 115, 232, 0.08);
+      }
+      .mono {
+        font-family: var(--mono);
+      }
+
+      .footer {
+        margin-top: 18px;
+        padding: 16px 0 28px;
+        text-align: center;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      @media (max-width: 1060px) {
+        .alerts {
+          grid-template-columns: 1fr;
+        }
+        .col-8,
+        .col-4 {
+          grid-column: span 12;
+        }
+        .oppGrid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 760px) {
+        nav {
+          display: none;
+        }
+        .hamburger {
+          display: inline-flex;
+        }
+        nav.open {
+          display: flex;
+          width: 100%;
+          margin-top: 10px;
+        }
+        .topbar {
+          align-items: flex-start;
+          flex-wrap: wrap;
+        }
+        .toolsGrid {
+          grid-template-columns: 1fr;
+        }
+        .row2 {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap">
+        <div class="topbar">
+          <div class="brand">
+            <h1>DIETER SDC</h1>
+            <div class="sub">Smart Distribution Center</div>
+          </div>
+
+          <div class="right">
+            <span class="user">👤 <span>Admin User</span> • <strong>Super Admin</strong></span>
+            <button class="hamburger" id="hamburger" type="button">☰ Menu</button>
+            <nav id="nav">
+              <a class="active" href="#">Dashboard</a>
+              <a href="#">Projects</a>
+              <a href="#">Leads</a>
+              <a href="#">HelloPieter</a>
+              <a href="#">Clients</a>
+              <a href="#">Documents</a>
+              <a href="#">Settings</a>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div class="wrap">
+        <div class="grid">
+          <section class="alerts">
+            <div class="alert critical">
+              🔴 Critical Support Ticket
+              <div class="subline">SecureLife Group — CCTV cameras offline</div>
+            </div>
+            <div class="alert warning">
+              ⚠️ Tender Closing Soon
+              <div class="subline">PABX Upgrade — Provincial Government closes in <span class="mono">5 days</span></div>
+            </div>
+            <div class="alert info">
+              ℹ️ New Tender Available
+              <div class="subline">Solar PV Systems — Public Hospitals — <span class="mono">R12M</span></div>
+            </div>
+          </section>
+
+          <section class="card col-8">
+            <h2>Government Projects</h2>
+            <div class="muted">Approval tracking with early signal detection</div>
+            <div class="pillRow" style="margin-top: 10px">
+              <span class="pill"><span class="dot good"></span>Live Monitoring</span>
+              <span class="pill"><span class="dot good"></span>AI Solution Matching: ACTIVE</span>
+              <span class="pill"><span class="dot info"></span>Council Minutes Parsing: ON</span>
+              <span class="pill"><span class="dot warn"></span>Early Signals: WATCH</span>
+            </div>
+            <p class="muted" style="margin: 10px 0 0; font-size: 13px; line-height: 1.45">
+              5 projects match your services (<span class="mono">Solar</span>, <span class="mono">CCTV</span>,
+              <span class="mono">PABX</span>, <span class="mono">Copiers</span>, <span class="mono">Digital</span>) • Council minutes parsed for
+              “early signal” patterns • Fit scores calculated per tender lifecycle stage.
+            </p>
+            <div class="toolsGrid" id="govTools"></div>
+          </section>
+
+          <section class="card col-4">
+            <h2>Filters</h2>
+            <div class="muted" style="font-size: 13px; line-height: 1.45">
+              Focus on South African government tenders and approvals. Use filters to isolate high-fit leads.
+            </div>
+            <div style="display: grid; gap: 10px; margin-top: 12px">
+              <select id="statusFilter">
+                <option value="ALL">Status: All (6)</option>
+              </select>
+              <select id="typeFilter">
+                <option value="ALL">Type: All</option>
+              </select>
+              <input id="q" placeholder="Search (city, category, contact…)" />
+              <select id="sortBy">
+                <option value="FIT_DESC">Sort: Fit (high → low)</option>
+                <option value="FIT_ASC">Sort: Fit (low → high)</option>
+                <option value="BUDGET_DESC">Sort: Budget (high → low)</option>
+                <option value="CITY_ASC">Sort: City (A → Z)</option>
+              </select>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+                <button class="primary" id="exportJson" type="button">Export JSON</button>
+                <button id="exportCsv" type="button">Export CSV</button>
+              </div>
+              <div class="pillRow">
+                <span class="pill"><span class="dot good"></span>High-fit: <span id="hiFitCount" class="mono">—</span></span>
+                <span class="pill"><span class="dot info"></span>Total: <span id="totalCount" class="mono">—</span></span>
+              </div>
+            </div>
+          </section>
+
+          <section class="card col-12">
+            <h2>🎯 High-Fit Opportunities (70%+ Match)</h2>
+            <div class="controls">
+              <div class="pillRow" id="statusChips"></div>
+              <div class="muted small" id="viewHint">Tip: click an opportunity to expand details.</div>
+            </div>
+
+            <div class="oppGrid" id="oppGrid"></div>
+
+            <div style="margin-top: 12px">
+              <table>
+                <thead>
+                  <tr>
+                    <th>All</th>
+                    <th>Pre-Consultation</th>
+                    <th>Public Notice</th>
+                    <th>Council Review</th>
+                    <th>Approved</th>
+                    <th>In Progress</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr id="statusCountsRow">
+                    <td class="mono">—</td>
+                    <td class="mono">—</td>
+                    <td class="mono">—</td>
+                    <td class="mono">—</td>
+                    <td class="mono">—</td>
+                    <td class="mono">—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div class="footer">DIETER SDC • Static mockup + filterable data layer • v0.1</div>
+      </div>
+    </main>
+
+    <script type="module" src="./dieter-sdc.js"></script>
+  </body>
+</html>
+

@@ -1,0 +1,12 @@
+# Railway: connect this Git repo, root = repository root.
+# One URL = full app (React + FastAPI). See DIETER_ESQ_START.md in the repo.
+# https://docs.railway.app/deploy/dockerfiles
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "dieter-backend/Dockerfile"
+
+[deploy]
+healthcheckPath = "/api/health"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"

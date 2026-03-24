@@ -1,0 +1,13 @@
+# Local stack — no cloud APIs. GPU: use docker run --gpus all with RVC image separately.
+services:
+  local-studio:
+    build: .
+    ports:
+      - "8890:8890"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - RVC_WEBUI_DIR=${RVC_WEBUI_DIR:-}
+      - TORTOISE_DIR=${TORTOISE_DIR:-}
+      - DIETER_ETHICAL_VOICE_DIR=${DIETER_ETHICAL_VOICE_DIR:-}
+    # For NVIDIA (optional): deploy RVC WebUI in another compose service or host network.

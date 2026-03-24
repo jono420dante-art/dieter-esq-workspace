@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dieter Esq. · Studio</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        .logo {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(45deg, #00d4ff, #7b68ee, #ff6b9d);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 15px;
+        }
+
+        .mureka-voices {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin: 50px 0;
+        }
+
+        .voice-card {
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .voice-card:hover, .voice-card.selected {
+            border-color: #00d4ff;
+            background: rgba(0,212,255,0.15);
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,212,255,0.2);
+        }
+
+        .voice-icon {
+            width: 3rem;
+            height: 3rem;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            border-radius: 50%;
+            background: rgba(0, 212, 255, 0.12);
+            border: 1px solid rgba(0, 212, 255, 0.35);
+        }
+        .voice-name { font-size: 1.3rem; font-weight: 600; margin-bottom: 8px; }
+
+        .pitch-control {
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            margin: 40px 0;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .pitch-slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.2);
+            -webkit-appearance: none;
+            appearance: none;
+            outline: none;
+            margin: 20px 0;
+        }
+
+        .pitch-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(45deg, #00d4ff, #7b68ee);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0,212,255,0.4);
+        }
+
+        .lyrics-input, .beat-upload {
+            width: 100%;
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 25px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(20px);
+            font-size: 18px;
+            color: white;
+        }
+
+        .lyrics-input { min-height: 150px; resize: vertical; }
+        .beat-upload { text-align: center; cursor: pointer; }
+
+        .beat-file-name {
+            margin-top: 12px;
+            color: #00d4ff;
+            font-size: 0.95rem;
+            word-break: break-all;
+        }
+
+        .generate-btn {
+            display: block;
+            margin: 40px auto;
+            background: linear-gradient(45deg, #00d4ff, #7b68ee);
+            color: white;
+            border: none;
+            padding: 25px 60px;
+            font-size: 1.4rem;
+            font-weight: 700;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            box-shadow: 0 20px 40px rgba(0,212,255,0.3);
+        }
+
+        .generate-btn:hover:not(:disabled) { transform: translateY(-8px); box-shadow: 0 30px 60px rgba(0,212,255,0.4); }
+        .generate-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+        .video-container {
+            max-width: 1000px;
+            margin: 40px auto;
+            background: rgba(15,15,35,0.95);
+            border-radius: 25px;
+            overflow: hidden;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+        }
+
+        .video-controls {
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(26, 26, 46, 0.95), rgba(22, 33, 62, 0.95));
+            backdrop-filter: blur(20px);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            width: 45px; height: 45px;
+            border: none; border-radius: 12px;
+            background: rgba(255,255,255,0.15);
+            color: white; cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .control-btn:hover { background: rgba(0,212,255,0.3); transform: scale(1.05); }
+        .control-btn svg { width: 22px; height: 22px; fill: currentColor; }
+
+        .progress-row {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 200px;
+        }
+
+        #progressBar {
+            flex: 1;
+            height: 6px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+            cursor: pointer;
+            position: relative;
+            --progress: 0%;
+        }
+
+        #progressBar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #7b68ee);
+            width: var(--progress, 0%);
+            border-radius: 3px;
+            transition: width 0.1s linear;
+        }
+
+        #volumeSlider {
+            width: 100px;
+            height: 6px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+            -webkit-appearance: none;
+            appearance: none;
+            outline: none;
+        }
+
+        #volumeSlider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #00d4ff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        #volumeSlider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: #00d4ff;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        #timeDisplay {
+            font-size: 0.9rem;
+            font-family: ui-monospace, 'SF Mono', monospace;
+            min-width: 90px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">Dieter Esq.</div>
+            <p>AI music production</p>
+        </div>
+
+        <div class="mureka-voices" id="voiceGrid"></div>
+
+        <div class="pitch-control">
+            <div style="font-size: 1.2rem; margin-bottom: 20px;">Voice pitch</div>
+            <input type="range" class="pitch-slider" id="pitchSlider" min="-12" max="12" value="0" step="0.5">
+            <div id="pitchValue" style="margin-top: 15px;">Natural Voice</div>
+        </div>
+
+        <textarea class="lyrics-input" id="lyricsInput" placeholder="Type your song lyrics here..."></textarea>
+
+        <div class="beat-upload" id="beatUploadZone" role="button" tabindex="0">
+            <h3>Upload beat</h3>
+            <p>Drag MP3/WAV or click</p>
+            <input type="file" id="beatInput" accept="audio/*" hidden>
+            <p id="beatFileName" class="beat-file-name" aria-live="polite"></p>
+        </div>
+
+        <button type="button" class="generate-btn" id="generateBtn" disabled>Create song</button>
+
+        <div class="video-container" id="videoPlayer" hidden>
+            <video id="dieterVideo" poster="https://via.placeholder.com/1000x600/1a1a2e/ffffff?text=Your+Song+Ready" muted playsinline>
+                <source src="" type="video/mp4">
+            </video>
+            <div class="video-controls">
+                <button type="button" id="playPauseBtn" class="control-btn" title="Play/Pause">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+                <div class="progress-row">
+                    <div id="progressBar" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0"></div>
+                    <span id="timeDisplay">0:00 / 0:00</span>
+                </div>
+                <button type="button" id="volumeBtn" class="control-btn" title="Mute">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+                </button>
+                <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="0.8" title="Volume">
+                <button type="button" id="fullscreenBtn" class="control-btn" title="Fullscreen">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function voiceBadge(id) {
+            const n = (id.match(/\d+/) || [''])[0]
+            return (id.startsWith('female') ? 'W' : 'M') + n
+        }
+
+        const VOICES = [
+            { id: 'male1', name: 'Man 1', style: 'warm voice' },
+            { id: 'male2', name: 'Man 2', style: 'deep voice' },
+            { id: 'male3', name: 'Man 3', style: 'clear voice' },
+            { id: 'male4', name: 'Man 4', style: 'friendly voice' },
+            { id: 'male5', name: 'Man 5', style: 'confident' },
+            { id: 'male6', name: 'Man 6', style: 'relaxed' },
+            { id: 'female1', name: 'Woman 1', style: 'soft voice' },
+            { id: 'female2', name: 'Woman 2', style: 'bright voice' },
+            { id: 'female3', name: 'Woman 3', style: 'warm voice' },
+            { id: 'female4', name: 'Woman 4', style: 'clear voice' },
+            { id: 'female5', name: 'Woman 5', style: 'gentle' },
+            { id: 'female6', name: 'Woman 6', style: 'natural' }
+        ];
+
+        let selectedVoice = VOICES[0];
+        let beatFile = null;
+        let pitch = 0;
+        let dieterPlayer = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const grid = document.getElementById('voiceGrid');
+            VOICES.forEach((voice) => {
+                const card = document.createElement('div');
+                card.className = 'voice-card';
+                card.innerHTML = `<div class="voice-icon" aria-hidden="true">${voiceBadge(voice.id)}</div><div class="voice-name">${voice.name}</div><div style="font-size:0.9rem;opacity:0.7;">${voice.style}</div>`;
+                card.addEventListener('click', () => {
+                    document.querySelectorAll('.voice-card').forEach((c) => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    selectedVoice = voice;
+                });
+                grid.appendChild(card);
+            });
+            grid.children[0].click();
+
+            document.getElementById('pitchSlider').addEventListener('input', (e) => {
+                pitch = parseFloat(e.target.value);
+                document.getElementById('pitchValue').textContent =
+                    pitch < -4 ? 'Deep male' : pitch > 4 ? 'Bright female' : 'Natural voice';
+            });
+
+            document.getElementById('lyricsInput').addEventListener('input', checkReady);
+
+            const beatInput = document.getElementById('beatInput');
+            const beatZone = document.getElementById('beatUploadZone');
+            const beatName = document.getElementById('beatFileName');
+
+            beatZone.addEventListener('click', () => beatInput.click());
+            beatZone.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    beatInput.click();
+                }
+            });
+
+            beatZone.addEventListener('dragover', (e) => { e.preventDefault(); beatZone.style.borderColor = '#00d4ff'; });
+            beatZone.addEventListener('dragleave', () => { beatZone.style.borderColor = ''; });
+            beatZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                beatZone.style.borderColor = '';
+                const f = e.dataTransfer.files[0];
+                if (f && f.type.startsWith('audio/')) {
+                    beatFile = f;
+                    beatName.textContent = f.name;
+                    checkReady();
+                }
+            });
+
+            beatInput.addEventListener('change', (e) => {
+                beatFile = e.target.files[0] || null;
+                beatName.textContent = beatFile ? beatFile.name : '';
+                checkReady();
+            });
+        });
+
+        function checkReady() {
+            const lyrics = document.getElementById('lyricsInput').value.trim();
+            document.getElementById('generateBtn').disabled = !lyrics || !beatFile;
+        }
+
+        function generateSong() {
+            const btn = document.getElementById('generateBtn');
+            btn.disabled = true;
+            btn.textContent = 'Generating...';
+
+            setTimeout(() => {
+                const vp = document.getElementById('videoPlayer');
+                vp.hidden = false;
+                vp.scrollIntoView({ behavior: 'smooth' });
+                btn.textContent = 'New song';
+                btn.disabled = false;
+
+                if (!dieterPlayer) {
+                    dieterPlayer = new DieterVideoPlayer();
+                } else {
+                    dieterPlayer.updateTimeDisplay();
+                    dieterPlayer.updateProgress();
+                }
+            }, 3000);
+        }
+
+        document.getElementById('generateBtn').addEventListener('click', generateSong);
+
+        class DieterVideoPlayer {
+            constructor() {
+                this.video = document.getElementById('dieterVideo');
+                this.playPauseBtn = document.getElementById('playPauseBtn');
+                this.progressBar = document.getElementById('progressBar');
+                this.volumeBtn = document.getElementById('volumeBtn');
+                this.volumeSlider = document.getElementById('volumeSlider');
+                this.fullscreenBtn = document.getElementById('fullscreenBtn');
+                this.timeDisplay = document.getElementById('timeDisplay');
+                this._onKey = (e) => this.handleKey(e);
+                this.init();
+            }
+
+            init() {
+                this.playPauseBtn.addEventListener('click', () => this.togglePlay());
+                this.video.addEventListener('click', () => this.togglePlay());
+
+                this.progressBar.addEventListener('click', (e) => this.setProgress(e));
+                this.progressBar.addEventListener('keydown', (e) => this.progressKey(e));
+                this.video.addEventListener('timeupdate', () => this.updateProgress());
+                this.video.addEventListener('loadedmetadata', () => this.updateProgress());
+
+                this.volumeSlider.addEventListener('input', (e) => this.setVolume(e.target.value));
+                this.volumeBtn.addEventListener('click', () => this.toggleMute());
+
+                this.fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
+                document.addEventListener('fullscreenchange', () => this.updateFullscreenButton());
+
+                document.addEventListener('keydown', this._onKey);
+
+                this.setVolume(parseFloat(this.volumeSlider.value));
+                this.updateTimeDisplay();
+            }
+
+            togglePlay() {
+                if (this.video.paused || this.video.ended) {
+                    this.video.play().catch(() => {});
+                    this.playPauseBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+                } else {
+                    this.video.pause();
+                    this.playPauseBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+                }
+            }
+
+            updateProgress() {
+                if (this.video.duration && isFinite(this.video.duration)) {
+                    const percent = (this.video.currentTime / this.video.duration) * 100;
+                    this.progressBar.style.setProperty('--progress', `${percent}%`);
+                    this.progressBar.setAttribute('aria-valuenow', String(Math.round(percent)));
+                    this.updateTimeDisplay();
+                }
+            }
+
+            setProgress(e) {
+                if (!this.video.duration || !isFinite(this.video.duration)) return;
+                const rect = this.progressBar.getBoundingClientRect();
+                const pos = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+                this.video.currentTime = pos * this.video.duration;
+            }
+
+            progressKey(e) {
+                if (!this.video.duration || !isFinite(this.video.duration)) return;
+                const step = 0.05;
+                let t = this.video.currentTime / this.video.duration;
+                if (e.code === 'ArrowRight') {
+                    e.preventDefault();
+                    t = Math.min(1, t + step);
+                } else if (e.code === 'ArrowLeft') {
+                    e.preventDefault();
+                    t = Math.max(0, t - step);
+                } else return;
+                this.video.currentTime = t * this.video.duration;
+            }
+
+            updateTimeDisplay() {
+                const current = this.formatTime(this.video.currentTime);
+                const duration = this.formatTime(this.video.duration || 0);
+                this.timeDisplay.textContent = `${current} / ${duration}`;
+            }
+
+            formatTime(seconds) {
+                if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            }
+
+            setVolume(volume) {
+                this.video.volume = parseFloat(volume);
+                if (this.video.volume === 0) {
+                    this.volumeBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 7.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.35 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>';
+                } else {
+                    this.volumeBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>';
+                }
+            }
+
+            toggleMute() {
+                this.video.muted = !this.video.muted;
+                if (this.video.muted) {
+                    this.volumeBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 7.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.35 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>';
+                    this.volumeSlider.value = 0;
+                } else {
+                    this.volumeSlider.value = String(this.video.volume || 0.8);
+                    this.setVolume(this.volumeSlider.value);
+                }
+            }
+
+            toggleFullscreen() {
+                const container = document.getElementById('videoPlayer');
+                if (!document.fullscreenElement) {
+                    container.requestFullscreen().catch(() => {});
+                } else {
+                    document.exitFullscreen();
+                }
+            }
+
+            updateFullscreenButton() {
+                if (document.fullscreenElement) {
+                    this.fullscreenBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm-6 0h2V5H8v3zm7-9h-5v5h5V5h-2v3z"/></svg>';
+                } else {
+                    this.fullscreenBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>';
+                }
+            }
+
+            handleKey(e) {
+                if (document.getElementById('videoPlayer').hidden) return;
+                if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+                switch (e.code) {
+                    case 'Space':
+                        e.preventDefault();
+                        this.togglePlay();
+                        break;
+                    case 'ArrowRight':
+                        this.video.currentTime = Math.min(this.video.duration || 0, this.video.currentTime + 5);
+                        break;
+                    case 'ArrowLeft':
+                        this.video.currentTime = Math.max(0, this.video.currentTime - 5);
+                        break;
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        this.video.volume = Math.min(1, this.video.volume + 0.1);
+                        this.volumeSlider.value = String(this.video.volume);
+                        this.setVolume(this.video.volume);
+                        break;
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        this.video.volume = Math.max(0, this.video.volume - 0.1);
+                        this.volumeSlider.value = String(this.video.volume);
+                        this.setVolume(this.video.volume);
+                        break;
+                    case 'KeyF':
+                        this.toggleFullscreen();
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "name": "DIETER AI Studio",
+  "short_name": "DIETER",
+  "description": "AI music & media studio (PWA).",
+  "start_url": "./index.html#/studio",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#070a12",
+  "theme_color": "#070a12",
+  "icons": [
+    {
+      "src": "./assets/bg-studio.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    },
+    {
+      "src": "./assets/bg-space.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
+

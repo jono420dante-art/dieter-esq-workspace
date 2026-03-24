@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dieter Esq. · SDC420 Studio</title>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            --dark-void: linear-gradient(135deg, #0c0c1a 0%, #1a1a2e 50%, #16213e 100%);
+            --neon-cyan: #00f5ff;
+            --glass: rgba(255,255,255,0.08);
+            --glass-border: rgba(255,255,255,0.12);
+            --glow: 0 25px 50px rgba(0,245,255,0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--dark-void);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .master-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .studio-link {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .studio-link a {
+            color: var(--neon-cyan);
+            font-weight: 600;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(0,245,255,0.4);
+        }
+        .studio-link a:hover { border-color: var(--neon-cyan); }
+
+        .hero {
+            text-align: center;
+            padding: 80px 0 60px;
+            background: radial-gradient(circle at center, rgba(102,126,234,0.1) 0%, transparent 70%);
+            border-radius: 40px;
+            margin-bottom: 50px;
+        }
+
+        .logo-sdc420 {
+            font-size: clamp(2.25rem, 8vw, 4rem);
+            font-weight: 900;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.06em;
+            margin-bottom: 20px;
+        }
+
+        .subtitle {
+            font-size: 1.15rem;
+            opacity: 0.88;
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .module-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 30px;
+            margin: 50px 0;
+        }
+
+        .module-card {
+            background: var(--glass);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            padding: 40px;
+            transition: transform 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .module-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--neon-cyan);
+            box-shadow: var(--glow);
+        }
+
+        .module-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .module-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: rgba(0,245,255,0.12);
+            border: 1px solid rgba(0,245,255,0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            color: var(--neon-cyan);
+        }
+        .module-title { font-size: 1.5rem; font-weight: 800; }
+
+        .voice-clone { border: 2px solid rgba(0,245,255,0.3); }
+
+        .voice-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .voice-option {
+            aspect-ratio: 1;
+            border-radius: 20px;
+            border: 2px solid transparent;
+            background: rgba(255,255,255,0.1);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 10px;
+            transition: all 0.3s ease;
+        }
+
+        .voice-option:hover, .voice-option.active {
+            border-color: var(--neon-cyan);
+            background: rgba(0,245,255,0.15);
+            transform: scale(1.03);
+        }
+
+        .voice-badge {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            background: rgba(0,245,255,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+        .voice-label { font-size: 0.9rem; text-align: center; font-weight: 600; }
+        .voice-option small { font-size: 0.7rem; opacity: 0.75; text-align: center; margin-top: 4px; }
+
+        .pitch-control { margin: 20px 0; }
+        .pitch-control label { font-weight: 600; font-size: 0.85rem; }
+
+        .slider-container { position: relative; margin: 28px 0 20px; }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.2);
+            -webkit-appearance: none;
+            appearance: none;
+            outline: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 28px;
+            height: 28px;
+            background: var(--primary-gradient);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: var(--glow);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 28px;
+            height: 28px;
+            background: var(--primary-gradient);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .slider-value {
+            position: absolute;
+            top: -42px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            white-space: nowrap;
+            border: 1px solid var(--glass-border);
+        }
+
+        .lyrics-area {
+            width: 100%;
+            min-height: 200px;
+            padding: 25px;
+            border-radius: 20px;
+            border: 2px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            font-family: inherit;
+            font-size: 16px;
+            color: white;
+            resize: vertical;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .lyrics-area:focus {
+            outline: none;
+            border-color: var(--neon-cyan);
+            box-shadow: var(--glow);
+        }
+
+        .lyrics-area::placeholder { color: rgba(255,255,255,0.4); }
+
+        .beat-zone {
+            border: 3px dashed rgba(0,245,255,0.4);
+            border-radius: 25px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 20px 0;
+        }
+
+        .beat-zone.dragover {
+            border-color: var(--neon-cyan);
+            background: rgba(0,245,255,0.1);
+            transform: scale(1.01);
+        }
+
+        .beat-zone .drop-icon {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--neon-cyan);
+            margin-bottom: 12px;
+        }
+
+        .beat-info {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0,245,255,0.1);
+            border-radius: 15px;
+            font-family: ui-monospace, monospace;
+            font-size: 0.9rem;
+        }
+
+        .master-output {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, rgba(102,126,234,0.2), rgba(118,75,162,0.2));
+            border: 2px solid var(--neon-cyan);
+        }
+
+        .waveform {
+            height: 80px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 20px;
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .waveform::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent 20%, var(--neon-cyan) 50%, transparent 80%);
+            animation: waveform 2s linear infinite;
+            opacity: 0.35;
+        }
+
+        @keyframes waveform {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 30px 0;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 30px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: var(--glow);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 35px 70px rgba(102,126,234,0.5);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid var(--glass-border);
+        }
+
+        .btn-secondary:hover:not(:disabled) { border-color: var(--neon-cyan); }
+
+        .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        @media (max-width: 768px) {
+            .module-grid { grid-template-columns: 1fr; gap: 20px; }
+            .master-container { padding: 20px; }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .module-card { animation: fadeInUp 0.7s ease forwards; }
+        .module-card:nth-child(1) { animation-delay: 0.05s; }
+        .module-card:nth-child(2) { animation-delay: 0.1s; }
+        .module-card:nth-child(3) { animation-delay: 0.15s; }
+        .master-output { animation-delay: 0.2s; }
+    </style>
+</head>
+<body>
+    <div class="master-container">
+        <p class="studio-link"><a href="dieter-sdc420-xtreme.html">Open full DAW layout (XTREME)</a></p>
+
+        <div class="hero">
+            <h1 class="logo-sdc420" role="banner">Dieter Esq. · SDC420</h1>
+            <p class="subtitle">
+                AI music production · Voice presets · Beat upload · Browser BPM estimate · Demo master chain
+            </p>
+            <p class="api-hint" style="margin-top:10px;font-size:0.8rem;opacity:0.65;max-width:40rem;margin-left:auto;margin-right:auto;">
+                Connect the stack: <code style="font-size:0.85em;">?api=http://127.0.0.1:8000/api</code> (or your FastAPI port; Vite dev proxies <code style="font-size:0.85em;">/api</code> → 8000).
+                Optional reference path uses <code style="font-size:0.85em;">POST /api/mureka/clone</code> + <code style="font-size:0.85em;">/api/mureka/generate</code> (Coqui TTS + pitch match — not full RVC).
+            </p>
+        </div>
+
+        <div class="module-grid">
+            <div class="module-card voice-clone">
+                <div class="module-header">
+                    <div class="module-icon" aria-hidden="true">VOX</div>
+                    <div class="module-title">Voice engine</div>
+                </div>
+                <div class="voice-grid" id="voiceGrid" role="radiogroup" aria-label="Voice selection"></div>
+                <div class="pitch-control">
+                    <label for="pitchSlider">Pitch shift</label>
+                    <div class="slider-container">
+                        <input type="range" class="slider" id="pitchSlider" min="-12" max="12" value="0" step="0.5" aria-valuetext="0 semitones">
+                        <div class="slider-value" id="pitchValue">0 semitones</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="module-card ref-voice-module">
+                <div class="module-header">
+                    <div class="module-icon" aria-hidden="true">REF</div>
+                    <div class="module-title">Learn from your audio</div>
+                </div>
+                <p style="font-size:0.88rem;opacity:0.88;line-height:1.55;margin-bottom:12px;">
+                    Upload a clear vocal clip or a short slice of <strong>your</strong> track. The backend measures average pitch (F0) and uses it to steer TTS toward that range when you mix with your beat. Timbre stays engine-based until you plug in RVC or a cloud voice model.
+                </p>
+                <p style="font-size:0.78rem;opacity:0.62;margin-bottom:16px;">Only upload audio you own or have permission to use.</p>
+                <input type="file" id="refVoiceInput" accept="audio/*" hidden>
+                <div class="beat-zone" id="refVoiceZone" role="button" tabindex="0" aria-label="Drop or choose reference vocal file" style="min-height:100px;padding:18px;">
+                    <div class="drop-icon" aria-hidden="true">♪</div>
+                    <h3 style="font-size:1rem;">Reference vocal / song clip</h3>
+                    <p style="font-size:0.85rem;">WAV or MP3 · ~10–90s · isolated vocal works best</p>
+                    <p id="refVoiceFileLabel" style="margin-top:10px;font-size:0.9rem;color:var(--neon-cyan);min-height:1.2em;"></p>
+                </div>
+                <label for="refVoiceName" style="display:block;margin-top:14px;font-size:0.85rem;opacity:0.9;">Label</label>
+                <input type="text" id="refVoiceName" placeholder="e.g. My voice March 2025" maxlength="80"
+                    style="width:100%;margin-top:6px;padding:12px 14px;border-radius:14px;border:1px solid var(--glass-border);background:rgba(0,0,0,0.25);color:white;font-size:0.95rem;">
+                <button type="button" class="btn btn-secondary" id="registerRefBtn" style="width:100%;margin-top:14px;" disabled>Register on server</button>
+                <p id="refVoiceServerLine" style="margin-top:12px;font-family:ui-monospace,monospace;font-size:0.8rem;opacity:0.85;word-break:break-all;min-height:2.5em;"></p>
+                <label style="display:flex;align-items:center;gap:10px;margin-top:12px;font-size:0.9rem;cursor:pointer;user-select:none;">
+                    <input type="checkbox" id="useRefVoiceToggle" disabled>
+                    <span>Use my reference voice for <strong>Create master</strong> (mix path)</span>
+                </label>
+            </div>
+
+            <div class="module-card">
+                <div class="module-header">
+                    <div class="module-icon" aria-hidden="true">LRC</div>
+                    <div class="module-title">Lyrics</div>
+                </div>
+                <textarea class="lyrics-area" id="lyricsInput"
+                    placeholder="Write your lyrics…&#10;[Verse 1]&#10;…&#10;&#10;[Chorus]&#10;…"></textarea>
+            </div>
+
+            <div class="module-card">
+                <div class="module-header">
+                    <div class="module-icon" aria-hidden="true">BPM</div>
+                    <div class="module-title">Beat detection</div>
+                </div>
+                <div class="beat-zone" id="beatZone" role="button" tabindex="0" aria-label="Drop or choose beat file">
+                    <div class="drop-icon" aria-hidden="true">↓</div>
+                    <h3>Drop your beat</h3>
+                    <p>MP3 / WAV · max 10 MB · estimated tempo</p>
+                    <input type="file" id="beatInput" accept="audio/*" hidden>
+                    <p id="beatFileLabel" style="margin-top:12px;font-size:0.9rem;color:var(--neon-cyan);min-height:1.2em;"></p>
+                </div>
+                <div class="beat-info" id="beatInfo" hidden>
+                    <strong>BPM (est.):</strong> <span id="bpm">120</span> ·
+                    <strong>Key:</strong> <span id="key">—</span> ·
+                    <strong>Duration:</strong> <span id="duration">0:00</span>
+                </div>
+            </div>
+
+            <div class="module-card master-output">
+                <div class="module-header">
+                    <div class="module-icon" aria-hidden="true">MST</div>
+                    <div class="module-title">Master output</div>
+                </div>
+                <div class="waveform" aria-hidden="true"></div>
+                <audio id="previewPlayer" controls style="width:100%;margin-bottom:20px;"></audio>
+                <div class="controls">
+                    <button type="button" class="btn btn-primary" id="generateBtn" disabled>Create master</button>
+                    <button type="button" class="btn btn-secondary" id="downloadBtn" disabled>Download</button>
+                    <button type="button" class="btn btn-secondary" id="shareBtn" disabled>Copy status</button>
+                </div>
+                <div id="status" style="text-align:center;margin-top:20px;font-family:ui-monospace,monospace;font-size:0.9rem;opacity:0.9;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const VOICE_LIBRARY = [
+            { id: 'deep_male', abbr: 'R1', name: 'Deep rap', f0: 85, style: '~85 Hz' },
+            { id: 'male1', abbr: 'M1', name: 'Man 1', f0: 120, style: '120 Hz warm' },
+            { id: 'male2', abbr: 'M2', name: 'Man 2', f0: 110, style: '110 Hz deep' },
+            { id: 'male3', abbr: 'M3', name: 'Man 3', f0: 130, style: '130 Hz clear' },
+            { id: 'female1', abbr: 'W1', name: 'Woman 1', f0: 200, style: '200 Hz soft' },
+            { id: 'female2', abbr: 'W2', name: 'Woman 2', f0: 220, style: '220 Hz bright' },
+            { id: 'alto', abbr: 'A', name: 'Alto', f0: 180, style: '~180 Hz' },
+            { id: 'soprano', abbr: 'S', name: 'Soprano', f0: 250, style: '~250 Hz' },
+            { id: 'clone', abbr: 'Y', name: 'Clone me', f0: 0, style: 'Your voice' },
+        ];
+
+        const KEYS = ['Cm', 'Am', 'Fm', 'Gm', 'Dm', 'Em'];
+
+        const CLONE_VOICE_STORAGE_KEY = 'dieter_esq_clone_voice_id';
+
+        let state = {
+            selectedVoice: VOICE_LIBRARY[1],
+            pitchShift: 0,
+            lyrics: '',
+            beatFile: null,
+            bpm: 120,
+            beatDurationSec: 45,
+            masterBlobUrl: null,
+            refVoiceFile: null,
+            cloneVoiceId: null,
+        };
+
+        function getDieterApiBase() {
+            try {
+                const v = new URLSearchParams(window.location.search).get('api');
+                if (!v || !String(v).trim()) return null;
+                return String(v).trim().replace(/\/$/, '');
+            } catch {
+                return null;
+            }
+        }
+
+        function absoluteUrlFromApi(apiBase, path) {
+            if (!path) return '';
+            if (/^https?:\/\//i.test(path)) return path;
+            try {
+                const baseResolved = new URL(apiBase, window.location.origin);
+                return new URL(path, baseResolved.origin).href;
+            } catch {
+                return path;
+            }
+        }
+
+        function mapVoiceToPitchPreset(voiceId) {
+            const m = {
+                deep_male: 'deep_male',
+                male1: 'male',
+                male2: 'male',
+                male3: 'male',
+                female1: 'female',
+                female2: 'female',
+                alto: 'female',
+                soprano: 'bright_female',
+                clone: '',
+            };
+            return m[voiceId] ?? '';
+        }
+
+        function mapVoiceToVocalPreset(voiceId) {
+            return voiceId === 'deep_male' ? 'Trap' : 'Radio';
+        }
+
+        function syncReferenceVoiceUi() {
+            const reg = document.getElementById('registerRefBtn');
+            const toggle = document.getElementById('useRefVoiceToggle');
+            const api = getDieterApiBase();
+            if (reg) reg.disabled = !state.refVoiceFile || !api;
+            if (toggle) {
+                toggle.disabled = !state.cloneVoiceId;
+                if (!state.cloneVoiceId) toggle.checked = false;
+            }
+        }
+
+        function setCloneVoiceId(id) {
+            state.cloneVoiceId = id || null;
+            const line = document.getElementById('refVoiceServerLine');
+            if (line) {
+                line.textContent = state.cloneVoiceId
+                    ? 'voice_id: ' + state.cloneVoiceId
+                    : (getDieterApiBase() ? 'No voice registered yet.' : 'Set ?api=… to register a reference voice.');
+            }
+            try {
+                if (state.cloneVoiceId) localStorage.setItem(CLONE_VOICE_STORAGE_KEY, state.cloneVoiceId);
+                else localStorage.removeItem(CLONE_VOICE_STORAGE_KEY);
+            } catch {
+                /* ignore */
+            }
+            syncReferenceVoiceUi();
+        }
+
+        async function registerReferenceVoice() {
+            const apiBase = getDieterApiBase();
+            const statusLine = document.getElementById('refVoiceServerLine');
+            if (!apiBase || !state.refVoiceFile) return;
+            const name = (document.getElementById('refVoiceName').value || 'Custom Voice').trim() || 'Custom Voice';
+            const fd = new FormData();
+            fd.append('voice_sample', state.refVoiceFile, state.refVoiceFile.name);
+            fd.append('voice_name', name);
+            if (statusLine) statusLine.textContent = 'Uploading reference…';
+            const res = await fetch(apiBase + '/mureka/clone', { method: 'POST', body: fd });
+            const text = await res.text();
+            let json = {};
+            try {
+                json = text ? JSON.parse(text) : {};
+            } catch {
+                /* ignore */
+            }
+            if (!res.ok) {
+                const detail = typeof json.detail === 'string' ? json.detail : text || res.statusText;
+                throw new Error(detail);
+            }
+            if (json.voice_id) setCloneVoiceId(json.voice_id);
+            const extra = json.note ? ' · ' + json.note : '';
+            const f0 = json.f0_mean != null ? ` · F0 ~${Math.round(json.f0_mean)} Hz` : '';
+            if (statusLine) {
+                statusLine.textContent =
+                    (json.status === 'stub' ? 'Stub id (install Coqui TTS for real clone path). ' : 'Registered. ') +
+                    (json.voice_id || '') +
+                    f0 +
+                    extra;
+            }
+        }
+
+        function detectPeaksStride(data, stride, threshold) {
+            const peaks = [];
+            for (let i = stride; i < data.length - stride; i += stride) {
+                if (data[i] > threshold) peaks.push(i);
+            }
+            return peaks;
+        }
+
+        function estimateBPMFromPeaks(peaks, sampleRate) {
+            if (peaks.length < 4) return 120;
+            const intervals = [];
+            for (let i = 1; i < peaks.length; i++) {
+                const sec = (peaks[i] - peaks[i - 1]) / sampleRate;
+                if (sec > 0.2 && sec < 2) {
+                    const bpm = 60 / sec;
+                    if (bpm > 60 && bpm < 200) intervals.push(bpm);
+                }
+            }
+            if (!intervals.length) return 120;
+            intervals.sort((a, b) => a - b);
+            return intervals[Math.floor(intervals.length / 2)];
+        }
+
+        function analyzeBeat(file) {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const ab = e.target.result.slice(0);
+                audioContext.decodeAudioData(
+                    ab,
+                    function (buffer) {
+                        const data = buffer.getChannelData(0);
+                        const peaks = detectPeaksStride(data, 2048, 0.35);
+                        state.bpm = Math.round(estimateBPMFromPeaks(peaks, buffer.sampleRate));
+                        state.beatDurationSec = Math.round(Math.min(240, Math.max(5, buffer.duration || 45)));
+                        document.getElementById('bpm').textContent = state.bpm;
+                        document.getElementById('duration').textContent = formatTime(buffer.duration);
+                        document.getElementById('key').textContent = KEYS[state.bpm % KEYS.length];
+                        document.getElementById('beatInfo').hidden = false;
+                        checkReady();
+                    },
+                    function () {
+                        document.getElementById('status').textContent = 'Could not decode audio.';
+                    },
+                );
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function formatTime(seconds) {
+            if (!isFinite(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function openBeatPicker() {
+            document.getElementById('beatInput').click();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const grid = document.getElementById('voiceGrid');
+            VOICE_LIBRARY.forEach((voice) => {
+                const card = document.createElement('button');
+                card.type = 'button';
+                card.className = 'voice-option';
+                card.innerHTML = `
+                    <div class="voice-badge" aria-hidden="true">${voice.abbr}</div>
+                    <div class="voice-label">${voice.name}</div>
+                    <small>${voice.style}</small>
+                `;
+                card.addEventListener('click', () => selectVoice(voice, card));
+                grid.appendChild(card);
+            });
+            grid.children[1].classList.add('active');
+
+            const xt = document.querySelector('.studio-link a');
+            if (xt && window.location.search) xt.setAttribute('href', 'dieter-sdc420-xtreme.html' + window.location.search);
+
+            try {
+                const saved = localStorage.getItem(CLONE_VOICE_STORAGE_KEY);
+                if (saved && saved.trim()) setCloneVoiceId(saved.trim());
+            } catch {
+                /* ignore */
+            }
+            if (!state.cloneVoiceId) {
+                const line = document.getElementById('refVoiceServerLine');
+                if (line) {
+                    line.textContent = getDieterApiBase()
+                        ? 'No voice registered yet (or re-register after moving servers).'
+                        : 'Set ?api=… to register a reference voice.';
+                }
+            }
+            syncReferenceVoiceUi();
+
+            const refIn = document.getElementById('refVoiceInput');
+            const refZone = document.getElementById('refVoiceZone');
+            function pickRefFile(f) {
+                if (!f || !f.type.startsWith('audio/')) return;
+                state.refVoiceFile = f;
+                document.getElementById('refVoiceFileLabel').textContent = f.name;
+                syncReferenceVoiceUi();
+            }
+            if (refZone && refIn) {
+                refZone.addEventListener('click', (e) => {
+                    if (e.target.closest('#refVoiceInput')) return;
+                    refIn.click();
+                });
+                refZone.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        refIn.click();
+                    }
+                });
+                refZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    refZone.classList.add('dragover');
+                });
+                refZone.addEventListener('dragleave', () => refZone.classList.remove('dragover'));
+                refZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    refZone.classList.remove('dragover');
+                    const f = e.dataTransfer.files[0];
+                    pickRefFile(f);
+                });
+                refIn.addEventListener('change', (e) => {
+                    const f = e.target.files && e.target.files[0];
+                    pickRefFile(f);
+                });
+            }
+            document.getElementById('registerRefBtn').addEventListener('click', async () => {
+                try {
+                    await registerReferenceVoice();
+                } catch (err) {
+                    const msg = err && err.message ? err.message : String(err);
+                    document.getElementById('refVoiceServerLine').textContent = 'Register failed: ' + msg;
+                }
+            });
+
+            const pitchSlider = document.getElementById('pitchSlider');
+            pitchSlider.addEventListener('input', (e) => {
+                state.pitchShift = parseFloat(e.target.value);
+                document.getElementById('pitchValue').textContent = `${state.pitchShift >= 0 ? '+' : ''}${state.pitchShift} semitones`;
+                pitchSlider.setAttribute('aria-valuetext', `${state.pitchShift} semitones`);
+            });
+
+            document.getElementById('lyricsInput').addEventListener('input', (e) => {
+                state.lyrics = e.target.value;
+                checkReady();
+            });
+
+            const beatZone = document.getElementById('beatZone');
+            beatZone.addEventListener('click', (e) => {
+                if (e.target.closest('#beatInput')) return;
+                openBeatPicker();
+            });
+            beatZone.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openBeatPicker();
+                }
+            });
+            beatZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                beatZone.classList.add('dragover');
+            });
+            beatZone.addEventListener('dragleave', () => beatZone.classList.remove('dragover'));
+            beatZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                beatZone.classList.remove('dragover');
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('audio/') && file.size < 10 * 1024 * 1024) {
+                    state.beatFile = file;
+                    document.getElementById('beatFileLabel').textContent = file.name;
+                    analyzeBeat(file);
+                }
+            });
+
+            document.getElementById('beatInput').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file && file.type.startsWith('audio/') && file.size < 10 * 1024 * 1024) {
+                    state.beatFile = file;
+                    document.getElementById('beatFileLabel').textContent = file.name;
+                    analyzeBeat(file);
+                }
+            });
+
+            document.getElementById('generateBtn').addEventListener('click', runMaster);
+            document.getElementById('downloadBtn').addEventListener('click', () => {
+                if (!state.masterBlobUrl) return;
+                const a = document.createElement('a');
+                a.href = state.masterBlobUrl;
+                a.download = state._masterDownloadName || 'dieter-esq-sdc420-demo.wav';
+                a.click();
+            });
+            document.getElementById('shareBtn').addEventListener('click', async () => {
+                const t = document.getElementById('status').textContent || '';
+                try {
+                    await navigator.clipboard.writeText(t);
+                    document.getElementById('status').textContent = 'Copied status to clipboard.';
+                } catch {
+                    prompt('Copy:', t);
+                }
+            });
+        });
+
+        function selectVoice(voice, card) {
+            document.querySelectorAll('.voice-option').forEach((c) => c.classList.remove('active'));
+            card.classList.add('active');
+            state.selectedVoice = voice;
+            checkReady();
+        }
+
+        function checkReady() {
+            const ready = state.lyrics.trim().length > 0 && state.beatFile;
+            document.getElementById('generateBtn').disabled = !ready;
+        }
+
+        async function runMaster() {
+            const btn = document.getElementById('generateBtn');
+            const statusEl = document.getElementById('status');
+            btn.disabled = true;
+            btn.textContent = 'Mastering…';
+            statusEl.textContent = `${state.selectedVoice.name} · ${state.pitchShift} st · ~${state.bpm} BPM`;
+
+            const apiBase = getDieterApiBase();
+            const useRef = document.getElementById('useRefVoiceToggle') && document.getElementById('useRefVoiceToggle').checked;
+            if (apiBase) {
+                if (useRef && !state.cloneVoiceId) {
+                    statusEl.textContent = 'Register a reference voice first, or uncheck “Use my reference voice”.';
+                    btn.textContent = 'Create master';
+                    btn.disabled = false;
+                    return;
+                }
+                try {
+                    if (useRef && state.cloneVoiceId) {
+                        await runCloneMaster(apiBase, statusEl);
+                        statusEl.textContent =
+                            'Mix ready (reference-guided TTS + beat). WAV download. For mastered MP3, run pipeline without reference or post-process in your DAW.';
+                        state._masterDownloadName = 'dieter-esq-sdc420-clone-mix.wav';
+                    } else {
+                        await runPipelineMaster(apiBase, statusEl);
+                        statusEl.textContent = 'Master ready (backend pipeline). Download is MP3.';
+                        state._masterDownloadName = 'dieter-esq-sdc420-master.mp3';
+                    }
+                    btn.textContent = 'New master';
+                    btn.disabled = false;
+                    document.getElementById('downloadBtn').disabled = false;
+                    document.getElementById('shareBtn').disabled = false;
+                    return;
+                } catch (err) {
+                    const msg = err && err.message ? err.message : String(err);
+                    statusEl.textContent = 'API error: ' + msg + ' · Check server or remove ?api= for local demo.';
+                    btn.textContent = 'Create master';
+                    btn.disabled = false;
+                    return;
+                }
+            }
+
+            state._masterDownloadName = 'dieter-esq-sdc420-demo.wav';
+            await new Promise((r) => setTimeout(r, 2500));
+
+            const ctx = new AudioContext();
+            const dur = 2;
+            const rate = ctx.sampleRate;
+            const frames = Math.floor(rate * dur);
+            const buffer = ctx.createBuffer(1, frames, rate);
+            const ch = buffer.getChannelData(0);
+            const base = 220 * Math.pow(2, state.pitchShift / 12);
+            for (let i = 0; i < frames; i++) {
+                ch[i] = Math.sin((2 * Math.PI * base * i) / rate) * 0.25 * (1 - i / frames);
+            }
+
+            const offline = new OfflineAudioContext(1, frames, rate);
+            const src = offline.createBufferSource();
+            src.buffer = buffer;
+            const gain = offline.createGain();
+            gain.gain.value = 0.9;
+            src.connect(gain);
+            gain.connect(offline.destination);
+            src.start();
+            const rendered = await offline.startRendering();
+            const wav = audioBufferToWav(rendered);
+            const blob = new Blob([wav], { type: 'audio/wav' });
+            if (state.masterBlobUrl) URL.revokeObjectURL(state.masterBlobUrl);
+            state.masterBlobUrl = URL.createObjectURL(blob);
+            document.getElementById('previewPlayer').src = state.masterBlobUrl;
+
+            statusEl.textContent = 'Master preview ready (demo tone). Add ?api=… for the Dieter pipeline (see hint above).';
+            btn.textContent = 'New master';
+            btn.disabled = false;
+            document.getElementById('downloadBtn').disabled = false;
+            document.getElementById('shareBtn').disabled = false;
+        }
+
+        async function runCloneMaster(apiBase, statusEl) {
+            if (!state.cloneVoiceId) throw new Error('Register a reference voice first');
+            if (!state.beatFile) throw new Error('No beat file');
+            const fd = new FormData();
+            fd.append('voice_id', state.cloneVoiceId);
+            fd.append('lyrics', state.lyrics);
+            fd.append('beat_file', state.beatFile, state.beatFile.name);
+            statusEl.textContent = 'Reference mix (clone path)…';
+            const res = await fetch(apiBase + '/mureka/generate', { method: 'POST', body: fd });
+            const text = await res.text();
+            let json = {};
+            try {
+                json = text ? JSON.parse(text) : {};
+            } catch {
+                /* ignore */
+            }
+            if (!res.ok) {
+                const detail = typeof json.detail === 'string' ? json.detail : text || res.statusText;
+                throw new Error(detail);
+            }
+            if (json.stub) {
+                throw new Error(json.message || 'Coqui TTS not installed on server (pip install TTS torch in dieter-backend).');
+            }
+            const songPath = json.song_url || json.audio_url;
+            const songAbs = absoluteUrlFromApi(apiBase, songPath);
+            if (!songAbs) throw new Error('No song_url in response');
+            const audioRes = await fetch(songAbs);
+            if (!audioRes.ok) throw new Error('Could not download mix');
+            const blob = await audioRes.blob();
+            if (state.masterBlobUrl) URL.revokeObjectURL(state.masterBlobUrl);
+            state.masterBlobUrl = URL.createObjectURL(blob);
+            document.getElementById('previewPlayer').src = state.masterBlobUrl;
+        }
+
+        async function runPipelineMaster(apiBase, statusEl) {
+            if (!state.beatFile) throw new Error('No beat file');
+            const fd = new FormData();
+            fd.append('beat', state.beatFile, state.beatFile.name);
+            fd.append('lyrics', state.lyrics);
+            fd.append('bpm', String(state.bpm));
+            fd.append('duration_sec', String(Math.round(state.beatDurationSec || 45)));
+            fd.append('vocal_preset', mapVoiceToVocalPreset(state.selectedVoice.id));
+            fd.append('pitch_semitones', String(state.pitchShift));
+            const pp = mapVoiceToPitchPreset(state.selectedVoice.id);
+            if (pp) fd.append('pitch_preset', pp);
+
+            const endpoint = apiBase + '/pipeline/generate-master';
+            statusEl.textContent = 'Calling pipeline…';
+            const res = await fetch(endpoint, { method: 'POST', body: fd });
+            if (!res.ok) {
+                let detail = res.status + ' ' + res.statusText;
+                try {
+                    const j = await res.json();
+                    if (typeof j.detail === 'string') detail = j.detail;
+                    else if (j.detail != null) detail = JSON.stringify(j.detail);
+                } catch {
+                    /* ignore */
+                }
+                throw new Error(detail);
+            }
+            const json = await res.json();
+            const masterAbs = absoluteUrlFromApi(apiBase, json.masterUrl);
+            if (!masterAbs) throw new Error('No masterUrl in response');
+
+            const audioRes = await fetch(masterAbs);
+            if (!audioRes.ok) throw new Error('Could not download mastered file');
+            const blob = await audioRes.blob();
+            if (state.masterBlobUrl) URL.revokeObjectURL(state.masterBlobUrl);
+            state.masterBlobUrl = URL.createObjectURL(blob);
+            state._masterDownloadName = 'dieter-esq-sdc420-master.mp3';
+            document.getElementById('previewPlayer').src = state.masterBlobUrl;
+        }
+
+        function audioBufferToWav(buffer) {
+            const numCh = buffer.numberOfChannels;
+            const rate = buffer.sampleRate;
+            const length = buffer.length * numCh * 2 + 44;
+            const arr = new ArrayBuffer(length);
+            const view = new DataView(arr);
+            const chData = [];
+            for (let c = 0; c < numCh; c++) chData.push(buffer.getChannelData(c));
+            let offset = 0;
+            function writeStr(s) {
+                for (let i = 0; i < s.length; i++) view.setUint8(offset++, s.charCodeAt(i));
+            }
+            function writeU32(v) {
+                view.setUint32(offset, v, true);
+                offset += 4;
+            }
+            function writeU16(v) {
+                view.setUint16(offset, v, true);
+                offset += 2;
+            }
+            writeStr('RIFF');
+            writeU32(length - 8);
+            writeStr('WAVE');
+            writeStr('fmt ');
+            writeU32(16);
+            writeU16(1);
+            writeU16(numCh);
+            writeU32(rate);
+            writeU32(rate * numCh * 2);
+            writeU16(numCh * 2);
+            writeU16(16);
+            writeStr('data');
+            writeU32(buffer.length * numCh * 2);
+            for (let i = 0; i < buffer.length; i++) {
+                for (let c = 0; c < numCh; c++) {
+                    let s = Math.max(-1, Math.min(1, chData[c][i]));
+                    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+                    offset += 2;
+                }
+            }
+            return arr;
+        }
+    </script>
+</body>
+</html>

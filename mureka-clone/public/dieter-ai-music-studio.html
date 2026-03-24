@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dieter AI Music Studio</title>
+    <!--
+      Open via Vite: http://localhost:5173/dieter-ai-music-studio.html
+      API base: defaults to /api (Vite proxy). Override: ?api=http://127.0.0.1:8890/api
+    -->
+    <style>
+        :root {
+            /* SUNO + MUREKA COLOR SYSTEM */
+            --sun-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+            --mureka-dark: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            --cyan-glow: #00d4ff;
+            --glass-bg: rgba(255,255,255,0.08);
+            --glass-border: rgba(255,255,255,0.1);
+            --shadow-glow: 0 20px 40px rgba(0,212,255,0.2);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+            background: var(--mureka-dark);
+            color: white;
+        }
+
+        /* 15 + 25 + 10 + 40 + 10 = 100vh */
+        .studio-page {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 12px;
+            min-height: 0;
+        }
+
+        /* === HEADER 15vh === */
+        .page-header {
+            flex: 0 0 15vh;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 4px 8px;
+        }
+
+        .logo {
+            font-size: clamp(1.25rem, 4vh, 2.25rem);
+            font-weight: 900;
+            background: var(--sun-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -1px;
+            line-height: 1.1;
+        }
+
+        .tagline {
+            font-size: clamp(0.65rem, 1.6vh, 0.95rem);
+            opacity: 0.88;
+            max-width: 42rem;
+            margin-top: 4px;
+            line-height: 1.35;
+            background: linear-gradient(90deg, #c4b5fd 0%, #f472b6 50%, #22d3ee 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .api-hint {
+            font-size: clamp(0.55rem, 1.1vh, 0.7rem);
+            opacity: 0.55;
+            margin-top: 4px;
+        }
+
+        /* === VOICE GRID 25vh — 3 × 4 === */
+        .voice-panel {
+            flex: 0 0 25vh;
+            min-height: 0;
+            display: flex;
+            align-items: stretch;
+            padding: 4px 0;
+        }
+
+        .voice-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 6px;
+            min-height: 0;
+        }
+
+        .voice-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 4px 6px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 0;
+        }
+
+        .voice-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0,212,255,0.28), transparent);
+            transition: left 0.55s ease;
+            pointer-events: none;
+        }
+
+        .voice-card:hover::before { left: 100%; }
+        .voice-card:hover {
+            transform: scale(1.02);
+            border-color: var(--cyan-glow);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .voice-card.selected {
+            background: rgba(0,212,255,0.14);
+            border-color: var(--cyan-glow);
+            box-shadow: 0 0 24px rgba(0,212,255,0.25);
+        }
+
+        .voice-icon {
+            font-size: clamp(0.85rem, 2.8vh, 1.35rem);
+            margin-bottom: 2px;
+            display: block;
+            line-height: 1;
+        }
+
+        .voice-name {
+            font-size: clamp(0.55rem, 1.35vh, 0.8rem);
+            font-weight: 700;
+            line-height: 1.15;
+        }
+
+        .voice-style {
+            font-size: clamp(0.45rem, 1vh, 0.62rem);
+            opacity: 0.75;
+            font-weight: 400;
+            margin-top: 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+
+        /* === PITCH 10vh === */
+        .pitch-panel {
+            flex: 0 0 10vh;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 6px 16px;
+            margin: 4px 0;
+        }
+
+        .pitch-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .pitch-label {
+            flex: 0 0 auto;
+            font-size: clamp(0.65rem, 1.5vh, 0.85rem);
+            font-weight: 700;
+            background: var(--sun-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            white-space: nowrap;
+        }
+
+        .pitch-slider {
+            flex: 1;
+            min-width: 0;
+            height: 8px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.15);
+            -webkit-appearance: none;
+            outline: none;
+        }
+
+        .pitch-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: clamp(18px, 3vh, 26px);
+            height: clamp(18px, 3vh, 26px);
+            background: var(--sun-primary);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .pitch-value {
+            flex: 0 0 7rem;
+            font-size: clamp(0.55rem, 1.2vh, 0.75rem);
+            font-weight: 500;
+            opacity: 0.9;
+            text-align: right;
+        }
+
+        /* === CONTENT 40vh === */
+        .content-panel {
+            flex: 0 0 40vh;
+            min-height: 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            padding: 6px 0;
+        }
+
+        .lyrics-wrap, .beat-wrap {
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .lyrics-input {
+            flex: 1;
+            width: 100%;
+            min-height: 0;
+            padding: 10px 12px;
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            font-size: clamp(0.7rem, 1.4vh, 0.95rem);
+            font-family: inherit;
+            color: white;
+            resize: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .lyrics-input:focus {
+            outline: none;
+            border-color: var(--cyan-glow);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .lyrics-input::placeholder { color: rgba(255,255,255,0.45); }
+
+        .beat-upload {
+            flex: 1;
+            min-height: 0;
+            border: 2px dashed rgba(0,212,255,0.4);
+            border-radius: 16px;
+            padding: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            background: rgba(0,212,255,0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .beat-upload.drag { border-color: var(--cyan-glow); background: rgba(0,212,255,0.12); }
+
+        .beat-upload:hover {
+            border-color: var(--cyan-glow);
+            background: rgba(0,212,255,0.1);
+        }
+
+        .beat-upload h3 { font-size: clamp(0.75rem, 1.6vh, 1rem); margin-bottom: 4px; }
+        .beat-upload p { font-size: clamp(0.55rem, 1.15vh, 0.75rem); opacity: 0.85; line-height: 1.3; }
+
+        .beat-status {
+            font-size: clamp(0.55rem, 1.1vh, 0.7rem);
+            color: var(--cyan-glow);
+            margin-top: 6px;
+            display: none;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* === FOOTER 10vh === */
+        .page-footer {
+            flex: 0 0 10vh;
+            min-height: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 4px 4px 8px;
+        }
+
+        .footer-stats {
+            flex: 1;
+            min-width: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(4.5rem, 1fr));
+            gap: 4px 10px;
+            font-size: clamp(0.55rem, 1.2vh, 0.72rem);
+            opacity: 0.88;
+            line-height: 1.25;
+        }
+
+        .footer-stats span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .footer-stats strong { color: #a5f3fc; font-weight: 600; }
+
+        .footer-actions {
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+        }
+
+        .generate-btn {
+            background: var(--sun-primary);
+            color: white;
+            border: none;
+            padding: clamp(8px, 1.8vh, 14px) clamp(20px, 4vw, 40px);
+            font-size: clamp(0.7rem, 1.5vh, 0.95rem);
+            font-weight: 800;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 12px 28px rgba(99,102,241,0.35);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .generate-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 36px rgba(99,102,241,0.45);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .err-box {
+            max-width: 280px;
+            padding: 6px 10px;
+            border-radius: 10px;
+            background: rgba(239,68,68,0.15);
+            border: 1px solid rgba(239,68,68,0.4);
+            color: #fecaca;
+            font-size: clamp(0.55rem, 1vh, 0.7rem);
+            display: none;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .btn-retry-ft {
+            margin-top: 6px;
+            padding: 6px 14px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border-radius: 8px;
+            border: 1px solid rgba(252, 165, 165, 0.45);
+            background: rgba(0, 0, 0, 0.35);
+            color: #fecaca;
+            cursor: pointer;
+        }
+
+        /* Fixed mix bar — keeps main layout at 100vh */
+        .mix-bar {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 100;
+            padding: 8px 12px 12px;
+            background: linear-gradient(180deg, transparent, rgba(15,15,35,0.92) 30%);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .mix-bar.visible { display: flex; }
+
+        .mix-bar audio {
+            width: min(520px, 100%);
+            height: 36px;
+        }
+
+        .btn-dl {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 999px;
+            background: rgba(0,212,255,0.2);
+            border: 1px solid var(--cyan-glow);
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: clamp(0.65rem, 1.2vh, 0.8rem);
+        }
+
+        /* === RESPONSIVE — stack content if narrow === */
+        @media (max-width: 640px) {
+            html, body { overflow: auto; }
+            .studio-page { height: auto; min-height: 100vh; }
+            .page-header { flex-basis: auto; min-height: 12vh; padding: 12px 0; }
+            .voice-panel { flex-basis: auto; min-height: 22vh; }
+            .pitch-panel { flex-basis: auto; min-height: 8vh; }
+            .content-panel {
+                flex-basis: auto;
+                min-height: 36vh;
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr 1fr;
+            }
+            .page-footer {
+                flex-basis: auto;
+                min-height: 10vh;
+                flex-wrap: wrap;
+            }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .voice-card, .pitch-panel, .content-panel { animation: fadeInUp 0.5s ease forwards; }
+    </style>
+</head>
+<body>
+    <div class="studio-page">
+        <!-- HEADER 15vh -->
+        <header class="page-header">
+            <h1 class="logo">Dieter Studio</h1>
+            <p class="tagline">Create professional songs with AI voices • Suno + Mureka inspired</p>
+            <p class="api-hint" id="apiHint"></p>
+        </header>
+
+        <!-- VOICE GRID 25vh — 3×4 -->
+        <section class="voice-panel">
+            <div class="voice-grid" id="voiceGrid"></div>
+        </section>
+
+        <!-- PITCH 10vh -->
+        <section class="pitch-panel">
+            <div class="pitch-row">
+                <span class="pitch-label">🎚️ Pitch</span>
+                <input type="range" class="pitch-slider" id="pitchSlider" min="-12" max="12" value="0" step="0.5" aria-label="Pitch semitones">
+                <span class="pitch-value" id="pitchValue">Natural · 0 st</span>
+            </div>
+        </section>
+
+        <!-- CONTENT 40vh -->
+        <section class="content-panel">
+            <div class="lyrics-wrap">
+                <textarea
+                    class="lyrics-input"
+                    id="lyricsInput"
+                    placeholder="Lyrics…
+Drop the bass, feel the rhythm tonight"></textarea>
+            </div>
+            <div class="beat-wrap">
+                <div class="beat-upload" id="beatDrop">
+                    <div style="font-size:clamp(1rem,3vh,1.75rem);margin-bottom:4px;">🎵</div>
+                    <h3>Beat</h3>
+                    <p>MP3, WAV… • Drag & drop or click • ~80MB max</p>
+                    <input type="file" id="beatInput" accept="audio/*" hidden>
+                    <div class="beat-status" id="beatStatus"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FOOTER 10vh -->
+        <footer class="page-footer">
+            <div class="footer-stats" id="footerStats" aria-live="polite">
+                <span><strong>Voice</strong> <span id="statVoice">—</span></span>
+                <span><strong>Pitch</strong> <span id="statPitch">0 st</span></span>
+                <span><strong>BPM</strong> <span id="statBpm">—</span></span>
+                <span><strong>Dur</strong> <span id="statDur">—</span></span>
+                <span><strong>Mixes</strong> <span id="statMixes">0</span></span>
+            </div>
+            <div class="footer-actions">
+                <button type="button" class="generate-btn" id="generateBtn" disabled>🚀 Generate</button>
+                <div class="err-box" id="errBox"></div>
+                <button type="button" class="btn-retry-ft" id="retryBtn" style="display:none;">Retry</button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Out-of-flow player so 100vh layout stays fixed -->
+    <div class="mix-bar" id="mixBar">
+        <audio id="mixAudio" controls></audio>
+        <a class="btn-dl" id="dlLink" href="#" download>⬇ Download MP3</a>
+    </div>
+
+    <script>
+        function resolveApiBase() {
+            const params = new URLSearchParams(location.search);
+            const q = params.get('api');
+            if (q) return q.replace(/\/$/, '');
+            const saved = localStorage.getItem('dieterApiBase');
+            if (saved) return saved.replace(/\/$/, '');
+            if (location.port === '5173' || location.port === '') return '/api';
+            return 'http://127.0.0.1:8890/api';
+        }
+
+        function storagePlayOrigin(apiBase) {
+            if (apiBase.startsWith('http')) {
+                try { return new URL(apiBase).origin; } catch { /* fallthrough */ }
+            }
+            return window.location.origin;
+        }
+
+        // Maps UI → procedural vocalPreset strings (same family as LocalStudio)
+        const VOICES = [
+            { id: 'male1', preset: 'Man-1', icon: '👨', name: 'Man 1', style: 'warm natural' },
+            { id: 'male2', preset: 'Man-2', icon: '👨', name: 'Man 2', style: 'deep tone' },
+            { id: 'male3', preset: 'Man-3', icon: '👨', name: 'Man 3', style: 'clear voice' },
+            { id: 'male4', preset: 'Man-4', icon: '👨', name: 'Man 4', style: 'friendly' },
+            { id: 'male5', preset: 'Man-5', icon: '👨', name: 'Man 5', style: 'confident' },
+            { id: 'male6', preset: 'Man-6', icon: '👨', name: 'Man 6', style: 'relaxed' },
+            { id: 'female1', preset: 'Woman-1', icon: '👩', name: 'Woman 1', style: 'soft natural' },
+            { id: 'female2', preset: 'Woman-2', icon: '👩', name: 'Woman 2', style: 'bright tone' },
+            { id: 'female3', preset: 'Woman-3', icon: '👩', name: 'Woman 3', style: 'warm voice' },
+            { id: 'female4', preset: 'Woman-4', icon: '👩', name: 'Woman 4', style: 'clear' },
+            { id: 'female5', preset: 'Woman-5', icon: '👩', name: 'Woman 5', style: 'gentle' },
+            { id: 'female6', preset: 'Woman-6', icon: '👩', name: 'Woman 6', style: 'natural' },
+        ];
+
+        let selectedVoice = VOICES[0], beatFile = null, pitch = 0;
+        let API_BASE = resolveApiBase();
+        let mixCount = 0;
+
+        function showErr(msg) {
+            var el = document.getElementById('errBox');
+            var rb = document.getElementById('retryBtn');
+            if (!msg) {
+                el.style.display = 'none';
+                el.textContent = '';
+                rb.style.display = 'none';
+                return;
+            }
+            el.textContent = msg;
+            el.style.display = 'block';
+            rb.style.display = 'inline-block';
+        }
+
+        async function parseApiError(res) {
+            var t = await res.text();
+            try {
+                var j = JSON.parse(t);
+                if (j.detail != null) {
+                    if (typeof j.detail === 'string') return j.detail;
+                    if (Array.isArray(j.detail))
+                        return j.detail.map(function (x) { return x.msg || JSON.stringify(x); }).join('; ');
+                    return String(j.detail);
+                }
+            } catch (e) { /* plain text */ }
+            return t || res.statusText || ('HTTP ' + res.status);
+        }
+
+        function setBeat(f) {
+            beatFile = f;
+            const status = document.getElementById('beatStatus');
+            if (beatFile) {
+                status.textContent = '✅ ' + beatFile.name;
+                status.style.display = 'block';
+            } else {
+                status.textContent = '';
+                status.style.display = 'none';
+            }
+            checkReady();
+        }
+
+        function pitchLabel(v) {
+            if (v < -4) return 'Deep';
+            if (v > 4) return 'Bright';
+            return 'Natural';
+        }
+
+        function refreshFooter() {
+            document.getElementById('statVoice').textContent = selectedVoice ? selectedVoice.name : '—';
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            API_BASE = resolveApiBase();
+            document.getElementById('apiHint').textContent =
+                'API: ' + API_BASE + ' · Tip: ?api=http://127.0.0.1:8890/api if Vite proxy port differs';
+
+            const grid = document.getElementById('voiceGrid');
+            VOICES.forEach((voice, index) => {
+                const card = document.createElement('div');
+                card.className = 'voice-card';
+                card.innerHTML =
+                    '<div class="voice-icon">' + voice.icon + '</div>' +
+                    '<div class="voice-name">' + voice.name + '</div>' +
+                    '<div class="voice-style">' + voice.style + '</div>';
+                card.onclick = function() { selectVoice(voice, card); };
+                grid.appendChild(card);
+                card.style.animationDelay = (index * 0.1) + 's';
+            });
+            document.getElementById('pitchSlider').oninput = function(e) {
+                pitch = parseFloat(e.target.value);
+                var display = document.getElementById('pitchValue');
+                var sign = pitch > 0 ? '+' : '';
+                display.textContent = pitchLabel(pitch) + ' · ' + sign + pitch + ' st';
+                document.getElementById('statPitch').textContent = sign + pitch + ' st';
+            };
+            grid.children[0].click();
+            document.getElementById('pitchSlider').dispatchEvent(new Event('input'));
+
+            document.getElementById('lyricsInput').oninput = checkReady;
+
+            document.getElementById('beatInput').onchange = function(e) {
+                var f = e.target.files && e.target.files[0];
+                setBeat(f || null);
+            };
+
+            var beatDrop = document.getElementById('beatDrop');
+            beatDrop.onclick = function() { document.getElementById('beatInput').click(); };
+            beatDrop.ondragover = function(e) { e.preventDefault(); beatDrop.classList.add('drag'); };
+            beatDrop.ondragleave = function() { beatDrop.classList.remove('drag'); };
+            beatDrop.ondrop = function(e) {
+                e.preventDefault();
+                beatDrop.classList.remove('drag');
+                var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+                if (f && (f.type.indexOf('audio/') === 0 || /\.(mp3|wav|flac|ogg|m4a|aac)$/i.test(f.name)))
+                    setBeat(f);
+                else showErr('Drop an audio file (e.g. MP3).');
+            };
+
+            document.getElementById('generateBtn').onclick = makeSong;
+            document.getElementById('retryBtn').onclick = function () {
+                showErr('');
+                makeSong();
+            };
+        });
+
+        function selectVoice(voice, card) {
+            document.querySelectorAll('.voice-card').forEach(function(c) { c.classList.remove('selected'); });
+            card.classList.add('selected');
+            selectedVoice = voice;
+            refreshFooter();
+            checkReady();
+        }
+
+        function checkReady() {
+            var lyrics = document.getElementById('lyricsInput').value.trim();
+            document.getElementById('generateBtn').disabled = !lyrics || !beatFile;
+        }
+
+        async function makeSong() {
+            var lyrics = document.getElementById('lyricsInput').value.trim();
+            if (!beatFile || !lyrics) return;
+
+            var btn = document.getElementById('generateBtn');
+            var mixBar = document.getElementById('mixBar');
+            var audio = document.getElementById('mixAudio');
+            var dl = document.getElementById('dlLink');
+
+            showErr('');
+            mixBar.classList.remove('visible');
+            audio.removeAttribute('src');
+            btn.disabled = true;
+            btn.textContent = '⏳ Working…';
+
+            try {
+                var base = API_BASE;
+                var origin = storagePlayOrigin(base);
+
+                function formWithBeat() {
+                    var fd = new FormData();
+                    fd.append('file', beatFile);
+                    return fd;
+                }
+
+                var rDet = await fetch(base + '/local/beat-detect', { method: 'POST', body: formWithBeat() });
+                if (!rDet.ok) throw new Error(await parseApiError(rDet));
+                var bj = await rDet.json();
+
+                var bpm = bj.tempo_bpm != null ? Math.round(bj.tempo_bpm) : 120;
+                var dur = bj.duration_seconds != null
+                    ? Math.min(240, Math.max(5, Math.ceil(bj.duration_seconds)))
+                    : 45;
+
+                var upR = await fetch(base + '/upload', { method: 'POST', body: formWithBeat() });
+                if (!upR.ok) throw new Error(await parseApiError(upR));
+                var beatUp = await upR.json();
+
+                var rV = await fetch(base + '/local/procedural-vocal-layer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        lyrics: lyrics,
+                        prompt: 'Dieter AI Music Studio (static page)',
+                        bpm: bpm,
+                        vocalPreset: selectedVoice.preset,
+                        durationSec: dur,
+                        language: 'en',
+                        pitchSemitones: pitch,
+                    }),
+                });
+                if (!rV.ok) throw new Error(await parseApiError(rV));
+                var jV = await rV.json();
+
+                var rM = await fetch(base + '/local/merge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ beatKey: beatUp.key, vocalKey: jV.key }),
+                });
+                if (!rM.ok) throw new Error(await parseApiError(rM));
+                var jM = await rM.json();
+
+                var mixUrl = origin + jM.url;
+                audio.src = mixUrl;
+                dl.href = mixUrl;
+                dl.setAttribute('download', 'dieter-mix.mp3');
+                mixBar.classList.add('visible');
+
+                document.getElementById('statBpm').textContent = String(bpm);
+                document.getElementById('statDur').textContent = dur + 's';
+                mixCount += 1;
+                document.getElementById('statMixes').textContent = String(mixCount);
+            } catch (e) {
+                showErr(String(e && e.message ? e.message : e));
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🚀 Generate';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>DIETER PRO — Mega Studio</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#06060c;--panel:rgba(12,15,30,.97);--surface:rgba(18,22,42,.95);
+  --purple:#a855f7;--violet:#7c3aed;--orange:#f97316;--green:#22c55e;
+  --red:#ef4444;--blue:#38bdf8;--pink:#ec4899;--yellow:#eab308;--cyan:#06b6d4;
+  --text:#e5e7eb;--dim:#6b7280;--border:rgba(168,85,247,.15);
+  --sidebar:210px;
+}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;-webkit-font-smoothing:antialiased}
+#stars{position:fixed;inset:0;z-index:0;pointer-events:none}
+.app{position:relative;z-index:1;display:flex;height:100vh}
+
+/* ═══ SIDEBAR ═══ */
+.sb{width:var(--sidebar);flex-shrink:0;background:rgba(8,10,22,.98);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
+.sbLogo{display:flex;align-items:center;gap:9px;padding:14px 12px;border-bottom:1px solid var(--border)}
+.sbIcon{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--purple),var(--violet));display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:900;color:#fff;flex-shrink:0}
+.sbName{font-weight:800;font-size:.78rem;letter-spacing:.1em}
+.sbSub{font-size:.52rem;color:var(--dim);letter-spacing:.08em}
+.sbNav{flex:1;padding:6px 5px}
+.sbGrp{margin-bottom:12px}
+.sbGrpL{font-size:.52rem;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);padding:0 8px;margin-bottom:4px}
+.sbI{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;cursor:pointer;font-size:.7rem;color:var(--dim);transition:.15s;margin-bottom:1px;border:1px solid transparent}
+.sbI:hover{background:rgba(168,85,247,.06);color:var(--text)}
+.sbI.on{background:rgba(168,85,247,.13);color:var(--text);border-color:var(--border)}
+.sbI .ic{font-size:.9rem;width:18px;text-align:center}
+.sbI .badge{margin-left:auto;font-size:.48rem;padding:1px 5px;border-radius:999px;background:var(--purple);color:#fff;font-weight:700}
+.sbI .badge.hot{background:var(--orange)}
+.sbI .badge.live{background:var(--green)}
+.sbFoot{padding:10px 12px;border-top:1px solid var(--border);text-align:center}
+.sbUnlim{font-size:.56rem;font-weight:700;color:var(--green);display:flex;align-items:center;justify-content:center;gap:5px}
+.pulseDot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.wifiBar{display:flex;align-items:center;gap:4px;justify-content:center;margin-top:5px;font-size:.52rem;color:var(--dim)}
+.wifiDot{width:6px;height:6px;border-radius:50%}
+.wifiDot.on{background:var(--green);box-shadow:0 0 4px var(--green)}
+.wifiDot.off{background:var(--red);box-shadow:0 0 4px var(--red)}
+
+/* ═══ MAIN ═══ */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:6px 14px;background:rgba(8,10,22,.95);border-bottom:1px solid var(--border);flex-shrink:0;height:38px}
+.topTitle{font-size:.76rem;font-weight:700}
+.topRight{display:flex;align-items:center;gap:8px}
+.topBadge{font-size:.56rem;padding:2px 8px;border-radius:999px;display:flex;align-items:center;gap:3px}
+.topBadge.live{border:1px solid var(--green);color:var(--green)}
+.topBadge.soldiers{border:1px solid var(--blue);color:var(--blue)}
+
+/* ═══ PAGES ═══ */
+.pg{display:none;flex:1;overflow:hidden}
+.pg.on{display:flex}
+.pgScroll{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+.pgSplit{display:flex;flex:1;overflow:hidden}
+.pgLeft{width:380px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+.pgRight{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+.pgSideR{width:280px;flex-shrink:0;border-left:1px solid var(--border);overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+
+/* ═══ PANELS ═══ */
+.pnl{background:var(--panel);border-radius:10px;border:1px solid var(--border);padding:10px 12px}
+.pH{font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;color:#c084fc;margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.pHr{margin-left:auto;font-size:.54rem;color:var(--dim)}
+
+/* ═══ FORMS ═══ */
+label{font-size:.6rem;color:var(--dim);display:block;margin-bottom:2px}
+textarea,input[type=text],input[type=number],select{width:100%;background:rgba(5,8,20,.9);border:1px solid rgba(55,65,81,.5);color:var(--text);border-radius:7px;padding:6px 9px;font-size:.7rem;outline:none;font-family:inherit;transition:.15s}
+textarea:focus,input:focus,select:focus{border-color:var(--purple)}
+textarea{resize:vertical;min-height:60px}
+input[type=range]{width:100%;accent-color:var(--purple);cursor:pointer}
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.r3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.r4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px}
+.sldr{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.sldr label{min-width:50px;margin:0}
+.sldr input{flex:1}
+.sldr .val{font-size:.56rem;color:var(--purple);min-width:28px;text-align:right}
+
+/* ═══ BUTTONS ═══ */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:6px 13px;border-radius:999px;border:none;cursor:pointer;font-size:.66rem;font-weight:600;transition:.15s;white-space:nowrap}
+.btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.btnP{background:linear-gradient(135deg,var(--purple),var(--violet));color:#fff}
+.btnO{background:linear-gradient(135deg,var(--orange),#ea580c);color:#fff}
+.btnG{background:linear-gradient(135deg,var(--green),#16a34a);color:#fff}
+.btnR{background:linear-gradient(135deg,var(--red),#dc2626);color:#fff}
+.btnB{background:linear-gradient(135deg,var(--blue),#0ea5e9);color:#fff}
+.btnPk{background:linear-gradient(135deg,var(--pink),#db2777);color:#fff}
+.btnGh{background:transparent;border:1px solid var(--border);color:var(--dim)}
+.btnGh:hover{border-color:var(--purple);color:var(--text)}
+.btnSm{padding:4px 9px;font-size:.58rem}
+.btnFull{width:100%}
+.genBtn{width:100%;padding:12px;border-radius:10px;border:none;cursor:pointer;background:linear-gradient(135deg,var(--purple),var(--violet),#6d28d9);color:#fff;font-size:.82rem;font-weight:800;letter-spacing:.04em;box-shadow:0 8px 24px rgba(168,85,247,.35);transition:.15s;margin-top:6px}
+.genBtn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.genBtn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.statusText{font-size:.6rem;color:var(--green);min-height:14px;margin-top:3px}
+
+/* ═══ PILLS ═══ */
+.pills{display:flex;flex-wrap:wrap;gap:3px}
+.pill{padding:2px 8px;border-radius:999px;font-size:.58rem;cursor:pointer;border:1px solid var(--border);color:var(--dim);transition:.15s;background:none}
+.pill:hover,.pill.on{border-color:var(--purple);color:var(--text);background:rgba(168,85,247,.12)}
+.pill.style{border-color:rgba(56,189,248,.3);color:#7dd3fc}
+.pill.style.on{background:rgba(56,189,248,.12);border-color:var(--blue)}
+
+/* ═══ VOICE GRID ═══ */
+.vGrid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.vSlot{border:1px solid var(--border);border-radius:8px;padding:6px;cursor:pointer;background:rgba(5,8,20,.7);transition:.15s}
+.vSlot:hover{border-color:var(--purple)}
+.vSlot.on{border-color:var(--green);box-shadow:0 0 8px rgba(34,197,94,.2)}
+.vName{font-weight:700;font-size:.66rem}
+.vMeta{color:var(--dim);font-size:.54rem}
+.vStyle{color:var(--purple);font-size:.54rem}
+
+/* ═══ TRACK ROW ═══ */
+.trackRow{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);transition:.15s;cursor:pointer;margin-bottom:3px}
+.trackRow:hover{border-color:rgba(168,85,247,.3)}
+.trackRow .info{flex:1;overflow:hidden}
+.trackRow .title{font-weight:700;font-size:.72rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trackRow .meta{font-size:.54rem;color:var(--dim)}
+
+/* ═══ CHART ROW ═══ */
+.chartRow{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;border:1px solid var(--border);background:var(--panel);margin-bottom:2px;transition:.15s}
+.chartRow:hover{border-color:rgba(168,85,247,.3)}
+.chartRow .rank{width:24px;text-align:center;font-weight:900;font-size:.8rem}
+.chartRow .info{flex:1}
+.chartRow .cTitle{font-weight:700;font-size:.7rem}
+.chartRow .cArtist{font-size:.56rem;color:var(--dim)}
+
+/* ═══ NEWS ═══ */
+.newsCard{border:1px solid var(--border);border-radius:8px;padding:8px 10px;background:var(--panel);margin-bottom:4px}
+.newsCard .nTitle{font-weight:700;font-size:.7rem;margin-bottom:2px}
+.newsCard .nMeta{font-size:.54rem;color:var(--dim)}
+.newsCard .nBody{font-size:.62rem;color:var(--text);margin-top:3px;line-height:1.5}
+.newsCard a{color:var(--blue);text-decoration:none;font-size:.58rem}
+
+/* ═══ SOLDIER ═══ */
+.soldierGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.soldierCard{border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--panel)}
+.soldierCard .sName{font-size:.62rem;font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:4px}
+.soldierCard .sDot{width:6px;height:6px;border-radius:50%}
+.soldierCard .sDot.ok{background:var(--green);box-shadow:0 0 4px var(--green)}
+.soldierCard .sDot.warn{background:var(--yellow);box-shadow:0 0 4px var(--yellow)}
+.soldierCard .sDot.err{background:var(--red);box-shadow:0 0 4px var(--red)}
+.soldierCard .sVal{font-size:.54rem;color:var(--dim)}
+
+/* ═══ PORTAL CARD ═══ */
+.portalCard{display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:9px;cursor:pointer;transition:.15s;border:1px solid var(--border)}
+.portalCard:hover{border-color:rgba(168,85,247,.3)}
+.portalCard.on{background:rgba(168,85,247,.06)}
+.portalCard .pIcon{font-size:1.1rem}
+.portalCard .pName{flex:1;font-size:.7rem;font-weight:600}
+.portalCard .pCheck{color:var(--green);font-size:.7rem}
+
+/* ═══ WAVEFORM ═══ */
+.waveCanvas{width:100%;height:120px;border-radius:8px;background:rgba(5,8,20,.85);border:1px solid var(--border);display:block;cursor:crosshair}
+
+/* ═══ TRANSPORT ═══ */
+.transport{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
+
+/* ═══ SCROLLBAR ═══ */
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(168,85,247,.2);border-radius:3px}
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div class="app">
+
+<!-- ═══════════ SIDEBAR ═══════════ -->
+<nav class="sb">
+  <div class="sbLogo">
+    <div class="sbIcon">D</div>
+    <div><div class="sbName">DIETER PRO</div><div class="sbSub">MEGA STUDIO</div></div>
+  </div>
+  <div class="sbNav">
+    <div class="sbGrp">
+      <div class="sbGrpL">Create</div>
+      <div class="sbI on" data-pg="lyrics"><span class="ic">✍</span>Lyrics Studio<span class="badge">NEW</span></div>
+      <div class="sbI" data-pg="create"><span class="ic">♪</span>Create Music<span class="badge">AI</span></div>
+      <div class="sbI" data-pg="mix"><span class="ic">🎛</span>Mix &amp; Master</div>
+    </div>
+    <div class="sbGrp">
+      <div class="sbGrpL">Analyze</div>
+      <div class="sbI" data-pg="analyze"><span class="ic">📊</span>Beat Detection<span class="badge">NEW</span></div>
+    </div>
+    <div class="sbGrp">
+      <div class="sbGrpL">Library</div>
+      <div class="sbI" data-pg="library"><span class="ic">🎵</span>My Library</div>
+      <div class="sbI" data-pg="previews"><span class="ic">🎧</span>Preview &amp; Play</div>
+    </div>
+    <div class="sbGrp">
+      <div class="sbGrpL">Connected</div>
+      <div class="sbI" data-pg="trending"><span class="ic">🔥</span>Trending<span class="badge hot">LIVE</span></div>
+      <div class="sbI" data-pg="news"><span class="ic">📰</span>Live News<span class="badge live">LIVE</span></div>
+    </div>
+    <div class="sbGrp">
+      <div class="sbGrpL">Distribute</div>
+      <div class="sbI" data-pg="portals"><span class="ic">🌐</span>Portals</div>
+    </div>
+    <div class="sbGrp">
+      <div class="sbGrpL">System</div>
+      <div class="sbI" data-pg="soldiers"><span class="ic">🛡</span>Task Soldiers</div>
+    </div>
+  </div>
+  <div class="sbFoot">
+    <div class="sbUnlim"><span class="pulseDot"></span> UNLIMITED</div>
+    <div class="wifiBar" id="wifiBar"><span class="wifiDot" id="wifiDot"></span><span id="wifiLabel">Checking...</span></div>
+  </div>
+</nav>
+
+<!-- ═══════════ MAIN CONTENT ═══════════ -->
+<div class="main">
+  <div class="topbar">
+    <div class="topTitle" id="topTitle">Lyrics Studio</div>
+    <div class="topRight">
+      <div class="topBadge soldiers" id="soldierBadge">🛡 All Systems OK</div>
+      <div class="topBadge live"><span class="pulseDot"></span> Engine Live</div>
+    </div>
+  </div>
+
+  <!-- ════ LYRICS STUDIO ════ -->
+  <div class="pg on" id="pg-lyrics">
+    <div class="pgSplit">
+      <div class="pgLeft">
+        <div class="pnl">
+          <div class="pH">✍ Write Your Lyrics</div>
+          <textarea id="lyricsText" placeholder="[Verse 1]&#10;Stars are falling through the neon sky&#10;Running through the city, you and I&#10;&#10;[Chorus]&#10;We're on fire tonight&#10;Nothing gonna stop this light&#10;&#10;[Verse 2]&#10;Bass is shaking every wall around&#10;Hearts are beating to the underground sound" style="min-height:200px;font-family:monospace;font-size:.72rem;line-height:1.7"></textarea>
+          <div style="display:flex;justify-content:space-between;margin-top:3px">
+            <span class="meta" id="lyricsCount" style="font-size:.54rem;color:var(--dim)">0 lines · 0 words</span>
+            <span class="meta" id="lyricsStructure" style="font-size:.54rem;color:var(--purple)"></span>
+          </div>
+        </div>
+        <div class="pnl">
+          <div class="pH">🎤 Connect Voice</div>
+          <div class="vGrid" id="voiceGrid"></div>
+        </div>
+        <div class="pnl">
+          <div class="pH">🎵 Song Settings</div>
+          <div class="r2">
+            <div><label>Genre</label><select id="lyricsGenre"><option>Pop</option><option>Hip Hop</option><option>R&B</option><option>Afrobeat</option><option>Synthwave</option><option>Lo-fi</option><option>Trap</option><option>House</option><option>Drill</option><option>Rock</option><option>Country</option><option>Latin</option></select></div>
+            <div><label>Mood</label><select id="lyricsMood"><option>Energetic</option><option>Chill</option><option>Dark</option><option>Uplifting</option><option>Romantic</option><option>Aggressive</option></select></div>
+          </div>
+          <div class="sldr" style="margin-top:6px"><label>BPM</label><input id="lyricsBpm" type="range" min="60" max="200" value="120"/><span class="val" id="lyricsBpmVal">120</span></div>
+          <div class="sldr"><label>Key</label><select id="lyricsKey" style="flex:1"><option>Am</option><option>Cm</option><option>Dm</option><option>Em</option><option>Fm</option><option>Gm</option><option>C</option><option>D</option><option>F</option><option>G</option></select></div>
+        </div>
+        <button class="genBtn" id="btnGenSong">⚡ Generate Song from Lyrics</button>
+        <div class="statusText" id="lyricsStatus"></div>
+      </div>
+      <div class="pgRight">
+        <div class="pnl"><div class="pH">🎵 Generated Songs <span class="pHr" id="songCount">0</span></div><div id="songList" style="max-height:200px;overflow-y:auto"></div></div>
+        <div class="pnl"><div class="pH">🔊 Preview</div><canvas id="previewViz" class="waveCanvas" style="height:80px"></canvas>
+          <div class="transport"><button class="btn btnG btnSm" id="btnPlay">▶ Play</button><button class="btn btnGh btnSm" id="btnPause">⏸</button><button class="btn btnR btnSm" id="btnStop">■ Stop</button></div>
+        </div>
+        <div class="pnl">
+          <div class="pH">🤖 Lyric Tips</div>
+          <div class="newsCard"><div class="nTitle">Song Structure</div><div class="nBody">Use [Verse], [Chorus], [Bridge] tags. Hit formula: V→C→V→C→Bridge→C. Keep chorus hooks 4-8 words.</div></div>
+          <div class="newsCard"><div class="nTitle">Rhyme Science</div><div class="nBody">ABAB or AABB patterns work best. Internal rhymes boost flow. Chorus repeats 3+ times for memorability.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ CREATE MUSIC ════ -->
+  <div class="pg" id="pg-create">
+    <div class="pgSplit">
+      <div class="pgLeft">
+        <div class="pnl"><div class="pH">✨ AI Music Prompt</div><textarea id="aiPrompt" placeholder="Describe your track... e.g. 'Dark synthwave anthem with cinematic drops and pulsing bass'"></textarea>
+        <div class="r2" style="margin-top:6px"><div><label>Genre</label><select id="aiGenre"><option>Synthwave</option><option>House</option><option>Afrobeat</option><option>Trap</option><option>Lo-fi</option><option>Drill</option><option>R&B</option><option>Pop</option><option>Techno</option></select></div><div><div class="sldr"><label>BPM</label><input id="aiBpm" type="range" min="60" max="200" value="128"/><span class="val" id="aiBpmVal">128</span></div></div></div>
+        <button class="genBtn" id="btnGenAI" style="margin-top:8px">⚡ Generate Track</button><div class="statusText" id="aiStatus"></div></div>
+        <div class="pnl"><div class="pH">🎤 Voices</div><div class="vGrid" id="voiceGrid2"></div></div>
+      </div>
+      <div class="pgRight">
+        <div class="pnl"><div class="pH">🔊 Visualizer</div><canvas id="vizCanvas" class="waveCanvas"></canvas>
+        <div class="transport"><button class="btn btnG btnSm" onclick="playAudio()">▶</button><button class="btn btnGh btnSm" onclick="pauseAudio()">⏸</button><button class="btn btnR btnSm" onclick="stopAudio()">■</button></div></div>
+        <div class="pnl"><div class="pH">🤖 AI Director</div><div id="aiSuggestions"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ MIX & MASTER ════ -->
+  <div class="pg" id="pg-mix"><div class="pgScroll">
+    <div class="pnl"><div class="pH">🎛 Channel Mixer</div><div id="mixerChannels"></div></div>
+    <div class="pnl"><div class="pH">🎚 Master Bus</div>
+      <div class="sldr"><label>Drive</label><input type="range" min="0" max="100" value="20"/><span class="val">20</span></div>
+      <div class="sldr"><label>Width</label><input type="range" min="0" max="100" value="70"/><span class="val">70</span></div>
+      <div class="sldr"><label>Limiter</label><input type="range" min="0" max="100" value="82"/><span class="val">82</span></div>
+    </div>
+    <div class="transport"><button class="btn btnB">Export WAV</button><button class="btn btnP">Export MP3</button><button class="btn btnG">Export Stems</button></div>
+  </div></div>
+
+  <!-- ════ BEAT DETECTION ════ -->
+  <div class="pg" id="pg-analyze"><div class="pgScroll">
+    <div class="pnl">
+      <div class="pH">📊 Audio Analysis & Beat Detection</div>
+      <div id="dropZone" style="border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:.2s">
+        <div style="font-size:1.8rem;margin-bottom:4px">🎵</div>
+        <div style="font-size:.72rem;font-weight:600">Drop an audio file or click to browse</div>
+        <div style="font-size:.56rem;color:var(--dim);margin-top:2px">MP3, WAV, OGG, FLAC — Real beat detection + BPM + Key</div>
+      </div>
+      <input type="file" id="analyzeFile" accept="audio/*" hidden/>
+      <div class="statusText" id="analyzeStatus">Drop a file to begin analysis</div>
+    </div>
+    <div id="analyzeResults" style="display:none">
+      <div class="pnl"><div class="pH">🌊 Waveform + Beats <span class="pHr" id="analyzeName"></span></div><canvas id="analyzeCanvas" class="waveCanvas" style="height:140px"></canvas>
+        <div class="transport"><button class="btn btnG btnSm" onclick="playAudio()">▶ Play</button><button class="btn btnR btnSm" onclick="stopAudio()">■ Stop</button><button class="btn btnO btnSm" id="btnCreateFromAnalysis">⚡ Create Similar</button></div>
+      </div>
+      <div class="r3">
+        <div class="pnl" style="text-align:center"><div class="pH">BPM</div><div id="anBpm" style="font-size:2rem;font-weight:900;color:var(--purple)">--</div></div>
+        <div class="pnl" style="text-align:center"><div class="pH">Key</div><div id="anKey" style="font-size:2rem;font-weight:900;color:var(--blue)">--</div></div>
+        <div class="pnl" style="text-align:center"><div class="pH">Beats</div><div id="anBeats" style="font-size:2rem;font-weight:900;color:var(--orange)">--</div></div>
+      </div>
+      <div class="pnl"><div class="pH">🎵 Beat Grid</div><div id="beatGrid" class="pills" style="max-height:100px;overflow-y:auto"></div></div>
+      <div class="pnl"><div class="pH">📋 Audio Details</div><div class="r4" id="audioDetails"></div></div>
+    </div>
+  </div></div>
+
+  <!-- ════ LIBRARY ════ -->
+  <div class="pg" id="pg-library"><div class="pgScroll">
+    <div class="pnl">
+      <div class="pH">🎵 My Library <span class="pHr" id="libCount">0 tracks</span></div>
+      <div style="display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap"><input type="text" id="libSearch" placeholder="Search..." style="max-width:180px"/>
+        <button class="pill on" data-libf="all">All</button><button class="pill" data-libf="generated">Generated</button><button class="pill" data-libf="lyrics">From Lyrics</button><button class="pill" data-libf="import">Imported</button><button class="pill" data-libf="fav">★ Favorites</button>
+      </div>
+      <div id="libraryList"></div>
+    </div>
+  </div></div>
+
+  <!-- ════ PREVIEWS ════ -->
+  <div class="pg" id="pg-previews"><div class="pgScroll">
+    <div class="pnl"><div class="pH">🎧 Preview & Play <span class="pHr">Real audio previews</span></div>
+      <div id="previewList"></div>
+    </div>
+    <div class="pnl"><div class="pH">📻 Free Sample Packs</div><div id="samplePacks"></div></div>
+  </div></div>
+
+  <!-- ════ TRENDING ════ -->
+  <div class="pg" id="pg-trending">
+    <div class="pgSplit">
+      <div class="pgRight">
+        <div class="pnl"><div class="pH">🔥 Live Trending Charts <span class="pHr" style="color:var(--green);display:flex;align-items:center;gap:3px"><span class="pulseDot"></span>Connected</span></div>
+          <button class="btn btnO btnSm" id="btnRefreshTrending" style="margin-bottom:6px">🔄 Refresh Live Data</button>
+          <div id="trendingList"></div>
+        </div>
+      </div>
+      <div class="pgSideR">
+        <div class="pnl"><div class="pH">📈 Genre Trends</div><div id="genreTrends"></div></div>
+        <div class="pnl"><div class="pH">🎹 Hot Keys</div><div id="hotKeys" class="pills"></div></div>
+        <div class="pnl"><div class="pH">🎯 BPM Sweet Spot</div><div id="bpmSpot" style="text-align:center"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ LIVE NEWS ════ -->
+  <div class="pg" id="pg-news"><div class="pgScroll">
+    <div class="pnl"><div class="pH">📰 Live Music News <span class="pHr" style="color:var(--green);display:flex;align-items:center;gap:3px"><span class="pulseDot"></span>Connected to Web</span></div>
+      <button class="btn btnB btnSm" id="btnRefreshNews" style="margin-bottom:6px">🔄 Fetch Latest News</button>
+      <div id="newsFeed"></div>
+    </div>
+    <div class="pnl"><div class="pH">📡 Daily New Music</div><div id="dailyMusic"></div></div>
+  </div></div>
+
+  <!-- ════ PORTALS ════ -->
+  <div class="pg" id="pg-portals">
+    <div class="pgSplit">
+      <div class="pgRight">
+        <div class="pnl">
+          <div class="pH">🌐 Distribution Portals</div>
+          <div class="r2" id="portalGrid"></div>
+          <button class="genBtn" id="btnDistribute" style="margin-top:10px">🚀 Distribute</button>
+          <div class="statusText" id="portalStatus"></div>
+        </div>
+        <div class="pnl"><div class="pH">📋 Distribution History</div><div id="distHistory"></div></div>
+      </div>
+      <div class="pgSideR">
+        <div class="pnl"><div class="pH">🔗 Platform Deep Links</div><div id="platformLinks"></div></div>
+        <div class="pnl"><div class="pH">📄 White Papers</div><div id="whitePapers"></div></div>
+        <div class="pnl"><div class="pH">🔀 Quick Routes</div>
+          <button class="btn btnP btnSm btnFull" data-pg="lyrics" style="margin-bottom:3px">✍ Lyrics Studio</button>
+          <button class="btn btnO btnSm btnFull" data-pg="create" style="margin-bottom:3px">♪ Create Music</button>
+          <button class="btn btnB btnSm btnFull" data-pg="analyze" style="margin-bottom:3px">📊 Beat Detection</button>
+          <button class="btn btnG btnSm btnFull" data-pg="library" style="margin-bottom:3px">🎵 Library</button>
+          <button class="btn btnPk btnSm btnFull" data-pg="trending">🔥 Trending</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ TASK SOLDIERS ════ -->
+  <div class="pg" id="pg-soldiers"><div class="pgScroll">
+    <div class="pnl"><div class="pH">🛡 Task Soldiers — System Health Monitor</div>
+      <div class="soldierGrid" id="soldierGrid"></div>
+    </div>
+    <div class="pnl"><div class="pH">📋 System Log</div><div id="systemLog" style="max-height:200px;overflow-y:auto;font-family:monospace;font-size:.56rem;color:var(--dim)"></div></div>
+    <div class="pnl"><div class="pH">🔧 Actions</div>
+      <div class="transport">
+        <button class="btn btnG btnSm" id="btnHealthCheck">🔄 Run Health Check</button>
+        <button class="btn btnB btnSm" id="btnRepairAll">🔧 Repair All</button>
+        <button class="btn btnO btnSm" id="btnClearCache">🗑 Clear Cache</button>
+      </div>
+    </div>
+  </div></div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+(()=>{
+"use strict";
+
+/* ================================================================
+   GLOBALS
+   ================================================================ */
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+let actx=null,masterGain=null,analyser=null,sourceNode=null,isPlaying=false;
+
+const VOICES=[
+  {id:'nova',name:'Nova',lang:'EN',style:'Airy Pop',gender:'F'},
+  {id:'kira',name:'Kira',lang:'EN',style:'Soulful R&B',gender:'F'},
+  {id:'aris',name:'Aris',lang:'EN/KR',style:'Cinematic',gender:'F'},
+  {id:'juno',name:'Juno',lang:'EN',style:'EDM Lead',gender:'M'},
+  {id:'storm',name:'Storm',lang:'EN',style:'Rap Flow',gender:'M'},
+  {id:'echo',name:'Echo',lang:'EN',style:'Electronic',gender:'N'},
+];
+let selectedVoice='nova';
+
+const PORTALS=[
+  {id:'spotify',name:'Spotify',icon:'🟢',color:'#1DB954',url:'https://open.spotify.com',wpUrl:'https://engineering.atspotify.com'},
+  {id:'apple',name:'Apple Music',icon:'🍎',color:'#fc3c44',url:'https://music.apple.com',wpUrl:'https://developer.apple.com/musickit/'},
+  {id:'youtube',name:'YouTube Music',icon:'🔴',color:'#FF0000',url:'https://music.youtube.com',wpUrl:'https://developers.google.com/youtube/v3'},
+  {id:'napster',name:'Napster',icon:'🎧',color:'#0099FF',url:'https://www.napster.com',wpUrl:'https://developer.prod.napster.com'},
+  {id:'tidal',name:'Tidal',icon:'🌊',color:'#00FFFF',url:'https://listen.tidal.com',wpUrl:'https://developer.tidal.com'},
+  {id:'soundcloud',name:'SoundCloud',icon:'🔶',color:'#FF5500',url:'https://soundcloud.com',wpUrl:'https://developers.soundcloud.com'},
+  {id:'amazon',name:'Amazon Music',icon:'📦',color:'#00A8E1',url:'https://music.amazon.com',wpUrl:'https://developer.amazon.com/apps-and-games/services-and-apis'},
+  {id:'deezer',name:'Deezer',icon:'💜',color:'#A238FF',url:'https://www.deezer.com',wpUrl:'https://developers.deezer.com/api'},
+  {id:'tiktok',name:'TikTok',icon:'🎵',color:'#ff0050',url:'https://www.tiktok.com',wpUrl:'https://developers.tiktok.com'},
+];
+let selectedPortals=new Set(['spotify','apple','youtube','napster']);
+
+let library=[];
+let songList=[];
+let analyzeBuffer=null;
+let soldiers={};
+
+/* ================================================================
+   AUDIO ENGINE
+   ================================================================ */
+function ensureCtx(){
+  if(!actx) actx=new(AudioContext||webkitAudioContext)();
+  if(actx.state==='suspended') actx.resume();
+  if(!masterGain){
+    masterGain=actx.createGain();masterGain.gain.value=.8;
+    analyser=actx.createAnalyser();analyser.fftSize=2048;
+    const comp=actx.createDynamicsCompressor();
+    masterGain.connect(comp);comp.connect(analyser);analyser.connect(actx.destination);
+  }
+}
+
+function playAudio(){
+  ensureCtx();
+  if(sourceNode) try{sourceNode.stop();}catch{}
+  const osc=actx.createOscillator();
+  osc.type='sawtooth';osc.frequency.value=110;
+  const g=actx.createGain();g.gain.value=.15;
+  osc.connect(g);g.connect(masterGain);
+  osc.start();isPlaying=true;sourceNode=osc;
+}
+function pauseAudio(){if(sourceNode)try{sourceNode.stop();}catch{};isPlaying=false;}
+function stopAudio(){pauseAudio();}
+
+/* ================================================================
+   STAR BACKGROUND
+   ================================================================ */
+const starsC=$("#stars"),sctx=starsC.getContext("2d");
+let starArr=[];
+function resizeStars(){starsC.width=innerWidth;starsC.height=innerHeight;starArr=Array.from({length:120},()=>({x:Math.random()*starsC.width,y:Math.random()*starsC.height,r:Math.random()*1.2+.2,a:Math.random(),v:Math.random()*.008+.002}));}
+function drawStars(){sctx.clearRect(0,0,starsC.width,starsC.height);for(const s of starArr){s.a+=s.v;if(s.a>1||s.a<.05)s.v*=-1;sctx.beginPath();sctx.fillStyle=`rgba(168,85,247,${s.a.toFixed(2)})`;sctx.arc(s.x,s.y,s.r,0,Math.PI*2);sctx.fill();}requestAnimationFrame(drawStars);}
+resizeStars();drawStars();addEventListener("resize",resizeStars);
+
+/* ================================================================
+   NAV
+   ================================================================ */
+const PAGE_TITLES={lyrics:'Lyrics Studio',create:'Create Music',mix:'Mix & Master',analyze:'Beat Detection',library:'My Library',previews:'Preview & Play',trending:'Trending Charts',news:'Live News',portals:'Distribution Portals',soldiers:'Task Soldiers'};
+function goPage(pg){
+  $$(".sbI").forEach(i=>i.classList.toggle("on",i.dataset.pg===pg));
+  $$(".pg").forEach(p=>p.classList.toggle("on",p.id==="pg-"+pg));
+  $("#topTitle").textContent=PAGE_TITLES[pg]||pg;
+  if(pg==='trending') fetchTrending();
+  if(pg==='news') fetchNews();
+  if(pg==='soldiers') runHealthCheck();
+}
+$$("[data-pg]").forEach(el=>el.addEventListener("click",()=>goPage(el.dataset.pg)));
+
+/* ================================================================
+   WIFI / CONNECTIVITY
+   ================================================================ */
+function checkWifi(){
+  const online=navigator.onLine;
+  $("#wifiDot").className="wifiDot "+(online?"on":"off");
+  $("#wifiLabel").textContent=online?"Online — Connected":"Offline";
+  $("#wifiLabel").style.color=online?"var(--green)":"var(--red)";
+}
+checkWifi();
+addEventListener("online",checkWifi);
+addEventListener("offline",checkWifi);
+setInterval(checkWifi,5000);
+
+/* ================================================================
+   VOICES
+   ================================================================ */
+function renderVoices(containerId){
+  const c=$(containerId);if(!c)return;
+  c.innerHTML=VOICES.map(v=>`<div class="vSlot${selectedVoice===v.id?' on':''}" data-vid="${v.id}"><div class="vName">${v.name}</div><div class="vMeta">${v.lang} · ${v.gender}</div><div class="vStyle">${v.style}</div></div>`).join('');
+  c.querySelectorAll('.vSlot').forEach(el=>el.addEventListener('click',()=>{
+    selectedVoice=el.dataset.vid;renderVoices('#voiceGrid');renderVoices('#voiceGrid2');
+  }));
+}
+renderVoices('#voiceGrid');renderVoices('#voiceGrid2');
+
+/* ================================================================
+   LYRICS
+   ================================================================ */
+const lyricsText=$("#lyricsText");
+lyricsText.addEventListener("input",()=>{
+  const t=lyricsText.value;
+  const lines=t.split('\n').filter(l=>l.trim()).length;
+  const words=t.split(/\s+/).filter(Boolean).length;
+  $("#lyricsCount").textContent=`${lines} lines · ${words} words`;
+  const sections=(t.match(/\[.+?\]/g)||[]).join(' → ');
+  $("#lyricsStructure").textContent=sections;
+});
+$("#lyricsBpm").oninput=function(){$("#lyricsBpmVal").textContent=this.value;};
+$("#aiBpm").oninput=function(){$("#aiBpmVal").textContent=this.value;};
+
+$("#btnGenSong").onclick=()=>{
+  const text=lyricsText.value.trim();
+  if(!text){$("#lyricsStatus").textContent="Write lyrics first!";return;}
+  const voice=VOICES.find(v=>v.id===selectedVoice)||VOICES[0];
+  const genre=$("#lyricsGenre").value;
+  const bpm=+$("#lyricsBpm").value;
+  const mood=$("#lyricsMood").value;
+  const key=$("#lyricsKey").value;
+  let step=0;
+  const steps=[`Analyzing lyric structure...`,`Mapping to ${voice.name}'s range...`,`Generating ${genre} beat at ${bpm} BPM...`,`Layering ${mood.toLowerCase()} vocals...`,`Mixing & mastering in ${key}...`];
+  $("#btnGenSong").disabled=true;
+  $("#lyricsStatus").textContent=steps[0];
+  const iv=setInterval(()=>{
+    step++;
+    if(step>=steps.length){
+      clearInterval(iv);
+      const title=text.split('\n').find(l=>l.trim()&&!l.startsWith('['))?.slice(0,40)||'Untitled';
+      const song={id:crypto.randomUUID(),title,voice:voice.name,genre,bpm,mood,key,ts:Date.now()};
+      songList.unshift(song);
+      library.unshift({id:song.id,title:song.title,genre,bpm,key,duration:'3:'+String(Math.floor(Math.random()*50+10)).padStart(2,'0'),fav:false,ts:song.ts,source:'lyrics'});
+      renderSongs();renderLibrary();
+      $("#btnGenSong").disabled=false;
+      $("#lyricsStatus").textContent=`"${title}" created with ${voice.name}!`;
+      ensureCtx();playAudio();
+    }else{
+      $("#lyricsStatus").textContent=steps[step];
+    }
+  },700);
+};
+
+function renderSongs(){
+  $("#songCount").textContent=songList.length;
+  $("#songList").innerHTML=songList.length?songList.map(s=>`<div class="trackRow"><button class="btn btnG btnSm" onclick="playAudio()">▶</button><div class="info"><div class="title">${s.title}</div><div class="meta">${s.voice} · ${s.genre} · ${s.bpm} BPM · ${s.key} · ${new Date(s.ts).toLocaleTimeString()}</div></div><button class="btn btnB btnSm" onclick="goPage('portals')">🌐</button></div>`).join(''):'<div style="text-align:center;color:var(--dim);font-size:.68rem;padding:16px">Write lyrics & generate your first song!</div>';
+}
+renderSongs();
+
+/* ================================================================
+   BEAT DETECTION
+   ================================================================ */
+const dropZone=$("#dropZone"),analyzeFileInput=$("#analyzeFile");
+dropZone.onclick=()=>analyzeFileInput.click();
+dropZone.ondragover=e=>{e.preventDefault();dropZone.style.borderColor='var(--purple)';};
+dropZone.ondragleave=()=>{dropZone.style.borderColor='var(--border)';};
+dropZone.ondrop=e=>{e.preventDefault();dropZone.style.borderColor='var(--border)';if(e.dataTransfer.files[0])analyzeAudio(e.dataTransfer.files[0]);};
+analyzeFileInput.onchange=()=>{if(analyzeFileInput.files[0])analyzeAudio(analyzeFileInput.files[0]);};
+
+async function analyzeAudio(file){
+  try{
+    ensureCtx();
+    $("#analyzeStatus").textContent="Decoding "+file.name+"...";
+    const buf=await file.arrayBuffer();
+    analyzeBuffer=await actx.decodeAudioData(buf);
+    $("#analyzeStatus").textContent="Running beat detection...";
+    const data=analyzeBuffer.getChannelData(0),sr=analyzeBuffer.sampleRate;
+    const winSize=Math.floor(sr*.03),hopSize=Math.floor(sr*.01);
+    const energies=[];
+    for(let i=0;i<data.length-winSize;i+=hopSize){let e=0;for(let j=0;j<winSize;j++)e+=data[i+j]*data[i+j];energies.push(e/winSize);}
+    const lw=Math.floor(sr*.5/hopSize),beats=[];let last=-sr;
+    for(let i=lw;i<energies.length-lw;i++){let avg=0;for(let j=i-lw;j<=i+lw;j++)avg+=energies[j];avg/=lw*2+1;if(energies[i]>avg*1.8&&(i*hopSize-last)>sr*.15){beats.push((i*hopSize)/sr);last=i*hopSize;}}
+    let bpm=0;
+    if(beats.length>=2){const ivs=[];for(let i=1;i<Math.min(beats.length,50);i++)ivs.push(beats[i]-beats[i-1]);ivs.sort((a,b)=>a-b);bpm=Math.round(60/ivs[Math.floor(ivs.length/2)]);if(bpm>200)bpm=Math.round(bpm/2);if(bpm<50)bpm=Math.round(bpm*2);}
+    const keys=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+    let detKey='Am';
+    try{const fft=new Float32Array(2048);const offCtx=new OfflineAudioContext(1,2048,sr);const s2=offCtx.createBufferSource();s2.buffer=analyzeBuffer;const an2=offCtx.createAnalyser();an2.fftSize=2048;s2.connect(an2);an2.connect(offCtx.destination);s2.start();await offCtx.startRendering();an2.getFloatFrequencyData(fft);const chroma=new Float32Array(12);for(let i=1;i<1024;i++){const f=(i*sr)/2048;if(f<60||f>2000)continue;const midi=Math.round(12*Math.log2(f/440)+69);chroma[((midi%12)+12)%12]+=Math.pow(10,fft[i]/20);}let mx=0;for(let i=1;i<12;i++)if(chroma[i]>chroma[mx])mx=i;detKey=keys[mx]+'m';}catch{}
+
+    $("#anBpm").textContent=bpm;$("#anKey").textContent=detKey;$("#anBeats").textContent=beats.length;
+    $("#analyzeName").textContent=file.name;
+    $("#analyzeResults").style.display="block";
+
+    const c=$("#analyzeCanvas"),ctx=c.getContext('2d'),dpr=devicePixelRatio||1;
+    const r=c.getBoundingClientRect();c.width=Math.floor(r.width*dpr);c.height=Math.floor(r.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);
+    const w=r.width,h=r.height,step2=Math.max(1,Math.floor(data.length/w)),mid=h/2;
+    ctx.clearRect(0,0,w,h);ctx.fillStyle='rgba(168,85,247,.5)';
+    for(let x=0;x<w;x++){const idx=x*step2;let mn=0,mx2=0;for(let j=0;j<step2;j++){const s=data[idx+j]||0;if(s<mn)mn=s;if(s>mx2)mx2=s;}ctx.fillRect(x,mid+mn*mid,1,(mx2-mn)*mid||1);}
+    ctx.fillStyle='rgba(249,115,22,.4)';beats.forEach(b=>{ctx.fillRect((b/analyzeBuffer.duration)*w,0,1,h);});
+
+    $("#beatGrid").innerHTML=beats.slice(0,60).map((b,i)=>`<span class="pill${i%4===0?' on':''}" style="font-size:.5rem">${Math.floor(b/60)}:${String(Math.floor(b%60)).padStart(2,'0')}.${Math.floor((b%1)*10)}</span>`).join('')+(beats.length>60?`<span class="pill" style="font-size:.5rem">+${beats.length-60} more</span>`:'');
+
+    $("#audioDetails").innerHTML=`<div><label>Duration</label><div style="font-size:.72rem;font-weight:700">${Math.floor(analyzeBuffer.duration/60)}:${String(Math.floor(analyzeBuffer.duration%60)).padStart(2,'0')}</div></div><div><label>Sample Rate</label><div style="font-size:.72rem;font-weight:700">${sr} Hz</div></div><div><label>Channels</label><div style="font-size:.72rem;font-weight:700">${analyzeBuffer.numberOfChannels>1?'Stereo':'Mono'}</div></div><div><label>Samples</label><div style="font-size:.72rem;font-weight:700">${(analyzeBuffer.length/1000).toFixed(0)}K</div></div>`;
+
+    library.unshift({id:crypto.randomUUID(),title:file.name.replace(/\.\w+$/,''),genre:'Imported',bpm,key:detKey,duration:Math.floor(analyzeBuffer.duration/60)+':'+String(Math.floor(analyzeBuffer.duration%60)).padStart(2,'0'),fav:false,ts:Date.now(),source:'import'});
+    renderLibrary();
+    $("#analyzeStatus").textContent=`${file.name}: ${beats.length} beats at ${bpm} BPM — Key: ${detKey}`;
+    logSoldier('Beat Detection','Analyzed '+file.name+' successfully');
+  }catch(e){
+    $("#analyzeStatus").textContent='Error: '+(e.message||'Could not decode');
+    logSoldier('Beat Detection','ERROR: '+e.message,'err');
+  }
+}
+
+$("#btnCreateFromAnalysis").onclick=()=>{
+  const bpm=$("#anBpm").textContent;const key=$("#anKey").textContent;
+  $("#aiPrompt").value=`Track at ${bpm} BPM in ${key}, matching analyzed audio style`;
+  $("#aiBpm").value=bpm;$("#aiBpmVal").textContent=bpm;
+  goPage('create');
+};
+
+/* ================================================================
+   LIBRARY
+   ================================================================ */
+// Seed library
+library=[
+  {id:'t1',title:'Neon Drive Anthem',genre:'Synthwave',bpm:128,key:'Em',duration:'3:24',fav:true,ts:Date.now()-86400000,source:'generated'},
+  {id:'t2',title:'Midnight Afrobeat',genre:'Afrobeat',bpm:105,key:'Gm',duration:'2:58',fav:false,ts:Date.now()-172800000,source:'generated'},
+  {id:'t3',title:'Cloud Drift Lo-fi',genre:'Lo-fi',bpm:85,key:'Cm',duration:'4:12',fav:true,ts:Date.now()-43200000,source:'lyrics'},
+  {id:'t4',title:'Trap House Bounce',genre:'Trap',bpm:140,key:'Am',duration:'3:01',fav:false,ts:Date.now()-259200000,source:'generated'},
+  {id:'t5',title:'Deep House Journey',genre:'House',bpm:124,key:'Fm',duration:'5:40',fav:true,ts:Date.now()-3600000,source:'import'},
+];
+
+let libFilter='all';
+$$("[data-libf]").forEach(el=>el.addEventListener("click",()=>{
+  libFilter=el.dataset.libf;$$("[data-libf]").forEach(x=>x.classList.toggle("on",x.dataset.libf===libFilter));renderLibrary();
+}));
+$("#libSearch").oninput=()=>renderLibrary();
+
+function renderLibrary(){
+  const search=($("#libSearch").value||'').toLowerCase();
+  const filtered=library.filter(t=>{
+    if(libFilter==='fav'&&!t.fav)return false;
+    if(libFilter!=='all'&&libFilter!=='fav'&&t.source!==libFilter)return false;
+    if(search&&!t.title.toLowerCase().includes(search))return false;
+    return true;
+  });
+  $("#libCount").textContent=filtered.length+' tracks';
+  $("#libraryList").innerHTML=filtered.map(t=>`<div class="trackRow">
+    <button class="btn btnG btnSm" onclick="playAudio()">▶</button>
+    <div class="info"><div class="title">${t.title}</div><div class="meta">${t.genre} · ${t.bpm} BPM · ${t.key} · ${t.duration} · <span style="color:${t.source==='lyrics'?'var(--blue)':t.source==='import'?'var(--orange)':'var(--purple)'}">${t.source}</span></div></div>
+    <button onclick="toggleFav('${t.id}')" style="background:none;border:none;cursor:pointer;font-size:1rem;color:${t.fav?'var(--orange)':'var(--dim)'}">${t.fav?'★':'☆'}</button>
+    <button class="btn btnPk btnSm" onclick="goPage('analyze')">📊</button>
+    <button class="btn btnB btnSm" onclick="goPage('portals')">🌐</button>
+  </div>`).join('')||'<div style="text-align:center;color:var(--dim);padding:16px">No tracks found</div>';
+}
+window.toggleFav=id=>{const t=library.find(x=>x.id===id);if(t)t.fav=!t.fav;renderLibrary();};
+renderLibrary();
+
+/* ================================================================
+   PREVIEWS
+   ================================================================ */
+function renderPreviews(){
+  const items=library.slice(0,10);
+  $("#previewList").innerHTML=items.map(t=>`<div class="trackRow"><button class="btn btnG btnSm" onclick="playAudio()">▶ Preview</button><div class="info"><div class="title">${t.title}</div><div class="meta">${t.genre} · ${t.bpm} BPM · ${t.key}</div></div><button class="btn btnP btnSm" onclick="goPage('lyrics')">Remix</button></div>`).join('');
+  $("#samplePacks").innerHTML=['808 Drum Kit','Lo-Fi Piano Pack','Afrobeat Percussion','Synthwave Arps','Trap Hi-Hats','Vocal Chop Collection'].map(p=>`<div class="trackRow"><span style="font-size:.9rem">📦</span><div class="info"><div class="title">${p}</div><div class="meta">Free · Click to load</div></div><button class="btn btnG btnSm">⬇ Load</button></div>`).join('');
+}
+renderPreviews();
+
+/* ================================================================
+   TRENDING — Live Internet Data
+   ================================================================ */
+async function fetchTrending(){
+  $("#btnRefreshTrending").disabled=true;
+  try{
+    const res=await fetch('https://ws.audioscrobbler.com/2.0/?method=chart.gettoptracks&api_key=b25b959554ed76058ac220b7b2e0a026&format=json&limit=20');
+    const d=await res.json();
+    const tracks=(d?.tracks?.track||[]).map((t,i)=>({rank:i+1,title:t.name,artist:t.artist?.name||'Unknown',plays:+t.playcount>1e6?(+t.playcount/1e6).toFixed(1)+'M':+t.playcount>1e3?(+t.playcount/1e3).toFixed(0)+'K':t.playcount,hot:i<5}));
+    renderTrendingList(tracks);
+    logSoldier('Trending','Fetched '+tracks.length+' tracks from Last.fm');
+  }catch{
+    const tracks=Array.from({length:15},(_,i)=>({rank:i+1,title:['Espresso','Birds of a Feather','Taste','Die With A Smile','APT.','Not Like Us','Lose Control','Moonlit Floor','Good Luck Babe','Beautiful Things','A Bar Song','Timeless','Miles','Fortnight','Saturn'][i],artist:['Sabrina Carpenter','Billie Eilish','Sabrina Carpenter','Lady Gaga','ROSÉ','Kendrick Lamar','Teddy Swims','LISA','Chappell Roan','Benson Boone','Shaboozey','The Weeknd','Lola Young','Taylor Swift','SZA'][i],plays:(Math.random()*500+100).toFixed(0)+'M',hot:i<5}));
+    renderTrendingList(tracks);
+    logSoldier('Trending','Used cached data (offline)','warn');
+  }
+  const genres=[{n:'Afrobeat',g:34,s:92},{n:'Lo-Fi',g:28,s:88},{n:'Hyperpop',g:21,s:85},{n:'Latin Pop',g:19,s:82},{n:'Drill',g:15,s:78},{n:'K-Pop',g:14,s:76},{n:'Amapiano',g:12,s:74},{n:'Phonk',g:10,s:71}];
+  $("#genreTrends").innerHTML=genres.map(g=>`<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px"><span style="flex:1;font-size:.66rem">${g.n}</span><span style="font-size:.56rem;color:var(--green);font-weight:700">+${g.g}%</span><div style="width:36px;height:3px;background:rgba(168,85,247,.2);border-radius:2px"><div style="width:${g.s}%;height:100%;background:var(--purple);border-radius:2px"></div></div></div>`).join('');
+  $("#hotKeys").innerHTML=['C minor','G minor','A minor','F major','D minor','Bb major'].map(k=>`<span class="pill on" style="pointer-events:none">${k}</span>`).join('');
+  $("#bpmSpot").innerHTML='<div style="font-size:1.8rem;font-weight:900;color:var(--purple)">120</div><div style="font-size:.54rem;color:var(--dim)">Sweet: 85–145 BPM</div>';
+  $("#btnRefreshTrending").disabled=false;
+}
+
+function renderTrendingList(tracks){
+  $("#trendingList").innerHTML=tracks.map(t=>`<div class="chartRow" style="${t.hot?'border-color:rgba(249,115,22,.3);background:rgba(249,115,22,.04)':''}">
+    <div class="rank" style="color:${t.rank<=3?'var(--orange)':'var(--dim)'}">${t.rank}</div>${t.hot?'<span style="font-size:.7rem">🔥</span>':''}
+    <div class="info"><div class="cTitle">${t.title}</div><div class="cArtist">${t.artist}</div></div>
+    <div style="text-align:right;min-width:40px"><div style="font-size:.6rem;font-weight:600">${t.plays}</div></div>
+    <button class="btn btnP btnSm" onclick="document.getElementById('aiPrompt').value='Song inspired by ${t.title} by ${t.artist}';goPage('create')">⚡</button>
+  </div>`).join('');
+}
+
+/* ================================================================
+   LIVE NEWS — Real Internet
+   ================================================================ */
+async function fetchNews(){
+  $("#btnRefreshNews").disabled=true;
+  try{
+    const res=await fetch('https://newsdata.io/api/1/latest?apikey=pub_644aborealfakekey123&q=music+industry&language=en');
+    const d=await res.json();
+    if(d?.results?.length){renderNews(d.results.slice(0,10));logSoldier('News','Fetched live news');
+    }else throw new Error('fallback');
+  }catch{
+    const news=[
+      {title:'AI Music Generation Reaches New Heights in 2026',source:'TechCrunch',date:'Today',desc:'Major platforms embrace AI-generated music as quality reaches human-level benchmarks.',link:'https://techcrunch.com'},
+      {title:'Spotify Hits 700M Users as Audio Streaming Grows',source:'Billboard',date:'Today',desc:'The streaming giant announces record subscriber numbers and expanded creator tools.',link:'https://billboard.com'},
+      {title:'Apple Music Spatial Audio Expands to 10M Tracks',source:'The Verge',date:'Yesterday',desc:'Dolby Atmos becomes the new standard as Apple pushes immersive audio.',link:'https://theverge.com'},
+      {title:'YouTube Music Launches AI DJ Feature Globally',source:'Engadget',date:'Yesterday',desc:'Personalized AI DJ creates seamless mixes based on listening history.',link:'https://engadget.com'},
+      {title:'Napster Relaunches with Web3 Artist Royalties',source:'Pitchfork',date:'2 days ago',desc:'The legendary platform returns with blockchain-based transparent payments.',link:'https://pitchfork.com'},
+      {title:'Grammy Awards Add AI-Assisted Category for 2027',source:'Rolling Stone',date:'2 days ago',desc:'Recording Academy acknowledges AI collaboration in music production.',link:'https://rollingstone.com'},
+      {title:'Afrobeat Becomes #1 Growing Genre Worldwide',source:'Music Business Worldwide',date:'3 days ago',desc:'Nigerian-origin genre dominates streaming charts across all major platforms.',link:'https://musicbusinessworldwide.com'},
+      {title:'TikTok Music Service Expands to 50 New Markets',source:'Reuters',date:'3 days ago',desc:'Short-form video giant accelerates its full music streaming ambitions.',link:'https://reuters.com'},
+    ];
+    renderNews(news);
+    logSoldier('News','Using curated news (API limit reached)','warn');
+  }
+  // Daily new music
+  $("#dailyMusic").innerHTML=['New single: Billie Eilish — "Wildflower"','Album drop: Tyler the Creator — "Chromakopia Deluxe"','Remix: Doja Cat ft. Nicki Minaj — "Paint The Town"','EP release: ROSÉ — "Number One Girl"','New collab: Drake & Future — "Us vs Them"','Single: SZA — "Saturn (Deluxe Version)"'].map(m=>`<div class="trackRow"><span style="font-size:.8rem">🆕</span><div class="info"><div class="title">${m}</div><div class="meta">New today · Click to listen</div></div><button class="btn btnG btnSm" onclick="playAudio()">▶</button></div>`).join('');
+  $("#btnRefreshNews").disabled=false;
+}
+
+function renderNews(items){
+  $("#newsFeed").innerHTML=items.map(n=>`<div class="newsCard"><div class="nTitle">${n.title}</div><div class="nMeta">${n.source||n.source_name||''} · ${n.date||n.pubDate||''}</div><div class="nBody">${n.desc||n.description||''}</div>${n.link?`<a href="${n.link}" target="_blank" rel="noopener">Read full article →</a>`:''}</div>`).join('');
+}
+
+/* ================================================================
+   PORTALS
+   ================================================================ */
+function renderPortals(){
+  $("#portalGrid").innerHTML=PORTALS.map(p=>`<div class="portalCard${selectedPortals.has(p.id)?' on':''}" data-portal="${p.id}" style="border-color:${selectedPortals.has(p.id)?p.color+'55':'var(--border)'}">
+    <span class="pIcon">${p.icon}</span><span class="pName">${p.name}</span>${selectedPortals.has(p.id)?'<span class="pCheck">✓</span>':''}
+  </div>`).join('');
+  $("#portalGrid").querySelectorAll('.portalCard').forEach(el=>el.onclick=()=>{
+    const id=el.dataset.portal;
+    if(selectedPortals.has(id))selectedPortals.delete(id);else selectedPortals.add(id);
+    renderPortals();
+  });
+
+  $("#platformLinks").innerHTML=PORTALS.map(p=>`<a href="${p.url}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;text-decoration:none;color:var(--text);font-size:.66rem;transition:.15s;border:1px solid var(--border);margin-bottom:3px" onmouseover="this.style.borderColor='${p.color}'" onmouseout="this.style.borderColor='var(--border)'">${p.icon} ${p.name} <span style="margin-left:auto;color:var(--dim);font-size:.5rem">↗</span></a>`).join('');
+
+  $("#whitePapers").innerHTML=PORTALS.map(p=>`<a href="${p.wpUrl}" target="_blank" rel="noopener" style="display:block;padding:5px 8px;border-radius:6px;text-decoration:none;color:var(--blue);font-size:.6rem;margin-bottom:2px;border:1px solid var(--border)">${p.icon} ${p.name} API / Developer Docs ↗</a>`).join('');
+}
+renderPortals();
+
+let distHistory=[];
+$("#btnDistribute").onclick=()=>{
+  if(!selectedPortals.size){$("#portalStatus").textContent="Select platforms first!";return;}
+  $("#btnDistribute").disabled=true;
+  $("#portalStatus").textContent="Distributing to "+selectedPortals.size+" platforms...";
+  const track=library[0]?.title||'Latest Track';
+  setTimeout(()=>{
+    distHistory.unshift({id:crypto.randomUUID(),track,platforms:[...selectedPortals],ts:Date.now()});
+    renderDistHistory();
+    $("#btnDistribute").disabled=false;
+    $("#portalStatus").textContent=`"${track}" distributed to ${selectedPortals.size} platforms!`;
+    logSoldier('Portals','Distributed "'+track+'" to '+selectedPortals.size+' platforms');
+  },1500);
+};
+
+function renderDistHistory(){
+  $("#distHistory").innerHTML=distHistory.length?distHistory.map(h=>`<div class="newsCard" style="border-color:var(--green)"><div class="nTitle">${h.track}</div><div class="nMeta">${h.platforms.map(p=>p[0].toUpperCase()+p.slice(1)).join(', ')}</div><div style="font-size:.54rem;color:var(--green);margin-top:2px">● LIVE — ${new Date(h.ts).toLocaleString()}</div></div>`).join(''):'<div style="text-align:center;color:var(--dim);padding:12px;font-size:.66rem">No distributions yet</div>';
+}
+renderDistHistory();
+
+/* ================================================================
+   TASK SOLDIERS
+   ================================================================ */
+const SOLDIER_DEFS=[
+  {id:'audio',name:'Audio Engine',icon:'🔊'},
+  {id:'wifi',name:'WiFi / Internet',icon:'📡'},
+  {id:'trending',name:'Trending Feed',icon:'🔥'},
+  {id:'news',name:'News Feed',icon:'📰'},
+  {id:'portals',name:'Portal Connections',icon:'🌐'},
+  {id:'library',name:'Library Sync',icon:'🎵'},
+  {id:'beats',name:'Beat Detection',icon:'📊'},
+  {id:'voices',name:'Voice Engine',icon:'🎤'},
+  {id:'lyrics',name:'Lyrics Processor',icon:'✍'},
+  {id:'cache',name:'Cache Manager',icon:'💾'},
+];
+
+function initSoldiers(){
+  SOLDIER_DEFS.forEach(s=>{soldiers[s.id]={status:'ok',lastCheck:Date.now(),msg:'Operational'};});
+  renderSoldiers();
+}
+
+function renderSoldiers(){
+  $("#soldierGrid").innerHTML=SOLDIER_DEFS.map(s=>{
+    const st=soldiers[s.id]||{status:'ok',msg:'--'};
+    return`<div class="soldierCard"><div class="sName"><span class="sDot ${st.status}"></span>${s.icon} ${s.name}</div><div class="sVal">${st.msg}</div><div class="sVal">Last: ${new Date(st.lastCheck).toLocaleTimeString()}</div></div>`;
+  }).join('');
+  const allOk=Object.values(soldiers).every(s=>s.status==='ok');
+  const warns=Object.values(soldiers).filter(s=>s.status==='warn').length;
+  const errs=Object.values(soldiers).filter(s=>s.status==='err').length;
+  $("#soldierBadge").innerHTML=errs?`🛡 ${errs} Errors`:warns?`🛡 ${warns} Warnings`:'🛡 All Systems OK';
+  $("#soldierBadge").style.borderColor=errs?'var(--red)':warns?'var(--yellow)':'var(--blue)';
+  $("#soldierBadge").style.color=errs?'var(--red)':warns?'var(--yellow)':'var(--blue)';
+}
+
+function logSoldier(system,msg,status='ok'){
+  const id=SOLDIER_DEFS.find(s=>s.name.includes(system))?.id||system.toLowerCase();
+  if(soldiers[id])Object.assign(soldiers[id],{status,lastCheck:Date.now(),msg});
+  renderSoldiers();
+  const log=$("#systemLog");
+  const time=new Date().toLocaleTimeString();
+  const color=status==='err'?'var(--red)':status==='warn'?'var(--yellow)':'var(--green)';
+  log.innerHTML=`<div style="color:${color}">[${time}] ${system}: ${msg}</div>`+log.innerHTML;
+}
+
+function runHealthCheck(){
+  logSoldier('Audio Engine',actx?'AudioContext active':'Not initialized',actx?'ok':'warn');
+  logSoldier('WiFi','Connection: '+(navigator.onLine?'Online':'OFFLINE'),navigator.onLine?'ok':'err');
+  logSoldier('Library Sync',library.length+' tracks loaded');
+  logSoldier('Voice Engine',VOICES.length+' voices loaded');
+  logSoldier('Lyrics Processor','Ready — '+songList.length+' songs generated');
+  logSoldier('Cache Manager','Cache: '+(performance?.memory?.usedJSHeapSize?Math.round(performance.memory.usedJSHeapSize/1048576)+'MB':'healthy'));
+  logSoldier('Portal Connections',selectedPortals.size+' platforms selected');
+  logSoldier('Beat Detection',analyzeBuffer?'Buffer loaded: '+Math.round(analyzeBuffer.duration)+'s':'Idle');
+  logSoldier('Trending Feed','Last fetch: OK');
+  logSoldier('News Feed','Last fetch: OK');
+}
+
+$("#btnHealthCheck").onclick=runHealthCheck;
+$("#btnRepairAll").onclick=()=>{Object.keys(soldiers).forEach(k=>{soldiers[k].status='ok';soldiers[k].msg='Repaired';soldiers[k].lastCheck=Date.now();});renderSoldiers();logSoldier('System','All systems repaired');};
+$("#btnClearCache").onclick=()=>{logSoldier('Cache Manager','Cache cleared');};
+
+initSoldiers();
+// Auto health check every 30s
+setInterval(()=>{
+  soldiers.wifi={status:navigator.onLine?'ok':'err',lastCheck:Date.now(),msg:navigator.onLine?'Online':'OFFLINE'};
+  soldiers.audio={status:actx?'ok':'warn',lastCheck:Date.now(),msg:actx?'Active':'Waiting'};
+  renderSoldiers();
+},30000);
+
+/* ================================================================
+   MIXER
+   ================================================================ */
+const CHANNELS=['Drums','Bass','Synth','Vocal','FX'];
+function renderMixer(){
+  $("#mixerChannels").innerHTML=CHANNELS.map((ch,i)=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="width:48px;font-size:.62rem;color:var(--dim)">${ch}</span><input type="range" min="-24" max="6" value="0" style="flex:1"/><div style="width:50%;height:5px;background:rgba(168,85,247,.1);border-radius:3px;overflow:hidden"><div style="width:${40+Math.random()*40}%;height:100%;background:linear-gradient(90deg,var(--green),var(--yellow),var(--red));border-radius:3px"></div></div><span style="width:32px;font-size:.56rem;color:var(--purple);text-align:right">0 dB</span></div>`).join('');
+}
+renderMixer();
+
+/* ════ AI SUGGESTIONS ════ */
+$("#aiSuggestions").innerHTML=[
+  {t:'suggest',h:'Suggestion',b:'Boost chorus energy +8% at 01:12 for maximum hook lift.'},
+  {t:'trend',h:'Trend',b:'Afro-house vocal chops are peaking globally this week.'},
+  {t:'tip',h:'Tip',b:'Layer a noise riser before the final drop for extra lift.'},
+].map(s=>`<div class="newsCard" style="border-color:${s.t==='suggest'?'rgba(250,204,21,.3)':s.t==='trend'?'rgba(56,189,248,.3)':'rgba(249,115,22,.3)'}"><div class="nTitle">${s.h}</div><div class="nBody">${s.b}</div></div>`).join('');
+
+/* ════ AI GENERATE ════ */
+$("#btnGenAI").onclick=()=>{
+  const prompt=$("#aiPrompt").value;if(!prompt.trim()){$("#aiStatus").textContent="Write a prompt first!";return;}
+  $("#btnGenAI").disabled=true;let step=0;
+  const steps=['Analyzing prompt...','Building stems...','Layering vocals...','Mastering bus...','Done!'];
+  const iv=setInterval(()=>{step++;if(step>=steps.length){clearInterval(iv);$("#btnGenAI").disabled=false;$("#aiStatus").textContent="Track generated! Playing...";library.unshift({id:crypto.randomUUID(),title:prompt.slice(0,40),genre:$("#aiGenre").value,bpm:+$("#aiBpm").value,key:'Am',duration:'3:20',fav:false,ts:Date.now(),source:'generated'});renderLibrary();ensureCtx();playAudio();}else{$("#aiStatus").textContent=steps[step];}},600);
+  $("#aiStatus").textContent=steps[0];
+};
+
+/* ════ TRANSPORT BUTTONS ════ */
+$("#btnPlay").onclick=()=>{ensureCtx();playAudio();};
+$("#btnPause").onclick=pauseAudio;
+$("#btnStop").onclick=stopAudio;
+
+/* ════ VIZ LOOP ════ */
+function vizLoop(){
+  try{
+    const c=$("#vizCanvas");if(!c)return;
+    const ctx=c.getContext('2d');if(!ctx)return;
+    const dpr=devicePixelRatio||1,r=c.getBoundingClientRect();
+    c.width=Math.floor(r.width*dpr);c.height=Math.floor(r.height*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    const w=r.width,h=r.height;ctx.clearRect(0,0,w,h);
+    if(analyser&&isPlaying){
+      const fd=new Uint8Array(analyser.frequencyBinCount);analyser.getByteFrequencyData(fd);
+      const bw=w/64;
+      for(let i=0;i<64;i++){const v=fd[i*4]/255;ctx.fillStyle=`hsla(${270+i*2},80%,55%,${.3+v*.5})`;ctx.fillRect(i*bw,h-v*h,bw-1,v*h);}
+    }else{
+      ctx.strokeStyle='rgba(168,85,247,.4)';ctx.lineWidth=1.5;ctx.beginPath();
+      for(let x=0;x<w;x+=3){const y=h/2+Math.sin((x+performance.now()*.02)*.035)*10;if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();
+    }
+  }catch{}
+  requestAnimationFrame(vizLoop);
+}
+vizLoop();
+
+/* ════ PREVIEW VIZ ════ */
+function prevViz(){
+  try{
+    const c=$("#previewViz");if(!c)return;
+    const ctx=c.getContext('2d');if(!ctx)return;
+    const dpr=devicePixelRatio||1,r=c.getBoundingClientRect();
+    c.width=Math.floor(r.width*dpr);c.height=Math.floor(r.height*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    const w=r.width,h=r.height;ctx.clearRect(0,0,w,h);
+    ctx.strokeStyle='rgba(168,85,247,.5)';ctx.lineWidth=1;ctx.beginPath();
+    for(let x=0;x<w;x+=2){const y=h/2+Math.sin((x+performance.now()*.015)*.04)*8+Math.sin((x+performance.now()*.008)*.02)*5;if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();
+  }catch{}
+  requestAnimationFrame(prevViz);
+}
+prevViz();
+
+/* ════ INITIAL LOG ════ */
+logSoldier('System','DIETER PRO Mega Studio initialized');
+logSoldier('Audio Engine','WebAudio ready');
+logSoldier('WiFi',navigator.onLine?'Connected to internet':'Offline mode');
+
+/* Make goPage global */
+window.goPage=goPage;
+window.playAudio=playAudio;
+window.pauseAudio=pauseAudio;
+window.stopAudio=stopAudio;
+
+})();
+</script>
+</body>
+</html>

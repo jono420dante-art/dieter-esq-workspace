@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dieter Tower Dashboard</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: #070a12;
+        color: #e7eaf3;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      }
+      .layout {
+        height: 100%;
+        display: grid;
+        grid-template-columns: 420px 1fr;
+      }
+      .panel {
+        border-right: 1px solid rgba(255, 255, 255, 0.12);
+        background: radial-gradient(1200px 900px at 10% 0%, rgba(31, 42, 80, 0.35), rgba(7, 10, 18, 0.95));
+        overflow: auto;
+      }
+      .panel .inner {
+        padding: 16px;
+        display: grid;
+        gap: 14px;
+      }
+      h1 {
+        font-size: 16px;
+        margin: 0;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        opacity: 0.95;
+      }
+      h2 {
+        font-size: 13px;
+        margin: 10px 0 6px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        opacity: 0.9;
+      }
+      p,
+      li {
+        font-size: 13px;
+        line-height: 1.45;
+        opacity: 0.92;
+      }
+      .card {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 12px;
+        background: rgba(10, 12, 20, 0.55);
+        padding: 12px;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 120px 1fr 64px;
+        gap: 10px;
+        align-items: center;
+        font-size: 13px;
+      }
+      .row input[type="range"] {
+        width: 100%;
+      }
+      .val {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        opacity: 0.9;
+      }
+      .btnRow {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      button,
+      select {
+        padding: 10px 10px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+        color: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      code,
+      pre {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 12px;
+      }
+      pre {
+        margin: 0;
+        padding: 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(0, 0, 0, 0.35);
+        overflow: auto;
+      }
+      .stage {
+        position: relative;
+        overflow: hidden;
+        background: radial-gradient(1100px 760px at 35% 20%, #182033, #070a12);
+      }
+      #stage {
+        position: absolute;
+        inset: 0;
+      }
+      .topbar {
+        position: absolute;
+        left: 12px;
+        right: 12px;
+        top: 12px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        pointer-events: none;
+      }
+      .pill {
+        pointer-events: auto;
+        padding: 8px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(10, 12, 20, 0.45);
+        backdrop-filter: blur(8px);
+        font-size: 12px;
+        opacity: 0.9;
+      }
+      a {
+        color: #b7d3ff;
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      @media (max-width: 980px) {
+        .layout {
+          grid-template-columns: 1fr;
+          grid-template-rows: 460px 1fr;
+        }
+        .panel {
+          border-right: 0;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="panel">
+        <div class="inner">
+          <div style="display: grid; gap: 6px">
+            <h1>Dieter Tower Dashboard</h1>
+            <div style="font-size: 12px; opacity: 0.85">
+              Live SDK demo. Main demo page: <a href="./dieter-tower.html">`dieter-tower.html`</a>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>Builder</h2>
+            <div class="row">
+              <label for="floors">Floors</label>
+              <input id="floors" type="range" min="8" max="240" step="1" value="56" />
+              <div class="val" id="floorsVal">56</div>
+            </div>
+            <div class="row">
+              <label for="radius">Radius</label>
+              <input id="radius" type="range" min="2" max="30" step="0.5" value="9" />
+              <div class="val" id="radiusVal">9.0</div>
+            </div>
+            <div class="row">
+              <label for="twist">Twist</label>
+              <input id="twist" type="range" min="0" max="180" step="1" value="28" />
+              <div class="val" id="twistVal">28°</div>
+            </div>
+            <div class="row">
+              <label for="taper">Taper</label>
+              <input id="taper" type="range" min="0" max="0.85" step="0.01" value="0.28" />
+              <div class="val" id="taperVal">0.28</div>
+            </div>
+            <div class="row">
+              <label for="floorH">Floor H</label>
+              <input id="floorH" type="range" min="0.2" max="2.0" step="0.01" value="0.62" />
+              <div class="val" id="floorHVal">0.62</div>
+            </div>
+
+            <div style="display: grid; gap: 10px; margin-top: 10px">
+              <div class="row" style="grid-template-columns: 120px 1fr">
+                <label for="preset">Preset</label>
+                <select id="preset">
+                  <option value="classic">classic</option>
+                  <option value="needle">needle</option>
+                  <option value="barrel">barrel</option>
+                  <option value="spiral">spiral</option>
+                  <option value="stubby">stubby</option>
+                </select>
+              </div>
+              <div class="btnRow">
+                <button id="applyPreset" type="button">Apply preset</button>
+                <button id="copyJSON" type="button">Copy JSON</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>Export</h2>
+            <div class="btnRow">
+              <button id="exportGlb" type="button">Export GLB</button>
+              <button id="exportObj" type="button">Export OBJ</button>
+            </div>
+            <p id="exportStatus" style="margin: 8px 0 0; font-size: 12px; opacity: 0.85"></p>
+          </div>
+
+          <div class="card">
+            <h2>API (functions you can call)</h2>
+            <pre id="apiBlock"></pre>
+          </div>
+
+          <div class="card">
+            <h2>Implement / embed</h2>
+            <p>Minimal embed example (copy/paste into your own HTML):</p>
+            <pre id="embedBlock"></pre>
+          </div>
+
+          <div class="card">
+            <h2>Diagnostics</h2>
+            <button id="refreshDiag" type="button" style="width: 100%">Refresh diagnostics</button>
+            <pre id="diagBlock" style="margin-top: 10px"></pre>
+          </div>
+        </div>
+      </aside>
+
+      <main class="stage">
+        <div class="topbar">
+          <div class="pill">Drag: orbit • Scroll: zoom • Shift+drag: pan</div>
+          <div class="pill">Open DevTools and use <code>window.tower</code></div>
+        </div>
+        <div id="stage"></div>
+      </main>
+    </div>
+
+    <script type="module">
+      import { createDieterTower, DieterTowerPresets } from "./dieter-tower-sdk.js";
+
+      const el = (id) => document.getElementById(id);
+      const ui = {
+        stage: el("stage"),
+        floors: el("floors"),
+        radius: el("radius"),
+        twist: el("twist"),
+        taper: el("taper"),
+        floorH: el("floorH"),
+        floorsVal: el("floorsVal"),
+        radiusVal: el("radiusVal"),
+        twistVal: el("twistVal"),
+        taperVal: el("taperVal"),
+        floorHVal: el("floorHVal"),
+        preset: el("preset"),
+        applyPreset: el("applyPreset"),
+        copyJSON: el("copyJSON"),
+        exportGlb: el("exportGlb"),
+        exportObj: el("exportObj"),
+        exportStatus: el("exportStatus"),
+        apiBlock: el("apiBlock"),
+        embedBlock: el("embedBlock"),
+        refreshDiag: el("refreshDiag"),
+        diagBlock: el("diagBlock"),
+      };
+
+      const tower = createDieterTower(ui.stage, {
+        params: {
+          floors: Number(ui.floors.value),
+          radius: Number(ui.radius.value),
+          twistDeg: Number(ui.twist.value),
+          taper: Number(ui.taper.value),
+          floorH: Number(ui.floorH.value),
+        },
+        showGrid: true,
+        showGround: true,
+      });
+      window.tower = tower;
+
+      const setValLabels = () => {
+        const p = tower.getParams();
+        ui.floorsVal.textContent = String(p.floors);
+        ui.radiusVal.textContent = Number(p.radius).toFixed(1);
+        ui.twistVal.textContent = `${Math.round(p.twistDeg)}°`;
+        ui.taperVal.textContent = Number(p.taper).toFixed(2);
+        ui.floorHVal.textContent = Number(p.floorH).toFixed(2);
+      };
+
+      const onSlider = () => {
+        tower.setParams({
+          floors: Number(ui.floors.value),
+          radius: Number(ui.radius.value),
+          twistDeg: Number(ui.twist.value),
+          taper: Number(ui.taper.value),
+          floorH: Number(ui.floorH.value),
+        });
+        setValLabels();
+      };
+
+      ui.floors.addEventListener("input", onSlider);
+      ui.radius.addEventListener("input", onSlider);
+      ui.twist.addEventListener("input", onSlider);
+      ui.taper.addEventListener("input", onSlider);
+      ui.floorH.addEventListener("input", onSlider);
+
+      ui.applyPreset.addEventListener("click", () => {
+        tower.setPreset(ui.preset.value);
+        const p = tower.getParams();
+        ui.floors.value = String(p.floors);
+        ui.radius.value = String(p.radius);
+        ui.twist.value = String(p.twistDeg);
+        ui.taper.value = String(p.taper);
+        ui.floorH.value = String(p.floorH);
+        setValLabels();
+      });
+
+      ui.copyJSON.addEventListener("click", async () => {
+        const json = tower.toJSON();
+        await navigator.clipboard.writeText(json);
+        ui.copyJSON.textContent = "Copied!";
+        setTimeout(() => (ui.copyJSON.textContent = "Copy JSON"), 900);
+      });
+
+      ui.exportGlb.addEventListener("click", () => {
+        ui.exportStatus.textContent = "Exporting GLB…";
+        tower
+          .exportGLB()
+          .then((filename) => (ui.exportStatus.textContent = `Saved: ${filename}`))
+          .catch((e) => (ui.exportStatus.textContent = `Export failed: ${e?.message ?? e}`));
+      });
+      ui.exportObj.addEventListener("click", () => {
+        ui.exportStatus.textContent = "Exporting OBJ…";
+        tower
+          .exportOBJ()
+          .then((filename) => (ui.exportStatus.textContent = `Saved: ${filename}`))
+          .catch((e) => (ui.exportStatus.textContent = `Export failed: ${e?.message ?? e}`));
+      });
+
+      const showDiag = () => {
+        ui.diagBlock.textContent = JSON.stringify(tower.diagnostics(), null, 2);
+      };
+      ui.refreshDiag.addEventListener("click", showDiag);
+
+      const apiText = `
+createDieterTower(containerEl, options) -> tower
+
+tower.setParams({ floors, radius, twistDeg, taper, floorH })
+tower.getParams() -> { ... }
+tower.setPreset("classic" | "needle" | "barrel" | "spiral" | "stubby")
+
+tower.exportGLB({ filename? }) -> Promise<filename>
+tower.exportOBJ({ filename? }) -> Promise<filename>
+
+tower.toJSON() -> string
+tower.fromJSON(jsonStringOrObject)
+
+tower.resize(width?, height?)
+tower.diagnostics() -> info (WebGL, memory, params)
+
+tower.start() / tower.stop() / tower.destroy()
+`.trim();
+      ui.apiBlock.textContent = apiText;
+
+      ui.embedBlock.textContent = `
+<!-- HTML -->
+<div id="tower" style="width: 100%; height: 420px"></div>
+<script type="module">
+  import { createDieterTower } from "./dieter-tower-sdk.js";
+  const tower = createDieterTower(document.getElementById("tower"), {
+    params: { floors: 70, radius: 10, twistDeg: 40, taper: 0.25, floorH: 0.62 },
+    autoRotate: true,
+  });
+
+  // Example: update later
+  // tower.setParams({ floors: 120 });
+  // await tower.exportGLB();
+</script>
+`.trim();
+
+      const ro = new ResizeObserver(() => tower.resize());
+      ro.observe(ui.stage);
+      setValLabels();
+      showDiag();
+    </script>
+  </body>
+</html>
+

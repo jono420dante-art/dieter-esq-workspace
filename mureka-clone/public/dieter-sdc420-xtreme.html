@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dieter Esq. · SDC420 XTREME</title>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            --dark-void: linear-gradient(135deg, #0c0c1a 0%, #1a1a2e 50%, #16213e 100%);
+            --neon-cyan: #00f5ff;
+            --glass: rgba(255,255,255,0.08);
+            --glass-border: rgba(255,255,255,0.12);
+            --glow: 0 25px 50px rgba(0,245,255,0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--dark-void);
+            color: white;
+            min-height: 100vh;
+        }
+
+        .studio-link {
+            position: fixed;
+            top: 12px;
+            right: 16px;
+            z-index: 100;
+            font-size: 0.85rem;
+        }
+        .studio-link a {
+            color: var(--neon-cyan);
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .app-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+            display: grid;
+            grid-template:
+                "header header header" auto
+                "sidebar main video" minmax(280px, 1fr)
+                "controls controls controls" auto
+                / 280px 1fr minmax(280px, 360px);
+            gap: 20px;
+        }
+
+        .header {
+            grid-area: header;
+            background: var(--glass);
+            backdrop-filter: blur(25px);
+            border-radius: 25px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .logo-main {
+            font-size: clamp(1.25rem, 3vw, 1.75rem);
+            font-weight: 900;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            font-family: ui-monospace, monospace;
+            font-size: 0.85rem;
+        }
+
+        .sidebar {
+            grid-area: sidebar;
+            background: var(--glass);
+            backdrop-filter: blur(25px);
+            border-radius: 25px;
+            padding: 25px;
+            border: 1px solid var(--glass-border);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .sidebar h3 { font-size: 1rem; margin-bottom: 4px; }
+
+        .agent-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+            text-align: left;
+        }
+
+        .agent-card:hover {
+            border-color: var(--neon-cyan);
+            box-shadow: var(--glow);
+            transform: translateX(4px);
+        }
+
+        .agent-card.active {
+            background: rgba(0,245,255,0.15);
+            border-color: var(--neon-cyan);
+        }
+
+        .agent-tag {
+            display: inline-block;
+            font-size: 0.65rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            color: var(--neon-cyan);
+            margin-bottom: 6px;
+        }
+
+        .main-workspace {
+            grid-area: main;
+            display: grid;
+            grid-template-rows: auto 1fr;
+            gap: 20px;
+            min-height: 0;
+        }
+
+        .lyrics-panel {
+            background: var(--glass);
+            backdrop-filter: blur(25px);
+            border-radius: 25px;
+            padding: 25px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .lyrics-area {
+            width: 100%;
+            height: 160px;
+            padding: 20px;
+            border-radius: 20px;
+            border: 2px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            font-family: inherit;
+            font-size: 15px;
+            color: white;
+            resize: vertical;
+        }
+
+        .daw-timeline {
+            background: var(--glass);
+            backdrop-filter: blur(25px);
+            border-radius: 25px;
+            padding: 20px;
+            border: 1px solid var(--glass-border);
+            min-height: 200px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .timeline-tracks {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .track {
+            height: 56px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            cursor: grab;
+            transition: background 0.3s ease;
+        }
+
+        .track:hover { background: rgba(255,255,255,0.18); }
+        .track.active { background: rgba(0,245,255,0.25); border: 2px solid var(--neon-cyan); }
+
+        .track-handle { width: 6px; height: 100%; background: var(--neon-cyan); border-radius: 6px; }
+
+        .video-panel {
+            grid-area: video;
+            background: var(--glass);
+            backdrop-filter: blur(25px);
+            border-radius: 25px;
+            padding: 20px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-height: 0;
+        }
+
+        .video-player {
+            flex: 1;
+            background: #000;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            min-height: 200px;
+        }
+
+        .video-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .controls {
+            grid-area: controls;
+            background: var(--glass);
+            backdrop-filter: blur(25px);
+            border-radius: 25px;
+            padding: 20px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .master-btn {
+            padding: 16px 32px;
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-weight: 800;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            box-shadow: var(--glow);
+        }
+
+        .master-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 35px 70px rgba(102,126,234,0.5);
+        }
+
+        .master-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+        .aux-btn {
+            padding: 12px 22px;
+            border-radius: 24px;
+            border: 1px solid var(--glass-border);
+            background: rgba(255,255,255,0.08);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .aux-btn:hover:not(:disabled) { border-color: var(--neon-cyan); }
+        .aux-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .transport {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-family: ui-monospace, monospace;
+        }
+
+        .transport-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .transport-btn:hover { background: var(--neon-cyan); color: #0a0a12; }
+
+        .time-display {
+            background: rgba(0,0,0,0.5);
+            padding: 10px 18px;
+            border-radius: 20px;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .distro-panel {
+            background: rgba(0,245,255,0.08);
+            border: 2px solid rgba(0,245,255,0.35);
+            border-radius: 20px;
+            padding: 16px;
+            flex: 1;
+            min-width: 240px;
+        }
+
+        .distro-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .distro-btn {
+            padding: 10px 14px;
+            border-radius: 16px;
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .distro-btn:hover { background: var(--neon-cyan); color: #0a0a12; }
+
+        .beat-zone.dragover { outline: 2px solid var(--neon-cyan); }
+
+        @media (max-width: 1200px) {
+            .app-container {
+                grid-template:
+                    "header" auto
+                    "main" 1fr
+                    "controls" auto
+                    / 1fr;
+            }
+            .sidebar, .video-panel { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <p class="studio-link"><a href="dieter-sdc420.html" id="moduleStudioLink">Module studio</a></p>
+    <p style="position:fixed;top:36px;right:16px;z-index:100;font-size:0.72rem;opacity:0.55;max-width:14rem;text-align:right;">
+        Backend: <code style="font-size:0.7rem;">?api=http://127.0.0.1:8890/api</code>
+    </p>
+
+    <div class="app-container">
+        <header class="header">
+            <div class="logo-main">Dieter Esq. · SDC420 XTREME</div>
+            <div class="status-bar">
+                <span id="bpmDisplay">120 BPM</span>
+                <span id="keyDisplay">Cm</span>
+                <span id="voiceDisplay">Man 1</span>
+                <span id="statusDisplay">Ready</span>
+            </div>
+        </header>
+
+        <aside class="sidebar">
+            <h3>Assistants</h3>
+            <button type="button" class="agent-card active" data-agent="lyricist" onclick="selectAgent('lyricist', this)">
+                <span class="agent-tag">LYRIC</span><br>
+                <strong>Lyricist</strong><br>
+                <small>Verse / hook / bridge</small>
+            </button>
+            <button type="button" class="agent-card" data-agent="mixer" onclick="selectAgent('mixer', this)">
+                <span class="agent-tag">MIX</span><br>
+                <strong>Mix</strong><br>
+                <small>EQ · dynamics · loudness</small>
+            </button>
+            <button type="button" class="agent-card" data-agent="video" onclick="selectAgent('video', this)">
+                <span class="agent-tag">VIDEO</span><br>
+                <strong>Video</strong><br>
+                <small>Sync to tempo</small>
+            </button>
+            <button type="button" class="agent-card" data-agent="distro" onclick="selectAgent('distro', this)">
+                <span class="agent-tag">OUT</span><br>
+                <strong>Distribution</strong><br>
+                <small>Platform links</small>
+            </button>
+        </aside>
+
+        <main class="main-workspace">
+            <div class="lyrics-panel">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
+                    <h3 style="font-size:1.1rem;">Lyrics</h3>
+                    <label style="font-size:0.8rem;opacity:0.85;">
+                        Voice
+                        <select id="voiceSelect" style="margin-left:8px;padding:8px 12px;border-radius:16px;border:1px solid var(--glass-border);background:var(--glass);color:white;">
+                            <option value="male" data-pitch-preset="male" data-vocal="Radio">Man 1 (120 Hz)</option>
+                            <option value="male" data-pitch-preset="male" data-vocal="Trap">Man 2 (110 Hz)</option>
+                            <option value="female" data-pitch-preset="female" data-vocal="Radio">Woman 1 (200 Hz)</option>
+                            <option value="female" data-pitch-preset="bright_female" data-vocal="Radio">Woman 2 (220 Hz)</option>
+                            <option value="neutral" data-pitch-preset="" data-vocal="Radio">Clone my voice</option>
+                        </select>
+                    </label>
+                </div>
+                <textarea class="lyrics-area" id="lyricsInput"
+                    placeholder="Write lyrics or use AI Lyrics…&#10;[VERSE] [CHORUS] [BRIDGE]"></textarea>
+                <div style="margin-top:10px;font-size:0.85rem;opacity:0.85;">
+                    <span id="charCount">0</span>/2000 ·
+                    <button type="button" class="distro-btn" onclick="generateLyrics()">AI lyrics</button>
+                </div>
+            </div>
+
+            <div class="daw-timeline">
+                <h3 style="margin-bottom:12px;font-size:1.05rem;">Timeline</h3>
+                <div class="timeline-tracks" id="timelineTracks"></div>
+                <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+                    <input type="file" id="beatFileInput" accept="audio/*" hidden>
+                    <div class="beat-zone distro-btn" id="beatDropZone" style="flex:1;min-width:120px;text-align:center;padding:14px;cursor:pointer;"
+                         ondrop="addBeat(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                        + Beat (drop or click)
+                    </div>
+                    <button type="button" class="distro-btn" style="flex:1;min-width:120px;" onclick="recordVoice()">Record</button>
+                    <button type="button" class="distro-btn" style="flex:1;min-width:120px;" onclick="addVideo()">Video track</button>
+                </div>
+            </div>
+        </main>
+
+        <div class="video-panel">
+            <h3 style="font-size:1.05rem;">Video sync</h3>
+            <div class="video-player">
+                <canvas class="video-canvas" id="videoCanvas" width="640" height="360"></canvas>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button type="button" class="distro-btn" onclick="generateVideo()">Animate</button>
+                <button type="button" class="distro-btn" onclick="exportVideo()">Export WebM note</button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="transport">
+                <button type="button" class="transport-btn" onclick="transportStop()" title="Stop">■</button>
+                <button type="button" class="transport-btn" onclick="transportPlay()" title="Play">▶</button>
+                <button type="button" class="transport-btn" onclick="transportRecord()" title="Record">●</button>
+                <div class="time-display" id="timeDisplay">00:00 / 00:00</div>
+            </div>
+
+            <button type="button" class="master-btn" id="masterBtn" onclick="createMaster()" disabled>Create master</button>
+            <button type="button" class="aux-btn" id="downloadBtn" onclick="downloadMaster()" disabled>Download</button>
+            <button type="button" class="aux-btn" id="shareBtn" onclick="shareStub()" disabled>Share</button>
+            <audio id="masterPreview" controls style="width:100%;max-width:520px;margin-top:10px;"></audio>
+
+            <div class="distro-panel">
+                <h4 style="margin-bottom:4px;font-size:0.95rem;">Distribution (opens web)</h4>
+                <div class="distro-grid">
+                    <button type="button" class="distro-btn" onclick="distribute('spotify')">Spotify</button>
+                    <button type="button" class="distro-btn" onclick="distribute('apple')">Apple</button>
+                    <button type="button" class="distro-btn" onclick="distribute('tiktok')">TikTok</button>
+                    <button type="button" class="distro-btn" onclick="distribute('napster')">Napster</button>
+                    <button type="button" class="distro-btn" onclick="shortenSong()">Shorten</button>
+                    <button type="button" class="distro-btn" onclick="addFade()">Fade</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let appState = {
+            isPlaying: false,
+            isRecording: false,
+            currentTime: 0,
+            duration: 0,
+            beatDurationSec: 45,
+            tracks: [],
+            lyrics: '',
+            bpm: 120,
+            activeAgent: 'lyricist',
+            beatFile: null,
+            masterBlobUrl: null,
+            _masterDownloadName: '',
+        };
+
+        let audioContext, analyser, mediaRecorder, canvasCtx;
+        let animationId;
+        let videoAnimId = null;
+
+        document.addEventListener('DOMContentLoaded', initStudio);
+
+        function getDieterApiBase() {
+            try {
+                const v = new URLSearchParams(window.location.search).get('api');
+                if (!v || !String(v).trim()) return null;
+                return String(v).trim().replace(/\/$/, '');
+            } catch {
+                return null;
+            }
+        }
+
+        function absoluteUrlFromApi(apiBase, path) {
+            if (!path) return '';
+            if (/^https?:\/\//i.test(path)) return path;
+            try {
+                const baseResolved = new URL(apiBase, window.location.origin);
+                return new URL(path, baseResolved.origin).href;
+            } catch {
+                return path;
+            }
+        }
+
+        function initStudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+            }
+            const ml = document.getElementById('moduleStudioLink');
+            if (ml && window.location.search) ml.setAttribute('href', 'dieter-sdc420.html' + window.location.search);
+
+            const beatIn = document.getElementById('beatFileInput');
+            const beatZ = document.getElementById('beatDropZone');
+            if (beatZ && beatIn) {
+                beatZ.addEventListener('click', (e) => {
+                    if (e.target === beatIn) return;
+                    beatIn.click();
+                });
+                beatIn.addEventListener('change', (e) => {
+                    const file = e.target.files && e.target.files[0];
+                    if (file && file.type.startsWith('audio/')) {
+                        ingestBeatFile(file);
+                    }
+                });
+            }
+
+            const canvas = document.getElementById('videoCanvas');
+            canvasCtx = canvas.getContext('2d');
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            const ta = document.getElementById('lyricsInput');
+            appState.lyrics = ta.value;
+            ta.addEventListener('input', function () {
+                appState.lyrics = this.value;
+                updateCharCount();
+                checkMasterReady();
+                analyzeLyricsFlow();
+            });
+
+            document.querySelectorAll('.beat-zone').forEach((zone) => {
+                zone.addEventListener('dragover', handleDragOver);
+                zone.addEventListener('dragleave', handleDragLeave);
+            });
+
+            document.getElementById('voiceSelect').addEventListener('change', (e) => {
+                document.getElementById('voiceDisplay').textContent = e.target.value.split('(')[0].trim();
+            });
+
+            updateCharCount();
+            addTrack('Vocals', 'Vox');
+            checkMasterReady();
+        }
+
+        function resizeCanvas() {
+            const canvas = document.getElementById('videoCanvas');
+            const parent = canvas.parentElement;
+            const w = parent.clientWidth || 640;
+            const h = Math.max(200, Math.round(w * 9 / 16));
+            canvas.width = w;
+            canvas.height = h;
+        }
+
+        function selectAgent(agent, el) {
+            appState.activeAgent = agent;
+            document.querySelectorAll('.agent-card').forEach((c) => c.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById('statusDisplay').textContent = 'Agent: ' + agent;
+        }
+
+        function generateLyrics() {
+            const genres = ['pop', 'hiphop', 'edm', 'rock', 'rnb'];
+            const genre = genres[Math.floor(Math.random() * genres.length)];
+            const lines = 10 + Math.floor(Math.random() * 6);
+            let lyrics = `[${genre.toUpperCase()} · AI draft]\n\n`;
+            for (let i = 0; i < lines; i++) {
+                const sec = i < 3 ? '[VERSE 1]\n' : i < 7 ? '[CHORUS]\n' : '[VERSE 2]\n';
+                if (i % 4 === 0 && i > 0) lyrics += '\n';
+                lyrics += sec + generateLine() + '\n';
+            }
+            document.getElementById('lyricsInput').value = lyrics;
+            appState.lyrics = lyrics;
+            updateCharCount();
+            checkMasterReady();
+        }
+
+        function generateLine() {
+            const pool = ['Feel the rhythm', 'Take it higher', 'Neon sky', 'Bass and soul', 'We do not slow down'];
+            return pool[Math.floor(Math.random() * pool.length)] + ' — tonight.';
+        }
+
+        function addTrack(name, icon) {
+            const tracks = document.getElementById('timelineTracks');
+            const trackId = 'track_' + Date.now();
+            const track = document.createElement('div');
+            track.className = 'track';
+            track.dataset.id = trackId;
+            track.innerHTML = `
+                <div class="track-handle"></div>
+                <div><strong>${icon}</strong> ${name}</div>
+                <div style="margin-left:auto;display:flex;gap:6px;">
+                    <button type="button" onclick="muteTrack('${trackId}')" style="padding:4px 10px;border-radius:8px;border:none;background:rgba(255,80,80,0.35);color:white;cursor:pointer;">M</button>
+                    <button type="button" onclick="soloTrack('${trackId}')" style="padding:4px 10px;border-radius:8px;border:none;background:rgba(80,255,120,0.35);color:white;cursor:pointer;">S</button>
+                </div>
+            `;
+            track.draggable = true;
+            track.ondragstart = (e) => e.dataTransfer.setData('text/plain', trackId);
+            tracks.appendChild(track);
+            appState.tracks.push({ id: trackId, name, volume: 1, muted: false, solo: false });
+        }
+
+        function ingestBeatFile(file) {
+            appState.beatFile = file;
+            analyzeAudioFile(file);
+            addTrack(file.name.substring(0, 18), 'Beat');
+            checkMasterReady();
+        }
+
+        function addBeat(e) {
+            e.preventDefault();
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('audio/')) {
+                ingestBeatFile(file);
+            }
+            e.currentTarget.classList.remove('dragover');
+        }
+
+        async function recordVoice() {
+            if (!appState.isRecording) {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                const chunks = [];
+                mediaRecorder.ondataavailable = (ev) => chunks.push(ev.data);
+                mediaRecorder.onstop = () => {
+                    addTrack('Voice ' + (appState.tracks.length + 1), 'Rec');
+                    checkMasterReady();
+                };
+                mediaRecorder.start();
+                appState.isRecording = true;
+                document.getElementById('statusDisplay').textContent = 'Recording…';
+            } else {
+                mediaRecorder.stop();
+                appState.isRecording = false;
+                document.getElementById('statusDisplay').textContent = 'Ready';
+            }
+        }
+
+        function addVideo() {
+            addTrack('Video lane', 'Vid');
+            document.getElementById('statusDisplay').textContent = 'Video track added (demo)';
+            checkMasterReady();
+        }
+
+        function analyzeAudioFile(file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const ab = ev.target.result.slice(0);
+                audioContext.decodeAudioData(ab).then((buffer) => {
+                    const bpm = detectBPM(buffer);
+                    appState.bpm = Math.round(bpm);
+                    document.getElementById('bpmDisplay').textContent = appState.bpm + ' BPM';
+                    appState.duration = buffer.duration;
+                    appState.beatDurationSec = Math.round(Math.min(240, Math.max(5, buffer.duration || 45)));
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function detectBPM(buffer) {
+            const data = buffer.getChannelData(0);
+            const peaks = [];
+            for (let i = 2000; i < data.length; i += 2000) {
+                if (data[i] > 0.28) peaks.push(i);
+            }
+            if (peaks.length < 2) return 120;
+            const avgInterval = (peaks[peaks.length - 1] - peaks[0]) / (peaks.length - 1);
+            return Math.min(190, Math.max(70, Math.round(60 / (avgInterval / buffer.sampleRate))));
+        }
+
+        function transportPlay() {
+            if (!appState.isPlaying) {
+                audioContext.resume();
+                appState.isPlaying = true;
+                updateTimeline();
+            }
+        }
+
+        function transportStop() {
+            appState.isPlaying = false;
+            if (animationId) cancelAnimationFrame(animationId);
+        }
+
+        function transportRecord() {
+            document.getElementById('statusDisplay').textContent = 'Use Record in timeline for mic capture';
+        }
+
+        function updateTimeline() {
+            if (!appState.isPlaying) return;
+            appState.currentTime += 1 / 60;
+            const minutes = Math.floor(appState.currentTime / 60);
+            const seconds = Math.floor(appState.currentTime % 60);
+            document.getElementById('timeDisplay').textContent =
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')} / ${formatTime(appState.duration)}`;
+            renderVideoFrame();
+            animationId = requestAnimationFrame(updateTimeline);
+        }
+
+        function voiceParamsFromSelect() {
+            const sel = document.getElementById('voiceSelect');
+            const opt = sel.options[sel.selectedIndex];
+            const vocal = (opt && opt.getAttribute('data-vocal')) || 'Radio';
+            const pitchPreset = (opt && opt.getAttribute('data-pitch-preset')) || '';
+            return { vocal_preset: vocal, pitch_preset: pitchPreset };
+        }
+
+        async function runPipelineMasterXtreme(apiBase) {
+            if (!appState.beatFile) throw new Error('No beat file');
+            const { vocal_preset, pitch_preset } = voiceParamsFromSelect();
+            const fd = new FormData();
+            fd.append('beat', appState.beatFile, appState.beatFile.name);
+            fd.append('lyrics', appState.lyrics || '');
+            fd.append('bpm', String(appState.bpm));
+            fd.append('duration_sec', String(Math.round(appState.beatDurationSec || 45)));
+            fd.append('vocal_preset', vocal_preset);
+            fd.append('pitch_semitones', '0');
+            if (pitch_preset) fd.append('pitch_preset', pitch_preset);
+
+            const res = await fetch(apiBase + '/pipeline/generate-master', { method: 'POST', body: fd });
+            if (!res.ok) {
+                let detail = res.status + ' ' + res.statusText;
+                try {
+                    const j = await res.json();
+                    if (typeof j.detail === 'string') detail = j.detail;
+                    else if (j.detail != null) detail = JSON.stringify(j.detail);
+                } catch {
+                    /* ignore */
+                }
+                throw new Error(detail);
+            }
+            const json = await res.json();
+            const masterAbs = absoluteUrlFromApi(apiBase, json.masterUrl);
+            if (!masterAbs) throw new Error('No masterUrl in response');
+            const audioRes = await fetch(masterAbs);
+            if (!audioRes.ok) throw new Error('Could not download mastered file');
+            const blob = await audioRes.blob();
+            if (appState.masterBlobUrl) URL.revokeObjectURL(appState.masterBlobUrl);
+            appState.masterBlobUrl = URL.createObjectURL(blob);
+            appState._masterDownloadName = 'dieter-esq-sdc420-xtreme-master.mp3';
+            document.getElementById('masterPreview').src = appState.masterBlobUrl;
+        }
+
+        async function createMaster() {
+            const btn = document.getElementById('masterBtn');
+            const statusEl = document.getElementById('statusDisplay');
+            btn.disabled = true;
+            btn.textContent = 'Mastering…';
+            statusEl.textContent = 'Processing…';
+
+            const apiBase = getDieterApiBase();
+            if (apiBase) {
+                try {
+                    await runPipelineMasterXtreme(apiBase);
+                    statusEl.textContent = 'Master ready (backend). MP3 in preview — download below.';
+                    btn.textContent = 'Create master';
+                    document.getElementById('downloadBtn').disabled = false;
+                    document.getElementById('shareBtn').disabled = false;
+                } catch (err) {
+                    const msg = err && err.message ? err.message : String(err);
+                    statusEl.textContent = 'API error: ' + msg;
+                    btn.textContent = 'Create master';
+                }
+                btn.disabled = false;
+                return;
+            }
+
+            await new Promise((r) => setTimeout(r, 3000));
+            generateMasterPreview();
+
+            btn.textContent = 'Create master';
+            statusEl.textContent = 'Demo beep only. Add ?api=http://127.0.0.1:8890/api for a real master.';
+            document.getElementById('downloadBtn').disabled = true;
+            document.getElementById('shareBtn').disabled = false;
+            btn.disabled = false;
+        }
+
+        function generateMasterPreview() {
+            const ctx = new AudioContext();
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.connect(g);
+            g.connect(ctx.destination);
+            o.frequency.setValueAtTime(220, ctx.currentTime);
+            g.gain.setValueAtTime(0.15, ctx.currentTime);
+            o.start();
+            o.stop(ctx.currentTime + 2);
+        }
+
+        function downloadMaster() {
+            if (!appState.masterBlobUrl) return;
+            const a = document.createElement('a');
+            a.href = appState.masterBlobUrl;
+            a.download = appState._masterDownloadName || 'dieter-esq-master.mp3';
+            a.click();
+        }
+
+        function shareStub() {
+            const t = `Dieter Esq. · ${appState.bpm} BPM · ${appState.tracks.length} tracks`;
+            navigator.clipboard.writeText(t).then(
+                () => alert('Copied: ' + t),
+                () => prompt('Copy:', t),
+            );
+        }
+
+        function distribute(platform) {
+            const urls = {
+                spotify: 'https://artists.spotify.com',
+                apple: 'https://music.apple.com',
+                tiktok: 'https://www.tiktok.com/music',
+                napster: 'https://artists.napster.com',
+            };
+            window.open(urls[platform], '_blank', 'noopener,noreferrer');
+        }
+
+        function shortenSong() {
+            appState.duration = Math.max(15, (appState.duration || 120) * 0.7);
+            alert('Demo: duration set to ' + formatTime(appState.duration));
+        }
+
+        function addFade() {
+            alert('Demo: fade would run in your DAW / FFmpeg pipeline.');
+        }
+
+        function generateVideo() {
+            const canvas = document.getElementById('videoCanvas');
+            const ctx = canvasCtx;
+            if (videoAnimId) cancelAnimationFrame(videoAnimId);
+            function animate() {
+                ctx.fillStyle = 'rgba(0,0,0,0.15)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                const n = Math.max(4, Math.floor(appState.bpm / 28));
+                for (let i = 0; i < n; i++) {
+                    ctx.fillStyle = `hsl(${(Date.now() / 20) % 360}, 70%, 55%)`;
+                    ctx.beginPath();
+                    ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() * 8 + 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                videoAnimId = requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        function exportVideo() {
+            alert('Use MediaRecorder + canvas.captureStream() in your app to export WebM, or the Dieter Esq. React visual export.');
+        }
+
+        function renderVideoFrame() {
+            if (!analyser) return;
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyser.getByteFrequencyData(dataArray);
+        }
+
+        function updateCharCount() {
+            document.getElementById('charCount').textContent = document.getElementById('lyricsInput').value.length;
+        }
+
+        function checkMasterReady() {
+            const lyrics = (appState.lyrics || '').trim().length > 0;
+            const hasBeat = !!appState.beatFile;
+            document.getElementById('masterBtn').disabled = !(lyrics && hasBeat);
+        }
+
+        function formatTime(seconds) {
+            if (!isFinite(seconds) || seconds <= 0) return '00:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${String(secs).padStart(2, '0')}`;
+        }
+
+        function analyzeLyricsFlow() {
+            const lyrics = appState.lyrics || '';
+            const sections = lyrics.match(/\[([^\]]+)\]/g) || [];
+            if (sections.length) console.log('Sections:', sections.join(', '));
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('dragover');
+        }
+
+        function muteTrack(trackId) {
+            const t = appState.tracks.find((x) => x.id === trackId);
+            if (t) t.muted = !t.muted;
+        }
+
+        function soloTrack(trackId) {
+            appState.tracks.forEach((t) => {
+                t.solo = t.id === trackId;
+                t.muted = !t.solo;
+            });
+        }
+    </script>
+</body>
+</html>

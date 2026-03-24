@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Transparent Wealth – Solar Console Pro</title>
+    <style>
+      :root {
+        --sun: #ffaa00;
+        --sun2: #ffcc4d;
+        --bg: #f4f4f4;
+        --card: #ffffff;
+        --text: #151515;
+        --muted: #5d6672;
+        --bd: #e6e6e6;
+        --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        --radius: 14px;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        margin: 0;
+        background: radial-gradient(900px 520px at 20% 0%, rgba(255, 170, 0, 0.18), rgba(244, 244, 244, 1));
+        color: var(--text);
+      }
+
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: rgba(244, 244, 244, 0.75);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      }
+
+      .wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 18px 16px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 18px;
+        letter-spacing: 0.02em;
+      }
+
+      .sub {
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      button,
+      select,
+      input {
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(0, 0, 0, 0.12);
+        background: rgba(255, 255, 255, 0.8);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+        font-size: 13px;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      button.primary {
+        background: linear-gradient(180deg, var(--sun2), var(--sun));
+        border-color: rgba(0, 0, 0, 0.08);
+        font-weight: 650;
+      }
+
+      main .wrap {
+        padding-top: 16px;
+        padding-bottom: 26px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 14px;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 14px;
+      }
+
+      .metrics {
+        grid-column: span 12;
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 12px;
+      }
+
+      .metric {
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        border-radius: 14px;
+        padding: 12px;
+        background: linear-gradient(180deg, rgba(255, 170, 0, 0.12), rgba(255, 255, 255, 0.9));
+      }
+
+      .metric .label {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .metric .value {
+        margin-top: 6px;
+        font-size: 22px;
+        font-weight: 750;
+        letter-spacing: 0.02em;
+        color: #a55f00;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .metric .note {
+        margin-top: 6px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .col-4 {
+        grid-column: span 4;
+      }
+      .col-6 {
+        grid-column: span 6;
+      }
+      .col-8 {
+        grid-column: span 8;
+      }
+      .col-12 {
+        grid-column: span 12;
+      }
+
+      h2 {
+        margin: 0 0 10px;
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #2a2f36;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      th,
+      td {
+        padding: 10px 10px;
+        text-align: left;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        font-size: 13px;
+      }
+      th {
+        background: rgba(255, 170, 0, 0.12);
+        color: #3a2b12;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        background: rgba(255, 255, 255, 0.7);
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #9aa3ad;
+      }
+      .dot.good {
+        background: #2ecc71;
+      }
+      .dot.warn {
+        background: #f39c12;
+      }
+      .dot.info {
+        background: #3498db;
+      }
+
+      .barRow {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .bar {
+        display: grid;
+        grid-template-columns: 140px 1fr 48px;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+      }
+      .bar .name {
+        color: #2a2f36;
+      }
+      .barTrack {
+        height: 10px;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+      }
+      .barFill {
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--sun), #ff6f00);
+        width: 0%;
+      }
+      .bar .count {
+        text-align: right;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+      .mono {
+        font-family: var(--mono);
+        font-variant-numeric: tabular-nums;
+      }
+
+      footer {
+        margin-top: 18px;
+        padding: 16px 0 28px;
+        text-align: center;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      @media (max-width: 1020px) {
+        .metrics {
+          grid-template-columns: repeat(3, 1fr);
+        }
+        .col-8,
+        .col-6,
+        .col-4 {
+          grid-column: span 12;
+        }
+      }
+      @media (max-width: 560px) {
+        .metrics {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap">
+        <div class="topbar">
+          <div>
+            <h1>Transparent Wealth – Solar Console Pro</h1>
+            <div class="sub">
+              Portfolio overview • Filters • Export • No backend (edit data in <span class="mono">solar-console-pro.js</span>)
+            </div>
+          </div>
+          <div class="actions">
+            <span class="pill"><span class="dot info"></span><span id="lastUpdated">Last updated: —</span></span>
+            <select id="statusFilter" title="Filter status">
+              <option value="ALL">Status: ALL</option>
+            </select>
+            <select id="cityFilter" title="Filter city">
+              <option value="ALL">City: ALL</option>
+            </select>
+            <input id="q" placeholder="Search properties…" />
+            <button class="primary" id="exportJson" type="button">Export JSON</button>
+            <button id="exportCsv" type="button">Export CSV</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div class="wrap">
+        <div class="grid">
+          <section class="metrics">
+            <div class="metric">
+              <div class="label">Total Properties</div>
+              <div class="value" id="mTotalProps">—</div>
+              <div class="note" id="mActiveCompleted">—</div>
+            </div>
+            <div class="metric">
+              <div class="label">Active Clients</div>
+              <div class="value" id="mClients">—</div>
+              <div class="note" id="mClientNote">—</div>
+            </div>
+            <div class="metric">
+              <div class="label">Total Investment</div>
+              <div class="value" id="mInvestment">—</div>
+              <div class="note">Across all projects</div>
+            </div>
+            <div class="metric">
+              <div class="label">Avg Model IRR</div>
+              <div class="value" id="mIrr">—</div>
+              <div class="note">Portfolio average</div>
+            </div>
+            <div class="metric">
+              <div class="label">Avg Daily Load</div>
+              <div class="value" id="mLoad">—</div>
+              <div class="note">kWh/day across sites</div>
+            </div>
+            <div class="metric">
+              <div class="label">Active Cities</div>
+              <div class="value" id="mCities">—</div>
+              <div class="note">Across South Africa</div>
+            </div>
+          </section>
+
+          <section class="card col-4">
+            <h2>Properties by Type</h2>
+            <div class="barRow" id="byType"></div>
+          </section>
+
+          <section class="card col-4">
+            <h2>Properties by Status</h2>
+            <div class="barRow" id="byStatus"></div>
+          </section>
+
+          <section class="card col-4">
+            <h2>Client Segments</h2>
+            <div class="barRow" id="bySegment"></div>
+          </section>
+
+          <section class="card col-6">
+            <h2>Cities & Regions</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>City</th>
+                  <th>Properties</th>
+                </tr>
+              </thead>
+              <tbody id="citiesBody"></tbody>
+            </table>
+          </section>
+
+          <section class="card col-6">
+            <h2>Project Status</h2>
+            <div class="metrics" style="grid-template-columns: repeat(3, 1fr); grid-column: span 12">
+              <div class="metric">
+                <div class="label">Completed Projects</div>
+                <div class="value" id="mCompleted">—</div>
+              </div>
+              <div class="metric">
+                <div class="label">In Progress</div>
+                <div class="value" id="mInProgress">—</div>
+              </div>
+              <div class="metric">
+                <div class="label">Total NPV</div>
+                <div class="value" id="mNpv">—</div>
+              </div>
+            </div>
+            <div class="sub" style="margin-top: 10px">
+              Tip: exports include the filtered “Recent Properties” view too.
+            </div>
+          </section>
+
+          <section class="card col-12">
+            <h2>Recent Properties</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Property</th>
+                  <th>City • Type</th>
+                  <th>Daily Load</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="recentBody"></tbody>
+            </table>
+            <div class="sub" id="recentCount" style="margin-top: 10px">—</div>
+          </section>
+        </div>
+
+        <footer>
+          Transparent Wealth Solar Console Pro • v1.0 • Static HTML/CSS + a small JS data layer
+        </footer>
+      </div>
+    </main>
+
+    <script type="module" src="./solar-console-pro.js"></script>
+  </body>
+</html>
+

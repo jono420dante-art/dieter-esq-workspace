@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!--
+  DIETER PRO × Mureka bridge — AI music studio, library sync, import/export.
+  Keywords: DIETER PRO, Mureka AI, AI music generator, studio, lyrics, library, API bridge.
+  Partner / deep link: https://www.mureka.ai/
+-->
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="theme-color" content="#06060c"/>
+<meta name="description" content="DIETER PRO — Professional Music Production Platform with Mureka AI bridge, library sync, and studio tools"/>
+<meta name="keywords" content="DIETER PRO, Mureka AI, AI music, music studio, lyrics, library sync, beat detection, video engine"/>
+<title>DIETER PRO — Platform</title>
+<link rel="stylesheet" href="css/platform.css"/>
+<link rel="preconnect" href="https://ws.audioscrobbler.com"/>
+</head>
+<body>
+<canvas id="stars" aria-hidden="true"></canvas>
+
+<div class="app" id="app">
+  <!-- ═══════════ SIDEBAR ═══════════ -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sb-logo">
+      <div class="sb-icon">D</div>
+      <div class="sb-brand">
+        <div class="sb-name">DIETER PRO</div>
+        <div class="sb-sub">PLATFORM</div>
+      </div>
+    </div>
+
+    <div class="sb-nav" id="sbnav"></div>
+
+    <div class="sb-footer">
+      <div class="sb-license" id="sb-license">Licensed to <strong>EDUARD GEERDES</strong></div>
+      <div class="sb-unlimited"><span class="pulse-dot"></span> UNLIMITED</div>
+      <div class="sb-wifi" id="wifi-status">
+        <span class="wifi-dot" id="wifi-dot"></span>
+        <span id="wifi-label">Checking...</span>
+      </div>
+      <div class="sb-perf" id="perf-display">
+        <span id="fps-display">-- FPS</span>
+        <span id="mem-display">-- MB</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══════════ MAIN ═══════════ -->
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="sb-toggle" id="sb-toggle" aria-label="Toggle sidebar">☰</button>
+        <h1 class="topbar-title" id="topbar-title">Home</h1>
+      </div>
+      <div class="topbar-right">
+      <div class="top-badge soldiers" id="soldier-badge">All OK</div>
+      <div class="top-badge live" id="engine-badge"><span class="pulse-dot"></span> Engine</div>
+      <div class="top-badge network" id="network-badge">Online</div>
+      </div>
+    </header>
+
+    <div class="page-container" id="page-container">
+      <section class="page active" id="page-home" data-title="Home"></section>
+      <section class="page" id="page-lyrics" data-title="Lyrics Studio"></section>
+      <section class="page" id="page-create" data-title="Create Music"></section>
+      <section class="page" id="page-mixer" data-title="Mix & Master"></section>
+      <section class="page" id="page-beats" data-title="Beat Detection"></section>
+      <section class="page" id="page-library" data-title="My Tracks"></section>
+      <section class="page" id="page-previews" data-title="Preview & Play"></section>
+      <section class="page" id="page-trending" data-title="Trending"></section>
+      <section class="page" id="page-news" data-title="Live News"></section>
+      <section class="page" id="page-portals" data-title="Distribution Portals"></section>
+      <section class="page" id="page-video" data-title="Video Engine"></section>
+      <section class="page" id="page-social" data-title="Social Media"></section>
+      <section class="page" id="page-mureka" data-title="Mureka AI"></section>
+      <section class="page" id="page-covers" data-title="Album Covers"></section>
+      <section class="page" id="page-soldiers" data-title="Task Soldiers"></section>
+    </div>
+  </main>
+</div>
+
+<!-- Error overlay -->
+<div class="error-overlay" id="error-overlay" hidden>
+  <div class="error-box">
+    <div class="error-title">⚠ Something went wrong</div>
+    <div class="error-msg" id="error-msg"></div>
+    <button class="btn btn-primary" onclick="document.getElementById('error-overlay').hidden=true">Dismiss</button>
+    <button class="btn btn-ghost" onclick="location.reload()">Reload</button>
+  </div>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

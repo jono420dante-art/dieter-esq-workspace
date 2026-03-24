@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dieter Tower</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: radial-gradient(1200px 800px at 30% 20%, #182033, #070a12);
+        color: #e7eaf3;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      }
+      #app {
+        height: 100%;
+      }
+      .hud {
+        position: fixed;
+        left: 16px;
+        top: 16px;
+        display: grid;
+        gap: 10px;
+        padding: 12px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 12px;
+        background: rgba(10, 12, 20, 0.55);
+        backdrop-filter: blur(8px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+        max-width: min(420px, calc(100vw - 32px));
+      }
+      .hud h1 {
+        font-size: 14px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin: 0;
+        opacity: 0.9;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 120px 1fr 56px;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+      }
+      .row label {
+        opacity: 0.9;
+      }
+      .row input[type="range"] {
+        width: 100%;
+      }
+      .val {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        opacity: 0.9;
+      }
+      .hint {
+        font-size: 12px;
+        opacity: 0.8;
+        line-height: 1.35;
+      }
+      .hint kbd {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .status {
+        position: fixed;
+        right: 16px;
+        top: 16px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(10, 12, 20, 0.45);
+        backdrop-filter: blur(8px);
+        font-size: 12px;
+        opacity: 0.9;
+      }
+      a {
+        color: #b7d3ff;
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      .fallback {
+        display: none;
+        position: fixed;
+        inset: 0;
+        align-content: center;
+        justify-items: center;
+        padding: 28px;
+        text-align: center;
+      }
+      .fallback p {
+        max-width: 560px;
+        opacity: 0.9;
+        line-height: 1.45;
+      }
+      .fallback code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <div class="hud">
+      <h1>Dieter Tower</h1>
+      <div class="row">
+        <label for="floors">Floors</label>
+        <input id="floors" type="range" min="8" max="120" step="1" value="56" />
+        <div class="val" id="floorsVal">56</div>
+      </div>
+      <div class="row">
+        <label for="radius">Radius</label>
+        <input id="radius" type="range" min="3" max="18" step="0.5" value="9" />
+        <div class="val" id="radiusVal">9.0</div>
+      </div>
+      <div class="row">
+        <label for="twist">Twist</label>
+        <input id="twist" type="range" min="0" max="120" step="1" value="28" />
+        <div class="val" id="twistVal">28°</div>
+      </div>
+      <div class="row">
+        <label for="taper">Taper</label>
+        <input id="taper" type="range" min="0" max="0.75" step="0.01" value="0.28" />
+        <div class="val" id="taperVal">0.28</div>
+      </div>
+      <div class="hint">
+        Drag to orbit. Scroll to zoom. Pan with <kbd>Shift</kbd> + drag.
+        If you opened this from disk and it’s blank, use the local server below.
+      </div>
+      <div class="row" style="grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px">
+        <button id="exportGlb" type="button" style="padding: 10px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.06); color: inherit; cursor: pointer;">
+          Export GLB
+        </button>
+        <button id="exportObj" type="button" style="padding: 10px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.06); color: inherit; cursor: pointer;">
+          Export OBJ
+        </button>
+      </div>
+      <div class="hint" id="exportStatus" style="min-height: 1.35em"></div>
+    </div>
+
+    <div class="status" id="status">
+      Run locally with <code>python -m http.server 5173</code> and open
+      <a href="http://localhost:5173/dieter-tower.html">localhost:5173/dieter-tower.html</a>
+    </div>
+
+    <div class="fallback" id="fallback">
+      <h2>Couldn’t start the 3D scene</h2>
+      <p>
+        If the 3D scene can’t load (often due to blocked downloads), start a local server in this folder, then open
+        <code>http://localhost:5173/dieter-tower.html</code>.
+      </p>
+      <p>
+        If you don’t have Python, tell me what you do have (Node, PHP, etc.) and I’ll tailor the server command.
+      </p>
+      <p class="hint" id="errText" style="max-width: 760px; white-space: pre-wrap"></p>
+    </div>
+
+    <script type="module">
+      const fb = document.getElementById("fallback");
+      const errText = document.getElementById("errText");
+      const show = (err) => {
+        if (fb) fb.style.display = "grid";
+        if (errText) errText.textContent = String(err && (err.stack || err.message) ? (err.stack || err.message) : err);
+      };
+      window.addEventListener("error", (e) => show(e.error || e.message || e));
+      window.addEventListener("unhandledrejection", (e) => show(e.reason || e));
+
+      try {
+        await import("./dieter-tower.js");
+      } catch (e) {
+        show(e);
+      }
+    </script>
+  </body>
+</html>
+

@@ -1,0 +1,15 @@
+# Render Blueprint (repository root) — see dieter-backend/DEPLOY_RENDER.md
+services:
+  - type: web
+    name: dieter-beat-lab
+    runtime: docker
+    region: oregon
+    plan: starter
+    dockerfilePath: ./dieter-backend/Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: WEB_CONCURRENCY
+        value: "2"
+      - key: DIETER_AUDIO_ENGINE
+        value: procedural

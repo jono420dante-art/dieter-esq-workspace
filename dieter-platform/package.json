@@ -1,0 +1,13 @@
+{
+  "name": "dieter-platform",
+  "private": true,
+  "scripts": {
+    "build": "echo Static site — no build step needed",
+    "deploy": "vercel --prod",
+    "deploy:preview": "vercel",
+    "generate:image": "node ./scripts/generate-image.mjs"
+  },
+  "dependencies": {
+    "replicate": "^1.4.0"
+  }
+}

@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DIETER — Studio Prototype</title>
+    <meta name="theme-color" content="#070a12" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="app" class="page" data-route="studio">
+      <canvas id="universeCanvas" class="universeCanvas" aria-hidden="true"></canvas>
+      <header class="topbar">
+        <div class="topbar__left">
+          <a class="brand" href="#/studio" aria-label="DIETER home">
+            <span class="brand__mark">DIETER</span>
+            <span class="brand__sub">AI Studio</span>
+          </a>
+          <nav class="nav" aria-label="Primary">
+            <a class="nav__link" href="#/studio" data-nav="studio">Studio</a>
+            <a class="nav__link" href="#/video" data-nav="video">Video Sync</a>
+            <a class="nav__link" href="#/workshop" data-nav="workshop">Workshop</a>
+            <a class="nav__link" href="#/library" data-nav="library">Library</a>
+            <a class="nav__link" href="#/publish" data-nav="publish">Publish</a>
+            <a class="nav__link" href="#/director" data-nav="director">AI Director</a>
+          </nav>
+        </div>
+
+        <div class="topbar__right">
+          <button class="btn btn--ghost" id="btnUniverse" type="button" title="Toggle universe background">
+            Universe
+          </button>
+          <button class="btn btn--ghost" id="btnTheme" type="button" title="Toggle glow">
+            Glow
+          </button>
+          <button class="btn" id="btnNew" type="button">New Project</button>
+        </div>
+      </header>
+
+      <main class="shell" role="main">
+        <section class="hero panel">
+          <div class="hero__copy">
+            <div class="pill" id="routePill">Studio</div>
+            <h1 class="hero__title" id="routeTitle">Write. Generate. Mix. Export.</h1>
+            <p class="hero__subtitle" id="routeSubtitle">
+              A futuristic home studio with AI structure planning, expressive voices, and a clean DAW.
+            </p>
+          </div>
+          <div class="hero__actions">
+            <div class="thought panel panel--soft">
+              <label class="thought__label" for="prompt">Thought bubble</label>
+              <textarea
+                id="prompt"
+                class="thought__input"
+                placeholder="Write lyrics, a poem, or a mood… (e.g., “Afrikaans electro, hopeful hook, 128bpm”)"
+              ></textarea>
+              <div class="thought__row">
+                <div class="chipRow" aria-label="Quick settings">
+                  <button class="chip" type="button" data-chip="genre">Genre</button>
+                  <button class="chip" type="button" data-chip="bpm">BPM</button>
+                  <button class="chip" type="button" data-chip="voice">Voice</button>
+                  <button class="chip" type="button" data-chip="lang">Language</button>
+                </div>
+                <div class="thought__cta">
+                  <button class="btn btn--ghost" id="btnExpand" type="button">Expand</button>
+                  <button class="btn btn--primary" id="btnGenerate" type="button">Generate</button>
+                </div>
+              </div>
+              <div class="status" id="status">Ready.</div>
+              <div id="builderMount" class="builderMount"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="routeMount" class="routeMount"></section>
+      </main>
+
+      <footer class="footer">
+        <span>DIETER Prototype • Local-only UI shell</span>
+        <span class="footer__sep">•</span>
+        <span>Backgrounds change per page</span>
+      </footer>
+    </div>
+
+    <div class="editorModal" id="editorModal" aria-hidden="true">
+      <div class="editorModal__card panel">
+        <div class="editorModal__top">
+          <div class="pill">Full writer</div>
+          <div class="editorModal__actions">
+            <button class="btn btn--ghost" id="btnCloseEditor" type="button">Close</button>
+          </div>
+        </div>
+        <textarea id="promptBig" class="editorModal__textarea" placeholder="Write the full song here…"></textarea>
+        <div class="editorModal__bottom">
+          <div class="hint">Tip: Ctrl/Cmd + Enter generates.</div>
+          <div class="btnRow">
+            <button class="btn btn--ghost" id="btnCopyToSmall" type="button">Copy to Studio</button>
+            <button class="btn btn--primary" id="btnGenerateBig" type="button">Generate</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="editorModal" id="lyricsModal" aria-hidden="true">
+      <div class="editorModal__card panel">
+        <div class="editorModal__top">
+          <div class="pill">Lyrics writer</div>
+          <div class="editorModal__actions">
+            <button class="btn btn--ghost" id="btnCloseLyrics" type="button">Close</button>
+          </div>
+        </div>
+        <textarea id="lyricsBig" class="editorModal__textarea" placeholder="Write your lyrics here… (Verse / Hook / Bridge)"></textarea>
+        <div class="editorModal__bottom">
+          <div class="hint">Tip: Ctrl/Cmd + Enter generates.</div>
+          <div class="btnRow">
+            <button class="btn btn--ghost" id="btnCopyLyricsToStudio" type="button">Copy to Studio</button>
+            <button class="btn btn--primary" id="btnGenerateLyrics" type="button">Generate</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="editorModal" id="settingsModal" aria-hidden="true">
+      <div class="editorModal__card panel" style="height: min(620px, 88vh);">
+        <div class="editorModal__top">
+          <div class="pill" id="settingsTitle">Quick settings</div>
+          <div class="editorModal__actions">
+            <button class="btn btn--ghost" id="btnCloseSettings" type="button">Close</button>
+          </div>
+        </div>
+
+        <div class="panel panel--soft card" style="height: 100%; overflow: auto;">
+          <div class="field">
+            <div class="label">Genre / Style</div>
+            <div class="chipRow" id="settingsStyle"></div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="subRow">
+            <div class="field">
+              <div class="label">BPM</div>
+              <input class="input" id="settingsBpm" type="number" min="40" max="240" value="128" />
+              <div class="hint">Tip: you can also type “128bpm” in the prompt.</div>
+            </div>
+            <div class="field">
+              <div class="label">Mood</div>
+              <div class="chipRow" id="settingsMood"></div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="subRow">
+            <div class="field">
+              <div class="label">Language</div>
+              <div class="chipRow" id="settingsLang"></div>
+            </div>
+            <div class="field">
+              <div class="label">Vocal preset</div>
+              <div class="chipRow" id="settingsVocal"></div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="subRow">
+            <div class="field">
+              <div class="label">Vocal mode</div>
+              <div class="chipRow compact" id="settingsVocalMode"></div>
+              <div class="hint">Singing stem is rendered by the backend. Live voice uses your device voices.</div>
+            </div>
+            <div class="field">
+              <div class="label">Live voice (device)</div>
+              <select class="input" id="settingsLiveVoice"></select>
+              <div class="hint">Pick a system voice to audition/perform your lyrics on-beat.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="editorModal__bottom">
+          <div class="hint">These settings apply to Studio Generate.</div>
+          <div class="btnRow">
+            <button class="btn btn--ghost" id="btnResetSettings" type="button">Reset</button>
+            <button class="btn btn--primary" id="btnSaveSettings" type="button">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("./sw.js").catch(() => {});
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SDC420 XTREME — Dieter Local</title>
+  <!-- Open: http://localhost:5173/sdc420-xtreme.html  —  API: ?api=http://127.0.0.1:8890/api -->
+  <style>
+    :root {
+      --bg: #0a0a12;
+      --card: rgba(255,255,255,0.06);
+      --border: rgba(0,212,255,0.35);
+      --accent: #00d4ff;
+      --text: #f4f4f5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; font-family: system-ui, sans-serif;
+      background: linear-gradient(160deg, #0f0f23, #1a1025 50%, #0a1628);
+      color: var(--text); padding: 1.25rem;
+    }
+    h1 { font-size: 1.5rem; margin: 0 0 0.25rem; letter-spacing: 0.08em; }
+    .sub { opacity: 0.7; font-size: 0.85rem; margin-bottom: 1rem; }
+    .api-line { font-size: 0.75rem; opacity: 0.55; margin-bottom: 1rem; word-break: break-all; }
+    .panel {
+      max-width: 560px; margin: 0 auto;
+      padding: 1.25rem; border-radius: 16px;
+      background: var(--card); border: 1px solid var(--border);
+    }
+    label { display: block; font-size: 0.8rem; margin: 0.75rem 0 0.35rem; color: #a5b4fc; }
+    select, textarea, .btn {
+      width: 100%; padding: 0.65rem 0.75rem; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.35);
+      color: var(--text); font-size: 0.95rem;
+    }
+    textarea { min-height: 120px; resize: vertical; }
+    .pitch-row { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.35rem; }
+    input[type="range"] { flex: 1; accent-color: var(--accent); }
+    .pitch-val { font-size: 0.85rem; min-width: 4rem; text-align: right; font-variant-numeric: tabular-nums; }
+    .drop {
+      border: 2px dashed rgba(0,212,255,0.4); border-radius: 12px; padding: 1rem;
+      text-align: center; cursor: pointer; font-size: 0.85rem; margin-top: 0.5rem;
+    }
+    .drop:hover { border-color: var(--accent); background: rgba(0,212,255,0.06); }
+    .btn-primary {
+      margin-top: 1rem; font-weight: 800; letter-spacing: 0.06em;
+      cursor: pointer; background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+      border: none; padding: 0.9rem 1rem;
+    }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+    #status { margin-top: 0.85rem; font-size: 0.85rem; line-height: 1.45; white-space: pre-wrap; }
+    audio { width: 100%; margin-top: 0.75rem; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <h1>SDC420 XTREME</h1>
+    <p class="sub">Procedural vocal (local) — multipart API</p>
+    <p class="api-line" id="apiLine"></p>
+
+    <label for="voicePick">Voice</label>
+    <select id="voicePick"></select>
+
+    <label for="pitchSlider">Pitch shift</label>
+    <div class="pitch-row">
+      <input type="range" id="pitchSlider" min="-12" max="12" step="0.5" value="0" />
+      <span class="pitch-val" id="pitchVal">0 st</span>
+    </div>
+
+    <label for="lyricsInput">Lyrics</label>
+    <textarea id="lyricsInput" placeholder="Your line…"></textarea>
+
+    <label>Beat (optional — for BPM + duration from file)</label>
+    <div class="drop" id="beatDrop">
+      Drag MP3 / WAV here or click<br />
+      <span id="beatName" style="opacity:0.75"></span>
+    </div>
+    <input type="file" id="beatInput" accept="audio/*" hidden />
+
+    <button type="button" class="btn btn-primary" id="generateBtn">🚀 CREATE MASTER</button>
+    <div id="status"></div>
+    <audio id="preview" controls style="display:none"></audio>
+  </div>
+
+  <script>
+    (function () {
+      function resolveApiBase() {
+        var q = new URLSearchParams(location.search).get('api');
+        if (q) return q.replace(/\/$/, '');
+        if (localStorage.getItem('dieterApiBase')) return localStorage.getItem('dieterApiBase').replace(/\/$/, '');
+        if (location.port === '5173' || location.port === '') return '/api';
+        return 'http://127.0.0.1:8890/api';
+      }
+
+      var API_BASE = resolveApiBase();
+      document.getElementById('apiLine').textContent = 'API: ' + API_BASE + '/local/procedural-vocal-layer-form';
+
+      var VOICES = [
+        { id: 'male1', label: 'Male 1' },
+        { id: 'male2', label: 'Male 2' },
+        { id: 'male3', label: 'Male 3' },
+        { id: 'female1', label: 'Female 1' },
+        { id: 'female2', label: 'Female 2' },
+        { id: 'female3', label: 'Female 3' },
+      ];
+
+      var state = {
+        selectedVoice: VOICES[1],
+        pitchShift: 0,
+        beatFile: null,
+      };
+
+      var sel = document.getElementById('voicePick');
+      VOICES.forEach(function (v) {
+        var o = document.createElement('option');
+        o.value = v.id;
+        o.textContent = v.label;
+        sel.appendChild(o);
+      });
+      sel.value = state.selectedVoice.id;
+      sel.onchange = function () {
+        state.selectedVoice = VOICES.find(function (x) { return x.id === sel.value; }) || VOICES[0];
+      };
+
+      var pitchSlider = document.getElementById('pitchSlider');
+      var pitchVal = document.getElementById('pitchVal');
+      pitchSlider.oninput = function () {
+        state.pitchShift = parseFloat(pitchSlider.value);
+        var s = state.pitchShift > 0 ? '+' : '';
+        pitchVal.textContent = s + state.pitchShift + ' st';
+      };
+
+      var beatInput = document.getElementById('beatInput');
+      var beatDrop = document.getElementById('beatDrop');
+      var beatName = document.getElementById('beatName');
+      beatDrop.onclick = function () { beatInput.click(); };
+      beatInput.onchange = function () {
+        var f = beatInput.files && beatInput.files[0];
+        state.beatFile = f || null;
+        beatName.textContent = f ? f.name : '';
+      };
+      beatDrop.ondragover = function (e) { e.preventDefault(); };
+      beatDrop.ondrop = function (e) {
+        e.preventDefault();
+        var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (f && (f.type.indexOf('audio/') === 0 || /\.(mp3|wav|flac|ogg|m4a)$/i.test(f.name))) {
+          state.beatFile = f;
+          beatName.textContent = f.name;
+        }
+      };
+
+      function storageOrigin() {
+        if (API_BASE.indexOf('http') === 0) {
+          try { return new URL(API_BASE).origin; } catch (e) { return window.location.origin; }
+        }
+        return window.location.origin;
+      }
+
+      async function parseHttpError(res) {
+        var t = await res.text();
+        try {
+          var j = JSON.parse(t);
+          var d = j.detail;
+          if (typeof d === 'string') return d;
+          if (Array.isArray(d)) return d.map(function (x) { return x.msg || JSON.stringify(x); }).join('; ');
+          if (d != null) return String(d);
+        } catch (e) { /* ignore */ }
+        return t || res.statusText;
+      }
+
+      document.getElementById('generateBtn').onclick = async function () {
+        var btn = this;
+        var statusEl = document.getElementById('status');
+        var audioEl = document.getElementById('preview');
+        var lyrics = document.getElementById('lyricsInput').value.trim();
+        if (!lyrics) {
+          statusEl.textContent = '❌ Add lyrics first.';
+          return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = '🎵 Processing...';
+        statusEl.textContent = '';
+        audioEl.style.display = 'none';
+        audioEl.removeAttribute('src');
+
+        var formData = new FormData();
+        formData.append('voice_id', state.selectedVoice.id);
+        formData.append('pitchSemitones', String(state.pitchShift));
+        formData.append('lyrics', lyrics);
+        if (state.beatFile) formData.append('beat_file', state.beatFile);
+
+        try {
+          // Must use multipart route — NOT /procedural-vocal-layer (JSON only)
+          var response = await fetch(API_BASE + '/local/procedural-vocal-layer-form', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            const errText = await parseHttpError(response);
+            throw new Error(errText || 'API failed');
+          }
+
+          const result = await response.json();
+          statusEl.textContent =
+            '✅ Generated: ' + (result.voice_id || state.selectedVoice.id) +
+            ' @ ' + (result.pitchSemitones != null ? result.pitchSemitones : state.pitchShift) + ' semitones';
+
+          if (result.url) {
+            audioEl.src = storageOrigin() + result.url;
+            audioEl.style.display = 'block';
+          }
+        } catch (error) {
+          statusEl.textContent = '❌ ' + (error && error.message ? error.message : error);
+          console.error('Generation error:', error);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = '🚀 CREATE MASTER';
+        }
+      };
+    })();
+  </script>
+</body>
+</html>
