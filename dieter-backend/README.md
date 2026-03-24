@@ -4,12 +4,65 @@
 
 **tRPC path (default):** `Create` calls `murekaSongGenerate` / `murekaSongQuery` on the DIETER tRPC server, which proxies to FastAPI → Mureka.
 
+### Build the React app into `static/` (single origin)
+
+Build the React app into `static/`, then run the API (same process serves `/` and `/api/*`).
+
+**One command (recommended):** install frontend deps once, then build + copy (run each line from the repo root):
+
+```bash
+cd mureka-clone
+npm ci
+cd ..
+npm run build:backend
+```
+
+`npm run build:backend` is defined at the **repository root** (`package.json`) and in `mureka-clone/`; it uses Node only (no shell `&&`) and runs Vite via `node …/vite.js build`, which avoids Windows issues where spawning `npm.cmd` fails.
+
+Alternatives:
+
+- **Any OS:** `node scripts/build-frontend-to-backend.mjs` from the repo root
+- **Windows (PowerShell):** `.\scripts\build-frontend-to-backend.ps1` (same as above)
+- **macOS / Linux:** `bash scripts/build-frontend-to-backend.sh`
+
+Then start the server:
+
+```bash
+cd dieter-backend
+pip install -r requirements.txt
+gunicorn app.main:app -k uvicorn.workers.UvicornWorker -w 2 -b 0.0.0.0:8080 --timeout 120
+```
+
+Manual copy (equivalent to the scripts above):
+
+```bash
+cd mureka-clone && npm ci && npm run build
+cp -r dist/* ../dieter-backend/static/
+cd ../dieter-backend
+pip install -r requirements.txt
+gunicorn app.main:app -k uvicorn.workers.UvicornWorker -w 2 -b 0.0.0.0:8080 --timeout 120
+```
+
+Or use **Docker** / **docker compose** from the repository root — see `docker-compose.yml` and `Dockerfile`.
+
+**Render.com:** see `DEPLOY_RENDER.md` and root `render.yaml`.
+
+### Run dev (Windows PowerShell)
+
+```powershell
+cd dieter-backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8787
+```
+
 ### macOS / Linux (one terminal)
 
 From repo root:
 
 ```bash
-chmod +x mureka-clone/dev-stack.sh serve-mac.sh
+chmod +x serve-mac.sh mureka-clone/dev-stack.sh
 ./serve-mac.sh
 ```
 

@@ -5,7 +5,10 @@ import { generateLyricsLocal, optimizeLyricsLocal } from './lyricsHelpers.js'
 import LocalStudio from './LocalStudio.jsx'
 import BeatLab from './BeatLab.jsx'
 import VoiceCloneStudio from './VoiceCloneStudio.jsx'
+import MurekaPromptStudio from './MurekaPromptStudio.jsx'
 import { fetchStudioGrowth, normalizeApiRoot, postStudioGrowth } from './apiResolve.js'
+import { extractAudioUrl } from './murekaHelpers.js'
+import { useBeatVisualizer } from './useBeatVisualizer.js'
 
 const DEFAULT_BASE = import.meta.env.VITE_API_BASE || '/api'
 /** When true (default), Mureka calls go through Dieter tRPC → FastAPI. Set VITE_USE_TRPC=false to use REST /api only. */
@@ -21,27 +24,6 @@ const STYLE_PRESETS = [
   'Cinematic',
   'Lo-fi Bedroom',
 ]
-
-function extractAudioUrl(obj, depth = 0) {
-  if (!obj || depth > 12) return null
-  if (
-    typeof obj === 'string' &&
-    /^https?:\/\//.test(obj) &&
-    /\.(mp3|wav|m4a|ogg)(\?|$)/i.test(obj)
-  )
-    return obj
-  if (typeof obj === 'object') {
-    for (const k of ['mp3_url', 'audio_url', 'url', 'download_url', 'file_url']) {
-      const v = obj[k]
-      if (typeof v === 'string' && v.startsWith('http')) return v
-    }
-    for (const v of Object.values(obj)) {
-      const u = extractAudioUrl(v, depth + 1)
-      if (u) return u
-    }
-  }
-  return null
-}
 
 /** Build Mureka prompt: style + optional vocals + lyrics or instrumental. */
 function buildCreationPrompt({ instrumental, lyrics, style, vocal, title }) {
@@ -61,115 +43,21 @@ function buildCreationPrompt({ instrumental, lyrics, style, vocal, title }) {
   return chunks.join('\n\n')
 }
 
-function useBeatVisualizer(audioRef, canvasRef, audioUrl) {
-  const rafRef = useRef(0)
-  const audioCtxRef = useRef(null)
-  const analyserRef = useRef(null)
-  const connectedRef = useRef(false)
-
-  useEffect(() => {
-    if (!audioUrl) return undefined
-    const canvas = canvasRef.current
-    if (!canvas) return undefined
-    const ctx2d = canvas.getContext('2d')
-
-    const resize = () => {
-      const r = canvas.getBoundingClientRect()
-      const dpr = Math.min(2, window.devicePixelRatio || 1)
-      canvas.width = Math.max(1, Math.floor(r.width * dpr))
-      canvas.height = Math.max(1, Math.floor(160 * dpr))
-    }
-    resize()
-    window.addEventListener('resize', resize)
-
-    let data = new Uint8Array(128)
-
-    const draw = () => {
-      rafRef.current = requestAnimationFrame(draw)
-      const W = canvas.width
-      const H = canvas.height
-      const analyser = analyserRef.current
-      if (!analyser) {
-        ctx2d.fillStyle = 'rgb(24,24,32)'
-        ctx2d.fillRect(0, 0, W, H)
-        ctx2d.fillStyle = 'rgba(167,139,250,.4)'
-        ctx2d.font = '12px system-ui,sans-serif'
-        ctx2d.fillText('Press play on the audio player', 10, 28)
-        return
-      }
-      if (data.length !== analyser.frequencyBinCount) {
-        data = new Uint8Array(analyser.frequencyBinCount)
-      }
-      analyser.getByteFrequencyData(data)
-      ctx2d.fillStyle = 'rgb(15,15,22)'
-      ctx2d.fillRect(0, 0, W, H)
-      const n = data.length
-      const barW = (W / n) * 2.5
-      let x = 0
-      for (let i = 0; i < n; i++) {
-        const v = data[i]
-        const bh = (v / 255) * H
-        ctx2d.fillStyle = `rgb(${Math.min(255, v + 80)}, ${Math.min(200, v)}, 180)`
-        ctx2d.fillRect(x, H - bh, barW, bh)
-        x += barW + 1
-        if (x > W) break
-      }
-    }
-    draw()
-
-    const audio = audioRef.current
-    const onPlay = async () => {
-      if (!audio) return
-      if (!connectedRef.current) {
-        try {
-          const actx = new (window.AudioContext || window.webkitAudioContext)()
-          audioCtxRef.current = actx
-          const src = actx.createMediaElementSource(audio)
-          const analyser = actx.createAnalyser()
-          analyser.fftSize = 256
-          analyserRef.current = analyser
-          src.connect(analyser)
-          analyser.connect(actx.destination)
-          connectedRef.current = true
-        } catch (e) {
-          console.warn('Web Audio:', e)
-        }
-      }
-      if (audioCtxRef.current?.state === 'suspended') await audioCtxRef.current.resume()
-    }
-    const tid = setTimeout(() => {
-      const a = audioRef.current
-      if (a) a.addEventListener('play', onPlay)
-    }, 0)
-
-    return () => {
-      clearTimeout(tid)
-      window.removeEventListener('resize', resize)
-      cancelAnimationFrame(rafRef.current)
-      audioRef.current?.removeEventListener('play', onPlay)
-      try {
-        audioCtxRef.current?.close()
-      } catch {
-        /* ignore */
-      }
-      audioCtxRef.current = null
-      analyserRef.current = null
-      connectedRef.current = false
-    }
-  }, [audioUrl, audioRef, canvasRef])
-}
-
 export default function App() {
-  /** `local` = Dieter FastAPI 8787. `beatlab` = beat API :8000. `voicestudio` = clone flow. `cloud` = Mureka create. */
+  /** `create` = Mureka hero. `local` / `beatlab` / `voicestudio` / `cloud` = labs + advanced cloud form. */
   const [appMode, setAppMode] = useState(
     () =>
-      import.meta.env.VITE_DEFAULT_MODE === 'cloud'
-        ? 'cloud'
-        : import.meta.env.VITE_DEFAULT_MODE === 'beatlab'
-          ? 'beatlab'
-          : import.meta.env.VITE_DEFAULT_MODE === 'voicestudio'
-            ? 'voicestudio'
-            : 'local',
+      import.meta.env.VITE_DEFAULT_MODE === 'create'
+        ? 'create'
+        : import.meta.env.VITE_DEFAULT_MODE === 'cloud'
+          ? 'cloud'
+          : import.meta.env.VITE_DEFAULT_MODE === 'beatlab'
+            ? 'beatlab'
+            : import.meta.env.VITE_DEFAULT_MODE === 'voicestudio'
+              ? 'voicestudio'
+              : import.meta.env.VITE_DEFAULT_MODE === 'local'
+                ? 'local'
+                : 'create',
   )
   const [lyrics, setLyrics] = useState('')
   const [style, setStyle] = useState('Melodic Trap')
@@ -442,16 +330,25 @@ export default function App() {
       <header className="header">
         <nav className="nav-main">
           <strong>
-            {appMode === 'local'
-              ? 'Dieter Esq. · Local'
-              : appMode === 'beatlab'
-                ? 'Dieter Esq. · Beat lab'
-                : appMode === 'voicestudio'
-                  ? 'Dieter Esq. · Voice'
-                  : 'Dieter Esq. · Cloud'}
+            {appMode === 'create'
+              ? 'Dieter Esq. · Create'
+              : appMode === 'local'
+                ? 'Dieter Esq. · Local'
+                : appMode === 'beatlab'
+                  ? 'Dieter Esq. · Beat lab'
+                  : appMode === 'voicestudio'
+                    ? 'Dieter Esq. · Voice'
+                    : 'Dieter Esq. · Cloud'}
           </strong>
         </nav>
         <div className="user-actions" style={{ flexWrap: 'wrap', gap: 8 }}>
+          <button
+            type="button"
+            className={appMode === 'create' ? 'pill-btn' : 'btn-mode'}
+            onClick={() => setAppMode('create')}
+          >
+            Create
+          </button>
           <button
             type="button"
             className={appMode === 'local' ? 'pill-btn' : 'btn-mode'}
@@ -480,7 +377,7 @@ export default function App() {
           >
             Cloud
           </button>
-          {appMode === 'cloud' && (
+          {(appMode === 'cloud' || appMode === 'create') && (
             <button type="button" className="pill-btn" onClick={() => setShowAuth(true)}>
               API keys
             </button>
@@ -488,20 +385,6 @@ export default function App() {
         </div>
       </header>
 
-      {appMode === 'local' ? (
-        <main className="main main-local">
-          <LocalStudio apiBase={base} />
-        </main>
-      ) : appMode === 'beatlab' ? (
-        <main className="main main-local">
-          <BeatLab apiBase={base} />
-        </main>
-      ) : appMode === 'voicestudio' ? (
-        <main className="main main-local">
-          <VoiceCloneStudio apiBase={base} />
-        </main>
-      ) : (
-        <>
       {showAuth && (
         <div className="modal" role="dialog">
           <div className="modal-bg" onClick={() => setShowAuth(false)} aria-hidden />
@@ -515,7 +398,11 @@ export default function App() {
               . Dev: Vite proxies <code>/trpc</code> → tRPC (8790) and <code>/api</code> → FastAPI (see{' '}
               <code>vite.config.js</code>).
               <br />
-              <strong>Production (full app)</strong>: deploy the <strong>single Docker image</strong> (<code>dieter-backend/Dockerfile</code> from repo root). Open your host URL — UI and <code>/api</code> are the same origin (see <code>DIETER_ESQ_START.md</code> in the repo). Only if you host the UI separately (e.g. Cloudflare Pages) set <code>VITE_API_BASE</code> and optional <code>DIETER_CORS_ORIGINS</code> on the API.
+              <strong>Production (full app)</strong>: deploy the <strong>single Docker image</strong> (
+              <code>dieter-backend/Dockerfile</code> from repo root). Open your host URL — UI and <code>/api</code> are
+              the same origin (see <code>DIETER_ESQ_START.md</code> in the repo). Only if you host the UI separately
+              (e.g. Cloudflare Pages) set <code>VITE_API_BASE</code> and optional <code>DIETER_CORS_ORIGINS</code> on
+              the API.
               <br />
               <strong>OpenAI</strong> (optional): set <code>OPENAI_API_KEY</code> on the FastAPI server for AI lyrics;
               or paste a key here to pass through to the backend. Generate/Optimize call FastAPI via tRPC (or{' '}
@@ -555,6 +442,27 @@ export default function App() {
         </div>
       )}
 
+      {appMode === 'create' ? (
+        <MurekaPromptStudio
+          apiBase={base}
+          apiKey={apiKey}
+          onOpenKeys={() => setShowAuth(true)}
+          onStudioPulse={(g) => setStudioPulse(g)}
+        />
+      ) : appMode === 'local' ? (
+        <main className="main main-local">
+          <LocalStudio apiBase={base} />
+        </main>
+      ) : appMode === 'beatlab' ? (
+        <main className="main main-local">
+          <BeatLab apiBase={base} />
+        </main>
+      ) : appMode === 'voicestudio' ? (
+        <main className="main main-local">
+          <VoiceCloneStudio apiBase={base} />
+        </main>
+      ) : (
+        <>
       <main className="main">
         <p className="workflow-intro">
           <strong>Workflow:</strong> write your own lyrics or use <strong>Generate Lyrics</strong>, refine with{' '}

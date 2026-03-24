@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dieter Esq. · AI Music Generator</title>
+  <!-- Same-origin: /api. Override: ?api=https://YOUR_HOST/api -->
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0a0a23 0%, #1a0a3a 50%, #0a1428 100%);
+      color: #fff;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 2rem;
+      position: relative;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background:
+        radial-gradient(circle at 20% 80%, rgba(120,119,198,0.3) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255,119,198,0.3) 0%, transparent 50%);
+      animation: pulse 4s infinite;
+      pointer-events: none;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .hero-inner { position: relative; z-index: 1; width: 100%; max-width: 640px; }
+    .logo {
+      font-size: clamp(2.5rem, 8vw, 4rem);
+      font-weight: 800;
+      background: linear-gradient(45deg, #a855f7, #ec4899, #3b82f6);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 1rem;
+    }
+    .tagline {
+      font-size: clamp(1rem, 2.8vw, 1.35rem);
+      opacity: 0.9;
+      max-width: 600px;
+      margin: 0 auto 2rem;
+      line-height: 1.5;
+    }
+    .api-line {
+      font-size: 0.75rem;
+      opacity: 0.55;
+      margin-bottom: 1rem;
+      word-break: break-all;
+    }
+    .prompt-container {
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 24px;
+      padding: 2.5rem;
+      width: 100%;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+    }
+    .prompt-input, .key-input {
+      width: 100%;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 16px;
+      padding: 1.25rem 1.5rem;
+      font-size: 1.05rem;
+      color: #fff;
+      outline: none;
+      transition: border-color 0.3s, box-shadow 0.3s;
+      margin-bottom: 1rem;
+    }
+    .key-input { font-size: 0.95rem; margin-bottom: 1.25rem; }
+    .prompt-input::placeholder, .key-input::placeholder { color: rgba(255,255,255,0.45); }
+    .prompt-input:focus, .key-input:focus {
+      border-color: #a855f7;
+      box-shadow: 0 0 0 3px rgba(168,85,247,0.2);
+    }
+    label.field-label { display: block; text-align: left; font-size: 0.8rem; opacity: 0.75; margin-bottom: 0.35rem; }
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    select {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 12px;
+      padding: 1rem;
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: border-color 0.3s;
+    }
+    select:focus { border-color: #a855f7; outline: none; }
+    option { background: #1a0a2e; color: #fff; }
+    .generate-btn {
+      width: 100%;
+      background: linear-gradient(45deg, #a855f7, #ec4899);
+      border: none;
+      border-radius: 16px;
+      padding: 1.25rem 3rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s;
+      letter-spacing: 0.04em;
+    }
+    .generate-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 30px rgba(168,85,247,0.4);
+    }
+    .generate-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .status {
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      opacity: 0.9;
+      min-height: 1.5em;
+      text-align: left;
+    }
+    .status.err { color: #fca5a5; }
+    .player-wrap { margin-top: 1.25rem; }
+    .player-wrap audio { width: 100%; border-radius: 12px; }
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2rem;
+      padding: 4rem 2rem 5rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .feature-card {
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 2rem;
+      border: 1px solid rgba(255,255,255,0.1);
+      text-align: center;
+      transition: transform 0.3s;
+    }
+    .feature-card:hover { transform: translateY(-5px); }
+    .feature-icon {
+      font-size: 1.75rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      margin-bottom: 1rem;
+      background: linear-gradient(45deg, #3b82f6, #a855f7);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .feature-card h3 { margin-bottom: 0.5rem; font-size: 1.15rem; }
+    .feature-card p { opacity: 0.82; font-size: 0.95rem; line-height: 1.5; }
+    @media (max-width: 768px) {
+      .prompt-container { padding: 1.5rem; }
+      .controls { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="logo">Dieter Esq.</div>
+      <h1 class="tagline">Create unique melodies from one prompt. Studio-quality AI music in seconds—royalty-free for your tracks.</h1>
+      <p class="api-line" id="apiLine"></p>
+      <div class="prompt-container">
+        <label class="field-label" for="murekaKey">Mureka API key (stored in this browser only)</label>
+        <input type="password" id="murekaKey" class="key-input" placeholder="Paste key — sent to your Dieter /api proxy, not to us" autocomplete="off">
+        <input type="text" id="promptInput" class="prompt-input" placeholder="e.g. upbeat electronic with synth leads, Daft Punk energy, 128 BPM" maxlength="500">
+        <div class="controls">
+          <select id="selGenre" aria-label="Genre">
+            <option value="all">Genre: All</option>
+            <option value="pop">Pop</option>
+            <option value="electronic">Electronic</option>
+            <option value="hip-hop">Hip-Hop</option>
+            <option value="jazz">Jazz</option>
+            <option value="rock">Rock</option>
+          </select>
+          <select id="selMood" aria-label="Mood">
+            <option value="happy">Mood: Happy</option>
+            <option value="relaxed">Relaxed</option>
+            <option value="energetic">Energetic</option>
+            <option value="sad">Sad</option>
+            <option value="inspired">Inspired</option>
+          </select>
+          <select id="selTempo" aria-label="Tempo">
+            <option value="120">Tempo: 120 BPM</option>
+            <option value="90">90 BPM</option>
+            <option value="140">140 BPM</option>
+            <option value="80">80 BPM</option>
+          </select>
+          <select id="selVocal" aria-label="Vocals">
+            <option value="female">Vocals: Female</option>
+            <option value="male">Male</option>
+            <option value="none">None (instrumental)</option>
+          </select>
+        </div>
+        <button type="button" class="generate-btn" id="genBtn">Generate music</button>
+        <div class="status" id="status" role="status"></div>
+        <div class="player-wrap">
+          <audio id="player" controls style="display:none"></audio>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="features">
+    <div class="feature-card">
+      <div class="feature-icon">GEN</div>
+      <h3>Song generator</h3>
+      <p>Full tracks with vocals and arrangement from a text prompt, via Mureka through Dieter&rsquo;s API proxy.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">INS</div>
+      <h3>Instrumental mode</h3>
+      <p>Choose &ldquo;None&rdquo; for vocals for beat-oriented instrumentals; refine in Beat lab in the main app.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">LRC</div>
+      <h3>Lyrics &amp; voice</h3>
+      <p>Genre, mood, tempo, and vocal gender are folded into the creation prompt for tighter control.</p>
+    </div>
+  </section>
+  <script>
+    (function () {
+      var KEY = 'dieter_mureka_landing_key';
+      function getApiBase() {
+        try {
+          var v = new URLSearchParams(location.search).get('api');
+          if (v && String(v).trim()) return String(v).trim().replace(/\/$/, '');
+        } catch (e) {}
+        return '/api';
+      }
+      function absUrl(path) {
+        if (!path) return '';
+        if (/^https?:\/\//i.test(path)) return path;
+        var base = getApiBase();
+        try {
+          if (/^https?:\/\//i.test(base)) return new URL(path, new URL(base).origin).href;
+        } catch (e) {}
+        return path;
+      }
+      function extractAudioUrl(obj, depth) {
+        if (!obj || depth > 12) return null;
+        if (typeof obj === 'string' && /^https?:\/\//.test(obj) && /\.(mp3|wav|m4a|ogg)(\?|$)/i.test(obj)) return obj;
+        if (typeof obj === 'object') {
+          for (var i = 0; i < ['mp3_url', 'audio_url', 'url', 'download_url', 'file_url'].length; i++) {
+            var k = ['mp3_url', 'audio_url', 'url', 'download_url', 'file_url'][i];
+            var v = obj[k];
+            if (typeof v === 'string' && v.indexOf('http') === 0) return v;
+          }
+          for (var key in obj) {
+            var u = extractAudioUrl(obj[key], depth + 1);
+            if (u) return u;
+          }
+        }
+        return null;
+      }
+      function buildPrompt() {
+        var p = (document.getElementById('promptInput').value || '').trim();
+        var g = document.getElementById('selGenre').value;
+        var m = document.getElementById('selMood').value;
+        var t = document.getElementById('selTempo').value;
+        var v = document.getElementById('selVocal').value;
+        var parts = ['Title: Dieter Esq. session', 'Style: ' + (g === 'all' ? 'modern pop/electronic' : g), 'Mood: ' + m, 'Target tempo: ~' + t + ' BPM'];
+        if (v === 'none') {
+          parts.push('Instrumental only — no lead vocal.');
+        } else {
+          parts.push((v === 'male' ? 'Male' : 'Female') + ' lead vocal.');
+        }
+        if (p) parts.push('User prompt:\n' + p);
+        return parts.join('\n\n');
+      }
+      var apiBase = getApiBase();
+      document.getElementById('apiLine').textContent = 'API: ' + apiBase + ' (override with ?api=…)';
+
+      var keyEl = document.getElementById('murekaKey');
+      try {
+        var saved = localStorage.getItem(KEY);
+        if (saved) keyEl.value = saved;
+      } catch (e) {}
+      keyEl.addEventListener('change', function () {
+        try { localStorage.setItem(KEY, keyEl.value.trim()); } catch (e) {}
+      });
+
+      document.getElementById('genBtn').addEventListener('click', async function () {
+        var btn = document.getElementById('genBtn');
+        var st = document.getElementById('status');
+        var player = document.getElementById('player');
+        var key = keyEl.value.trim();
+        var promptText = (document.getElementById('promptInput').value || '').trim();
+        st.textContent = '';
+        st.className = 'status';
+        player.style.display = 'none';
+        player.removeAttribute('src');
+
+        if (!key) {
+          st.className = 'status err';
+          st.textContent = 'Add your Mureka API key (from platform.mureka.ai).';
+          return;
+        }
+        if (!promptText) {
+          st.className = 'status err';
+          st.textContent = 'Enter a prompt describing the track.';
+          return;
+        }
+
+        var instrumental = document.getElementById('selVocal').value === 'none';
+        var prompt = buildPrompt();
+        var lyricPayload = instrumental ? '' : promptText;
+
+        btn.disabled = true;
+        try {
+          st.textContent = 'Starting generation…';
+          var genUrl = apiBase + '/mureka/song/generate';
+          var res = await fetch(genUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: 'Bearer ' + key,
+            },
+            body: JSON.stringify({ lyrics: lyricPayload, model: 'auto', prompt: prompt }),
+          });
+          var raw = await res.text();
+          var j = {};
+          try { j = raw ? JSON.parse(raw) : {}; } catch (e) {}
+          if (!res.ok) {
+            throw new Error(typeof j.detail === 'string' ? j.detail : raw || res.statusText);
+          }
+          var taskId = String(j.id || j.task_id || j.taskId || '');
+          if (!taskId) throw new Error('No task id in response');
+
+          for (var i = 0; i < 90; i++) {
+            st.textContent = 'Rendering… (' + (i + 1) + '/90)';
+            var q = await fetch(apiBase + '/mureka/song/query/' + encodeURIComponent(taskId), {
+              headers: { Authorization: 'Bearer ' + key },
+            });
+            var qt = await q.text();
+            var qj = {};
+            try { qj = qt ? JSON.parse(qt) : {}; } catch (e) {}
+            if (!q.ok) throw new Error(qt || q.statusText);
+            var url = extractAudioUrl(qj);
+            if (url) {
+              player.src = absUrl(url);
+              player.style.display = 'block';
+              st.textContent = 'Ready — press play.';
+              btn.disabled = false;
+              return;
+            }
+            var state = String(qj.status || qj.state || '').toLowerCase();
+            if (state.indexOf('fail') >= 0 || state.indexOf('error') >= 0) {
+              throw new Error(JSON.stringify(qj.error || qj));
+            }
+            await new Promise(function (r) { setTimeout(r, 2000); });
+          }
+          throw new Error('Timeout waiting for audio URL');
+        } catch (err) {
+          st.className = 'status err';
+          st.textContent = String(err && err.message ? err.message : err);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

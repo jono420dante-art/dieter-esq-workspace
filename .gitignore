@@ -23,6 +23,9 @@ mcps/
 Thumbs.db
 Desktop.ini
 
+# Built UI copied for local prod-style runs (Docker builds from mureka-clone instead)
+dieter-backend/static/
+
 # Backend runtime data (regenerated on server)
 dieter-backend/storage/
 dieter-backend/data/*
@@ -75,3 +78,5 @@ thumbnail
 DIETER-AND-ED-AI/
 deploy/
 platform/
+
+.vercel

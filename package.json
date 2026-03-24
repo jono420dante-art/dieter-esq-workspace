@@ -1,0 +1,10 @@
+{
+  "name": "dieter-repo",
+  "private": true,
+  "description": "Root scripts only (no deps). Frontend lives in mureka-clone/.",
+  "scripts": {
+    "build:backend": "node scripts/build-frontend-to-backend.mjs",
+    "deploy:vercel": "npx vercel deploy --prod",
+    "deploy:vercel:preview": "npx vercel deploy"
+  }
+}

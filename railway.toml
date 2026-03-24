@@ -1,5 +1,10 @@
-# Railway: connect this Git repo, root = repository root.
-# One URL = full app (React + FastAPI). See DIETER_ESQ_START.md in the repo.
+# Railway: connect this Git repo.
+#
+# CRITICAL — Service "Root Directory" must be EMPTY (repo root), NOT "dieter-backend".
+# This Dockerfile COPYs both mureka-clone/ and dieter-backend/ from the same context.
+# If Root Directory = dieter-backend, the build fails: "/mureka-clone": not found.
+#
+# One URL = full app (React + FastAPI). See DIETER_ESQ_START.md.
 # https://docs.railway.app/deploy/dockerfiles
 
 [build]

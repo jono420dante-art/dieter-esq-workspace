@@ -13,9 +13,10 @@ Use this repo when Railway (or Render) asks you to pick a GitHub project.
 ### 1. Deploy on Railway
 
 1. Create a project at [railway.app](https://railway.app) and **Deploy from GitHub** (this repository).
-2. Railway should pick up **`railway.toml`** at the repo root (build: `dieter-backend/Dockerfile`).
-3. After the build finishes, open the **generated public URL** (e.g. `https://your-service.up.railway.app`).
-4. That URL is the app: **same origin** for the UI and **`/api/*`**.
+2. In the service **Settings**, set **Root Directory** to **empty** (repository root). Do **not** set it to `dieter-backend` — the Docker build needs both `mureka-clone/` and `dieter-backend/` in the same context.
+3. Railway should pick up **`railway.toml`** at the repo root (build: `dieter-backend/Dockerfile`).
+4. After the build finishes, open the **generated public URL** (e.g. `https://your-service.up.railway.app`).
+5. That URL is the app: **same origin** for the UI and **`/api/*`**.
 
 Optional environment variables (in Railway → Variables):
 
@@ -28,14 +29,43 @@ Optional environment variables (in Railway → Variables):
 
 ### 2. First visit checklist
 
-1. Open the **root** of the URL (`/`). You should see **Dieter Esq.** with tabs: **Local**, **Beat lab**, **Voice studio**, **Cloud**.
-2. Confirm API: `https://YOUR_HOST/api/health` returns `{"ok":true,...}`.
-3. **Local** or **Beat lab**: upload a beat and run a flow (same host — no CORS setup).
-4. **Cloud**: click **API keys**, add your **Mureka** key, then **Create**.
+1. Open the **root** of the URL (`/`). Default tab is **Create** — Mureka-style prompt + genre / mood / tempo / vocals, wired to Dieter’s **same** `/api` (or **tRPC** when enabled).
+2. Click **Connections · Mureka key** (or **API keys** in the header), paste your **Mureka** key, **Save**. Then **Generate music**.
+3. Confirm API: `https://YOUR_HOST/api/health` returns `{"ok":true,...}`.
+4. Use **Local**, **Beat lab**, and **Voice studio** for stems, FFmpeg pipeline, and reference voice — all on the same host.
+5. **Cloud** tab = advanced form (lyrics + style presets) — same Mureka backend path.
+
+**Your live app URL** is whatever Railway (or Render) shows after deploy — shape: `https://<service>.up.railway.app` — there is no fixed link until you deploy.
 
 ### 3. Same thing on Render
 
 Use **`dieter-backend/Dockerfile`** from the **repository root** as context, health check **`/api/health`**. See `dieter-backend/DEPLOY_RENDER.md`.
+
+### 4. Vercel (static React UI + API elsewhere)
+
+Vercel hosts the **Vite build** from **`mureka-clone`** only. Your **FastAPI** backend must already be live (Railway / Render / Docker) — the browser calls that host via `VITE_API_BASE`.
+
+1. In [Vercel](https://vercel.com), switch to team **`jonathan-s-projects-2da2bb36`** (team menu, top left), then **Add New → Project** and import **[dieter-esq-workspace](https://github.com/jono420dante-art/dieter-esq-workspace)**.
+2. **Root Directory**: leave **empty** so Vercel uses the repo root **[`vercel.json`](./vercel.json)** (it installs and builds inside `mureka-clone/`).  
+   *Alternative:* set **Root Directory** to **`mureka-clone`** and use [`mureka-clone/vercel.json`](./mureka-clone/vercel.json) only — do **not** do both conflicting setups.
+3. **Environment Variables** (Production and Preview), at minimum:
+
+| Variable | Example | Purpose |
+|----------|---------|---------|
+| `VITE_API_BASE` | `https://your-api.up.railway.app/api` | All `/api` traffic from the UI |
+| `VITE_USE_TRPC` | `false` | Use REST against FastAPI (single Docker service has no `/trpc`) |
+
+Optional: `VITE_TRPC_URL` if you deploy **`dieter-backend/dieter-trpc`** separately; `VITE_DEFAULT_MODE`, `MUREKA_API_KEY` on the **backend** for server-side Mureka.
+
+4. Deploy. Open the **stable production URL** **https://dieter-esq-workspace.vercel.app** (each deploy also gets a unique `*-*.vercel.app` URL; prefer the alias for bookmarks). In **Connections**, confirm **API base** matches your backend (or rely on the baked-in `VITE_API_BASE`).
+
+**Redeploy (Vercel):** from the repository root, run `npm run deploy:vercel` after `vercel login`, or push to the connected Git branch.
+
+**CORS:** FastAPI defaults to permissive origins (`DIETER_CORS_ORIGINS` default `*`). For production hardening, set `DIETER_CORS_ORIGINS` to your Vercel origin(s), e.g. `https://dieter-esq-workspace.vercel.app`.
+
+### VPS (full stack in Docker)
+
+On your server (Docker + repo clone): `docker compose build && docker compose up -d` from the repo root — same image as Railway (see **§1** above). Use your VPS public URL and point DNS / TLS as usual; no Vercel involved.
 
 ---
 
@@ -56,12 +86,13 @@ Health: **http://localhost:8080/api/health**
 ## What this is *not*
 
 - **Not** “static HTML only”: those files under `public/` are optional extras inside the same build; the main product is the **React app at `/`**.
-- **Not** required: Cloudflare Pages + separate API URL — that split is only if you *choose* to host the UI elsewhere.
+- **Not** required: Vercel / Cloudflare Pages + separate API URL — that split is only if you *choose* to host the UI elsewhere (see **§4 Vercel** above).
 
 ---
 
 ## Troubleshooting
 
+- **Docker: `"/mureka-clone": not found`** (or `failed to calculate checksum`): the image is being built with the **wrong context**. The context must be the **repository root** (the directory that contains both `mureka-clone/` and `dieter-backend/`). On **Railway**, clear **Root Directory** in service settings. On **Render**, the Docker **context** for `dockerfilePath: ./dieter-backend/Dockerfile` must be the repo root (Render’s default for a single service is usually correct). On **Google Cloud Build**, use `docker build -f dieter-backend/Dockerfile .` with `.` = repo root, not `dieter-backend` as the build’s working directory. Also confirm **`mureka-clone/` is committed and pushed** to GitHub — a backend-only clone will fail the same way.
 - **Blank page**: check build logs; ensure `npm run build` inside Docker succeeded.
 - **API errors**: confirm `/api/health` works; check Railway/Render logs for missing **ffmpeg** (included in Dockerfile) or Python errors.
 - **Mureka / OpenAI**: set keys on the **server** (Railway variables), not only in the browser.

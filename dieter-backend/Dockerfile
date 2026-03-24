@@ -1,4 +1,7 @@
-# Build from repository root:  docker build -f dieter-backend/Dockerfile .
+# Build context MUST be the repository root (the folder that contains BOTH
+# mureka-clone/ and dieter-backend/). Example:
+#   docker build -f dieter-backend/Dockerfile .
+# If your host uses only the Dockerfile’s folder as context, COPY mureka-clone will fail.
 # Produces: FastAPI + Gunicorn + React static (mureka-clone/dist → /app/static)
 
 FROM node:20-alpine AS frontend
