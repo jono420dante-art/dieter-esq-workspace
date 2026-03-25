@@ -51,8 +51,10 @@ Use this when you want **`*.vercel.app`** for the SPA and a separate API host.
 |----------|---------|
 | `VITE_API_BASE` | `https://dieter-api-production.up.railway.app/api` |
 | `VITE_USE_TRPC` | `false` (REST to Railway unless you run tRPC separately) |
+| `VITE_STUDIO_LINKS` | Optional JSON array for footer links, e.g. `[{"label":"Licensing","href":"https://…"}]` — shop, socials, buyer portals |
+| `VITE_STUDIO_SHOP_URL` / `VITE_STUDIO_LICENSING_URL` / … | Optional single URLs if you prefer not to use JSON (see `mureka-clone/src/studioLinks.js`) |
 
-5. Deploy. After the first deploy, the built app will call your Railway **`/api`** for lyrics, Local lab, Mureka proxy, storage URLs, etc.
+5. Deploy. After the first deploy, the built app will call your Railway **`/api`** for lyrics, Local lab, Mureka proxy, storage URLs, lyrics analyze (`/api/lyrics/analyze`), etc.
 
 ### 4. CORS
 

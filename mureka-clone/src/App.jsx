@@ -10,6 +10,7 @@ import { fetchStudioGrowth, normalizeApiRoot, postStudioGrowth } from './apiReso
 import { dieterInitialApiBase, dieterUseTrpc, audioCrossOriginForSrc } from './dieterClientConfig.js'
 import { extractAudioUrl } from './murekaHelpers.js'
 import { useBeatVisualizer } from './useBeatVisualizer.js'
+import { getStudioOutboundLinks } from './studioLinks.js'
 
 const DEFAULT_BASE = import.meta.env.VITE_API_BASE || '/api'
 const USE_TRPC = dieterUseTrpc()
@@ -52,8 +53,8 @@ export default function App() {
     if (m === 'beatlab') return 'beatlab'
     if (m === 'voicestudio') return 'voicestudio'
     if (m === 'local') return 'local'
-    /** Default: Local lab (lyrics + beat, Dieter API) — no Mureka key. Set VITE_DEFAULT_MODE=create for Mureka-first. */
-    return 'local'
+    /** Default: Create (Mureka + real cloud vocals). Set VITE_DEFAULT_MODE=local for offline procedural lab first. */
+    return 'create'
   })
   const [lyrics, setLyrics] = useState('')
   const [style, setStyle] = useState('Melodic Trap')
@@ -68,6 +69,8 @@ export default function App() {
   const [err, setErr] = useState('')
   const [audioUrl, setAudioUrl] = useState('')
   const [lyricsBusy, setLyricsBusy] = useState(false)
+  const [lyricsReport, setLyricsReport] = useState(null)
+  const [lyricsAnalyzeErr, setLyricsAnalyzeErr] = useState('')
   const [studioPulse, setStudioPulse] = useState(null)
   const canvasRef = useRef(null)
   const audioRef = useRef(null)
@@ -82,6 +85,7 @@ export default function App() {
   }
 
   const base = useMemo(() => normalizeApiRoot(apiBase || DEFAULT_BASE), [apiBase])
+  const outboundLinks = useMemo(() => getStudioOutboundLinks(), [])
 
   useEffect(() => {
     let cancelled = false
@@ -94,6 +98,48 @@ export default function App() {
       cancelled = true
     }
   }, [base])
+
+  useEffect(() => {
+    if (appMode !== 'cloud' || instrumental) {
+      setLyricsReport(null)
+      setLyricsAnalyzeErr('')
+      return
+    }
+    const text = lyrics.trim()
+    if (!text) {
+      setLyricsReport(null)
+      setLyricsAnalyzeErr('')
+      return
+    }
+    let cancelled = false
+    const t = setTimeout(() => {
+      ;(async () => {
+        setLyricsAnalyzeErr('')
+        try {
+          const r = await fetch(`${base}/lyrics/analyze`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lyrics: text, beatsPerBar: 4 }),
+          })
+          if (!r.ok) {
+            const msg = await r.text()
+            throw new Error(msg || r.statusText)
+          }
+          const j = await r.json()
+          if (!cancelled) setLyricsReport(j)
+        } catch (e) {
+          if (!cancelled) {
+            setLyricsReport(null)
+            setLyricsAnalyzeErr(e?.message || String(e))
+          }
+        }
+      })()
+    }, 550)
+    return () => {
+      cancelled = true
+      clearTimeout(t)
+    }
+  }, [lyrics, instrumental, appMode, base])
 
   const handleGenerateLyrics = useCallback(async () => {
     if (instrumental) return
@@ -389,12 +435,13 @@ export default function App() {
           <div className="modal-card">
             <h2>Connections</h2>
             <p className="hint">
-              <strong>Mureka</strong> is optional — use the <strong>Local</strong> tab for lyrics + beat + Dieter API
-              without it. Add a Mureka key from{' '}
+              <strong>Mureka</strong> powers <strong>real AI vocals</strong> on the Create and Voice studio tabs. Get a key
+              from{' '}
               <a href="https://platform.mureka.ai" target="_blank" rel="noreferrer">
                 platform.mureka.ai
-              </a>{' '}
-              only when you want cloud generation from the Create tab.
+              </a>
+              ; for Voice studio + Docker, set <code>MUREKA_API_KEY</code> on the server. The <strong>Local</strong> tab
+              stays offline (placeholder vocal stem).
               <br />
               Dev: Vite proxies <code>/trpc</code> → tRPC (8790) and <code>/api</code> → FastAPI (see{' '}
               <code>vite.config.js</code>). <strong>tRPC</strong> is on by default in dev only; production builds use{' '}
@@ -534,6 +581,51 @@ export default function App() {
           </button>
         </div>
 
+        {!instrumental && lyrics.trim() && (
+          <div className="lyrics-lint-panel" style={{ marginTop: 8 }}>
+            {lyricsAnalyzeErr && (
+              <p className="bad" style={{ fontSize: '0.88rem' }}>
+                Lyrics analyze: {lyricsAnalyzeErr} (needs reachable <code>/api/lyrics/analyze</code>)
+              </p>
+            )}
+            {lyricsReport && !lyricsAnalyzeErr && (
+              <>
+                {(lyricsReport.errors?.length > 0 || !lyricsReport.ok) && (
+                  <ul className="bad" style={{ fontSize: '0.88rem', margin: '6px 0' }}>
+                    {(lyricsReport.errors || []).map((x, i) => (
+                      <li key={`e-${i}`}>{x}</li>
+                    ))}
+                  </ul>
+                )}
+                {lyricsReport.warnings?.length > 0 && (
+                  <ul
+                    className="hint"
+                    style={{
+                      fontSize: '0.88rem',
+                      margin: '6px 0',
+                      opacity: 0.95,
+                      listStyle: 'disc',
+                      paddingLeft: '1.2rem',
+                    }}
+                  >
+                    {lyricsReport.warnings.map((x, i) => (
+                      <li key={`w-${i}`}>{x}</li>
+                    ))}
+                  </ul>
+                )}
+                {lyricsReport.metrics && (
+                  <p className="hint" style={{ fontSize: '0.82rem', margin: '4px 0 0' }}>
+                    {lyricsReport.metrics.lineCount} sung lines · {lyricsReport.metrics.sectionTagCount} section tag(s)
+                    {lyricsReport.barsHint
+                      ? ` · bar ~${lyricsReport.barsHint.secondsPerBar}s @ ${lyricsReport.barsHint.bpmAssumed} BPM (hint)`
+                      : ''}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
         <div className="instrumental-row">
           <input
             type="checkbox"
@@ -643,15 +735,30 @@ export default function App() {
           lineHeight: 1.5,
         }}
       >
-        <strong>Studio pulse</strong>{' '}
-        {studioPulse?.counters ? (
-          <span>
-            lyrics {studioPulse.counters.lyrics_generated ?? 0} · masters {studioPulse.counters.masters_built ?? 0} ·
-            cloud tracks {studioPulse.counters.mureka_songs ?? 0} · beats {studioPulse.counters.beats_analyzed ?? 0} ·
-            ref. voices {studioPulse.counters.voice_clones ?? 0}
-          </span>
-        ) : (
-          <span>Deploy the Docker image — API lives at <code>/api</code> on this same host.</span>
+        <div style={{ marginBottom: 10 }}>
+          <strong>Studio pulse</strong>{' '}
+          {studioPulse?.counters ? (
+            <span>
+              lyrics {studioPulse.counters.lyrics_generated ?? 0} · masters {studioPulse.counters.masters_built ?? 0} ·
+              cloud tracks {studioPulse.counters.mureka_songs ?? 0} · beats{' '}
+              {studioPulse.counters.beats_analyzed ?? 0} · ref. voices {studioPulse.counters.voice_clones ?? 0}
+            </span>
+          ) : (
+            <span>
+              Deploy the Docker image — API at <code>/api</code>. Vercel UI only: set <code>VITE_API_BASE</code> to your
+              API origin.
+            </span>
+          )}
+        </div>
+        {outboundLinks.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 16px', alignItems: 'center' }}>
+            <strong>Outbound</strong>
+            {outboundLinks.map(({ label, href }) => (
+              <a key={href + label} href={href} target="_blank" rel="noreferrer">
+                {label}
+              </a>
+            ))}
+          </div>
         )}
       </footer>
     </div>

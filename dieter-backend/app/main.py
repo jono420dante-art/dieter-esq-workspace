@@ -21,11 +21,24 @@ from pydantic import BaseModel, Field
 
 from .engines import get_engine
 from .lyrics_service import generate_lyrics, optimize_lyrics
+from .lyrics_analyze import analyze_lyrics as analyze_lyrics_text
+from .agents import list_agents, run_agent as run_studio_agent
 from .audio_master import pro_master_audio
 from .beat_lab import router as beat_lab_router
 from .pitch_presets import preset_semitones
 from .release_pipeline import generate_master_pipeline, save_distro_prep_upload
 from .music_video import generate_music_video
+from .seo_service import build_seo_pack
+from .kling_video import (
+    aiml_api_config,
+    build_kling_prompt_from_song,
+    create_text_to_video_task,
+    download_video,
+    kling_configured,
+    loop_video_and_mux_audio,
+    maybe_post_colab_webhook,
+    poll_generation,
+)
 from .local_pipeline import (
     detect_beats_from_path,
     local_capabilities,
@@ -33,6 +46,12 @@ from .local_pipeline import (
     pitch_shift_semitones_preserve_duration,
     stretch_audio_to_bpm_ratio,
 )
+
+import librosa
+
+from audio_pro import pro_ffmpeg_master
+from beat_analysis import analyze
+from mureka_sync import MurekaSync, MurekaSyncError, download_audio_url
 
 try:
     import voice_clone_pipeline as vcp
@@ -53,6 +72,8 @@ STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
 GROWTH_PATH = DATA_DIR / "studio_growth.json"
 _growth_lock = threading.Lock()
+PERF_PATH = DATA_DIR / "perf_metrics.json"
+_perf_lock = threading.Lock()
 
 if vcp is not None:
     _n = vcp.load_voice_library(STORAGE_DIR / "voice_clone")
@@ -259,6 +280,62 @@ def api_studio_growth_post(body: StudioGrowthEvent) -> dict[str, Any]:
     return {"ok": True, "counters": data.get("counters", {})}
 
 
+def _record_perf(event: str, ok: bool, elapsed_ms: float, *, detail: str = "") -> None:
+    with _perf_lock:
+        try:
+            raw = json.loads(PERF_PATH.read_text(encoding="utf-8")) if PERF_PATH.is_file() else {}
+            if not isinstance(raw, dict):
+                raw = {}
+        except (OSError, json.JSONDecodeError):
+            raw = {}
+        entries = raw.setdefault("entries", [])
+        entries.insert(
+            0,
+            {
+                "event": event,
+                "ok": bool(ok),
+                "elapsed_ms": round(float(elapsed_ms), 2),
+                "detail": (detail or "")[:400],
+                "t": time.time(),
+            },
+        )
+        raw["entries"] = entries[:500]
+        try:
+            PERF_PATH.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
+        except OSError:
+            logger.warning("Could not write %s", PERF_PATH)
+
+
+@app.get("/api/perf/summary")
+def api_perf_summary() -> dict[str, Any]:
+    with _perf_lock:
+        try:
+            raw = json.loads(PERF_PATH.read_text(encoding="utf-8")) if PERF_PATH.is_file() else {}
+            entries = raw.get("entries", []) if isinstance(raw, dict) else []
+        except (OSError, json.JSONDecodeError):
+            entries = []
+
+    if not entries:
+        return {
+            "count": 0,
+            "ok_count": 0,
+            "error_count": 0,
+            "avg_elapsed_ms": 0.0,
+            "last": [],
+        }
+
+    count = len(entries)
+    ok_count = sum(1 for e in entries if e.get("ok"))
+    avg_ms = sum(float(e.get("elapsed_ms", 0.0)) for e in entries) / max(1, count)
+    return {
+        "count": count,
+        "ok_count": ok_count,
+        "error_count": count - ok_count,
+        "avg_elapsed_ms": round(avg_ms, 2),
+        "last": entries[:20],
+    }
+
+
 class LyricsGenerateBody(BaseModel):
     """Generate draft lyrics (OpenAI when key present, else local template)."""
 
@@ -283,6 +360,39 @@ def api_lyrics_generate(req: LyricsGenerateBody) -> dict[str, Any]:
 def api_lyrics_optimize(req: LyricsOptimizeBody) -> dict[str, Any]:
     text, source = optimize_lyrics(req.lyrics, req.openaiApiKey)
     return {"text": text, "source": source}
+
+
+class LyricsAnalyzeBody(BaseModel):
+    """Lint lyrics + rough bar/syllable overflow hints (optional BPM)."""
+
+    lyrics: str = ""
+    bpm: Optional[int] = Field(None, ge=40, le=240)
+    beatsPerBar: int = Field(4, ge=1, le=16)
+
+
+@app.post("/api/lyrics/analyze")
+def api_lyrics_analyze(req: LyricsAnalyzeBody) -> dict[str, Any]:
+    return analyze_lyrics_text(req.lyrics or "", bpm=req.bpm, beats_per_bar=req.beatsPerBar)
+
+
+class AgentRunBody(BaseModel):
+    agentId: str = Field(..., min_length=1)
+    payload: dict[str, Any] = Field(default_factory=dict)
+
+
+@app.get("/api/agents")
+def api_agents_list() -> dict[str, Any]:
+    return {"agents": list_agents()}
+
+
+@app.post("/api/agents/run")
+def api_agents_run(body: AgentRunBody) -> dict[str, Any]:
+    try:
+        result = run_studio_agent(body.agentId, body.payload or {})
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    return {"ok": True, "agentId": body.agentId, "result": result}
+
 
 VOICE_PRESETS = [
     # core
@@ -336,8 +446,8 @@ class VideoGenerateRequest(BaseModel):
 @app.post("/api/video/generate")
 def api_video_generate(req: VideoGenerateRequest) -> dict[str, Any]:
     """
-    Stub endpoint for PixVerse/Runway-style text-to-video.
-    In production this would enqueue a job against a provider and return a jobId.
+    Raw text-to-video hook (same Kling/AIML stack) without a song mux — optional ``assetId`` for future extensions.
+    Prefer ``POST /api/video/from-song`` when you have a generated master to sync.
     """
     job_id = _new_id("jobv")
     job = {
@@ -346,7 +456,10 @@ def api_video_generate(req: VideoGenerateRequest) -> dict[str, Any]:
         "status": "failed",
         "createdAt": time.time(),
         "params": req.model_dump(),
-        "error": "Video engine not connected yet. This endpoint is a placeholder for PixVerse-style integration.",
+        "error": (
+            "Use POST /api/video/from-song with audioUrl or assetId for Kling + your audio. "
+            "Raw prompt-only generation is not wired to a separate job queue here."
+        ),
     }
     with jobs_lock:
         jobs = _load_jobs()
@@ -357,12 +470,68 @@ def api_video_generate(req: VideoGenerateRequest) -> dict[str, Any]:
 
 class VideoFromSongRequest(BaseModel):
     projectId: str = Field(..., min_length=1)
-    style: str = Field("abstract")
-    engine: str = Field("pixverse")
-    # direct audio input for the prototype (offline-friendly)
+    style: str = Field("cinematic abstract")
+    engine: str = Field("kling")
     audioUrl: Optional[str] = None
-    # or a previously generated assetId (future)
-    assetId: Optional[str] = None
+    assetId: Optional[str] = Field(
+        None, description="Storage key, e.g. local/mix_abc.mp3 or uploads/…"
+    )
+    lyrics: Optional[str] = None
+    title: Optional[str] = None
+    aspectRatio: Literal["16:9", "9:16", "1:1"] = "16:9"
+    klingDurationSec: Literal[5, 10] = 10
+    negativePrompt: Optional[str] = None
+
+
+def _storage_file_strict(key: str) -> Path:
+    key = (key or "").strip().replace("\\", "/").lstrip("/")
+    if not key or ".." in key or key.startswith("."):
+        raise ValueError("Invalid storage key")
+    p = (STORAGE_DIR / key).resolve()
+    root = STORAGE_DIR.resolve()
+    if not str(p).startswith(str(root)) or not p.is_file():
+        raise ValueError("Storage file not found for key")
+    return p
+
+
+def _materialize_audio_for_video(params: dict[str, Any]) -> tuple[Path, list[Path]]:
+    """
+    Return path to a local audio file and a list of temp paths to delete after the job.
+    """
+    to_remove: list[Path] = []
+    audio_url = (params.get("audioUrl") or "").strip()
+    asset_key = (params.get("assetId") or "").strip()
+    if asset_key:
+        return _storage_file_strict(asset_key), to_remove
+    if not audio_url:
+        raise ValueError("Provide audioUrl (https or /api/storage/…) or assetId (storage key).")
+    if audio_url.startswith(("http://", "https://")):
+        low = audio_url.lower()
+        suffix = ".mp3"
+        if ".wav" in low.split("?", 1)[0]:
+            suffix = ".wav"
+        elif ".flac" in low.split("?", 1)[0]:
+            suffix = ".flac"
+        fd, tmp = tempfile.mkstemp(suffix=suffix)
+        os.close(fd)
+        p = Path(tmp)
+        req = urllib.request.Request(audio_url, method="GET")
+        try:
+            with urllib.request.urlopen(req, timeout=180) as resp:
+                p.write_bytes(resp.read())
+        except Exception:
+            p.unlink(missing_ok=True)
+            raise
+        to_remove.append(p)
+        return p, to_remove
+    m = re.search(r"/api/storage/([^/]+)/([^/?#]+)", audio_url)
+    if m:
+        p = (STORAGE_DIR / m.group(1) / m.group(2)).resolve()
+        root = STORAGE_DIR.resolve()
+        if not str(p).startswith(str(root)) or not p.is_file():
+            raise ValueError("audioUrl did not resolve to a file on this server")
+        return p, to_remove
+    raise ValueError("audioUrl must be http(s) or contain /api/storage/{folder}/{file}")
 
 
 def _run_video_job(job_id: str) -> None:
@@ -375,24 +544,96 @@ def _run_video_job(job_id: str) -> None:
         job["startedAt"] = time.time()
         _save_jobs(jobs)
 
+    params: dict[str, Any] = job.get("params") or {}
+    tmp_audio: list[Path] = []
+    tmp_dir: Optional[str] = None
     try:
-        # This repo currently has only a music procedural renderer.
-        # Video generation is a provider integration stub.
-        time.sleep(1.2)
+        if not kling_configured():
+            raise RuntimeError(
+                "Set AIMLAPI_KEY or KLING_API_KEY for Kling-class AI video (via AI/ML API). "
+                "Optional KLING_VIDEO_MODEL defaults to klingai/video-v2-6-pro-text-to-video — "
+                "set your provider's Kling 3.0 id when available. "
+                "For offline beat-waveform video use POST /api/local/music-video."
+            )
+
+        audio_path, tmp_audio = _materialize_audio_for_video(params)
+        det = detect_beats_from_path(audio_path)
+        beats = [float(x) for x in (det.get("beat_times_seconds") or [])]
+        bpm = float(det.get("tempo_bpm") or 120.0)
+        title = (params.get("title") or params.get("projectId") or "Untitled") or "Untitled"
+        prompt = build_kling_prompt_from_song(
+            style=str(params.get("style") or "cinematic"),
+            title=str(title),
+            lyrics=str(params.get("lyrics") or ""),
+            bpm=bpm,
+            beat_count=len(beats),
+        )
+        aspect = params.get("aspectRatio") or "16:9"
+        dur: Any = params.get("klingDurationSec") or 10
+        if dur not in (5, 10):
+            dur = 10
+        neg = str(params.get("negativePrompt") or "")
+        create_resp = create_text_to_video_task(
+            prompt=prompt,
+            aspect_ratio=aspect,  # type: ignore[arg-type]
+            duration_sec=dur,  # type: ignore[arg-type]
+            negative_prompt=neg,
+            generate_audio=False,
+        )
+        gen_id = create_resp.get("id")
+        if not gen_id:
+            raise RuntimeError(f"No generation id from provider: {create_resp!r}")
+
+        result = poll_generation(str(gen_id))
+        st = (result.get("status") or "").lower()
+        if st != "completed":
+            raise RuntimeError(result.get("error") or result)
+        vid_url = (result.get("video") or {}).get("url")
+        if not vid_url:
+            raise RuntimeError("Provider returned no video URL")
+
+        tmp_dir = tempfile.mkdtemp(prefix="dieter_kling_")
+        clip_path = Path(tmp_dir) / "kling_clip.mp4"
+        download_video(str(vid_url), clip_path)
+
+        out_dir = STORAGE_DIR / "video"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        safe_name = f"{job_id}_kling_mux.mp4"
+        out_path = out_dir / safe_name
+        loop_video_and_mux_audio(clip_path, audio_path, out_path)
+
+        rel_key = f"video/{safe_name}"
+        out_payload = {
+            "videoUrl": f"/api/storage/video/{safe_name}",
+            "storageKey": rel_key,
+            "klingGenerationId": gen_id,
+            "beatMarkers": beats[:96],
+            "bpm": bpm,
+            "beatCount": len(beats),
+            "promptUsed": prompt[:1200],
+            "engine": "kling_aiml_mux",
+            "note": "AI clip looped to track length; audio is YOUR song (not model audio).",
+        }
+        maybe_post_colab_webhook(
+            {
+                "type": "dieter.kling_mux.complete",
+                "jobId": job_id,
+                "output": out_payload,
+            }
+        )
+
         with jobs_lock:
             jobs = _load_jobs()
             job = jobs.get(job_id)
             if not job:
                 return
-            job["status"] = "failed"
+            job["status"] = "succeeded"
             job["finishedAt"] = time.time()
-            job["error"] = "Video engine not connected yet (PixVerse/Runway adapter stub)."
-            job["output"] = {
-                "videoUrl": None,
-                "beatMarkers": [],
-            }
+            job["output"] = out_payload
+            job["error"] = None
             _save_jobs(jobs)
     except Exception as e:
+        logger.exception("video job %s failed", job_id)
         with jobs_lock:
             jobs = _load_jobs()
             job = jobs.get(job_id)
@@ -401,7 +642,13 @@ def _run_video_job(job_id: str) -> None:
             job["status"] = "failed"
             job["finishedAt"] = time.time()
             job["error"] = str(e)
+            job["output"] = {"videoUrl": None, "beatMarkers": []}
             _save_jobs(jobs)
+    finally:
+        for p in tmp_audio:
+            p.unlink(missing_ok=True)
+        if tmp_dir:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 @app.post("/api/video/from-song")
@@ -434,47 +681,39 @@ def api_video_job(id: str) -> dict[str, Any]:
     return {"jobId": job.get("jobId"), "status": job.get("status"), "output": job.get("output"), "error": job.get("error")}
 
 
+@app.get("/api/video/capabilities")
+def api_video_capabilities() -> dict[str, Any]:
+    key, base, model = aiml_api_config()
+    return {
+        "klingPipeline": "Kling-class text-to-video (AI/ML API) + ffmpeg: loop AI clip, mux your track",
+        "aimlConfigured": bool(key),
+        "aimlBase": base if key else None,
+        "videoModel": model if key else None,
+        "colabWebhookConfigured": bool(os.environ.get("COLAB_VIDEO_WEBHOOK_URL", "").strip()),
+        "beatSync": "Librosa BPM + beat times inform the text prompt; output audio is always your uploaded song.",
+    }
+
+
 class SeoSuggestRequest(BaseModel):
     title: str = Field(..., min_length=1)
     description: Optional[str] = None
     lyrics: Optional[str] = None
     tags: Optional[list[str]] = None
     genre: Optional[str] = None
+    openaiApiKey: Optional[str] = None
 
 
 @app.post("/api/seo/suggest")
 def api_seo_suggest(req: SeoSuggestRequest) -> dict[str, Any]:
-    # Offline-safe heuristic suggestions (swap later with real AI agent)
-    tags = req.tags or []
-    genre = req.genre or "music"
-    title = req.title.strip()
-    keywords = []
-    for t in [genre, req.description or "", title, *(tags or [])]:
-        parts = re.split(r"[^a-z0-9]+", str(t).lower())
-        for w in parts:
-            if len(w) >= 3 and w not in keywords:
-                keywords.append(w)
-            if len(keywords) >= 18:
-                break
-        if len(keywords) >= 18:
-            break
-
-    keywords = keywords[:18]
-    desc = (req.description or "").strip()[:160] if req.description else ""
-    if not desc:
-        desc = f"{title} — {genre} song with vivid lyrics and a modern production vibe."
-
-    return {
-        "metaDescription": desc,
-        "keywords": keywords,
-        "h1": title,
-        "h2Ideas": [
-            f"What makes {genre} sound feel {req.title.split(' ')[0] if ' ' in req.title else 'fresh'}?",
-            "Release-ready audio, mix, and mastering workflow",
-            "Lyrics meaning + story behind the hook",
-        ],
-        "slugSuggestions": [f"{title.lower().replace(' ', '-')[:60]}"],
-    }
+    pack, source = build_seo_pack(
+        title=req.title.strip(),
+        description=req.description,
+        lyrics=req.lyrics,
+        tags=req.tags,
+        genre=req.genre,
+        openai_api_key=req.openaiApiKey,
+    )
+    return {**pack, "packSource": source}
 
 
 class SeoConfigUpsertRequest(BaseModel):
@@ -890,12 +1129,127 @@ def api_storage(asset_id: str, filename: str):
         if ext == ".wav"
         else "audio/flac"
         if ext == ".flac"
+        else "video/mp4"
+        if ext == ".mp4"
+        else "video/webm"
+        if ext == ".webm"
         else "application/octet-stream"
     )
     return FileResponse(str(p), media_type=media, filename=filename)
 
 
 MUREKA_API_BASE = os.environ.get("MUREKA_API_BASE", "https://api.mureka.ai").rstrip("/")
+
+_MAX_MUREKA_BEAT_BYTES = 80 * 1024 * 1024
+
+
+def _synth_vocals_allowed() -> bool:
+    return os.environ.get("DIETER_SYNTH_VOCALS", "").strip().lower() in ("1", "true", "yes", "on")
+
+
+async def _mureka_beat_vocal_mix_from_bytes(
+    beat_raw: bytes,
+    lyrics: str,
+    mureka_style: str,
+    beat_filename: str,
+    *,
+    voice_id_ref: str | None = None,
+) -> dict[str, Any]:
+    """
+    Mureka ``/v1/song/generate`` → poll → download, mix with user's beat (real cloud vocals).
+    Output MP3 under ``storage/mureka_mix/`` served at ``/api/storage/mureka_mix/…``.
+    """
+    api_key = (os.environ.get("MUREKA_API_KEY") or "").strip()
+    if not api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="Set MUREKA_API_KEY on this server for Mureka vocals + beat mix.",
+        )
+    if len(beat_raw) > _MAX_MUREKA_BEAT_BYTES:
+        raise HTTPException(status_code=413, detail="Beat file too large (max ~80MB)")
+    if len(beat_raw) < 256:
+        raise HTTPException(status_code=400, detail="Beat audio too short or empty")
+    if not (lyrics or "").strip():
+        raise HTTPException(status_code=400, detail="Lyrics required for Mureka vocal generation.")
+
+    job = uuid.uuid4().hex[:12]
+    tmp_dir = STORAGE_DIR / "_mureka_tmp"
+    mix_dir = STORAGE_DIR / "mureka_mix"
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    mix_dir.mkdir(parents=True, exist_ok=True)
+
+    beat_suffix = Path(beat_filename or "beat").suffix.lower() or ".wav"
+    if beat_suffix not in {".wav", ".wave", ".mp3", ".flac", ".ogg", ".m4a", ".aac", ".webm"}:
+        beat_suffix = ".wav"
+
+    beat_path = tmp_dir / f"_mureka_beat_{job}{beat_suffix}"
+    mureka_audio = tmp_dir / f"_mureka_raw_{job}.audio"
+    out_mp3 = mix_dir / f"master_mureka_{job}.mp3"
+
+    bpm = 0.0
+    n_beats = 0
+
+    try:
+        beat_path.write_bytes(beat_raw)
+        y_beat, sr_beat = librosa.load(str(beat_path), sr=None, mono=True)
+        analysis = analyze(y_beat, sr_beat, max_beats_report=None)
+        bpm = float(analysis["tempo_bpm"])
+        n_beats = len(analysis["beats_all"])
+
+        sync = MurekaSync(api_key)
+        try:
+            audio_url, _final = await sync.generate_track_url(
+                lyrics.strip(),
+                mureka_style,
+                model="auto",
+            )
+        except MurekaSyncError as e:
+            raise HTTPException(status_code=502, detail=str(e)) from e
+        except TimeoutError as e:
+            raise HTTPException(status_code=504, detail=str(e)) from e
+
+        ext = Path(audio_url.split("?", 1)[0]).suffix.lower() or ".mp3"
+        if ext not in {".mp3", ".wav", ".flac", ".ogg", ".m4a", ".aac"}:
+            ext = ".mp3"
+        mureka_audio = mureka_audio.with_suffix(ext)
+
+        await download_audio_url(audio_url, str(mureka_audio))
+
+        pro_ffmpeg_master(
+            beat_path,
+            mureka_audio,
+            out_mp3,
+            target_length_sec=min(180.0, float(analysis["duration_s"])),
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("mureka beat+vocal mix failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    finally:
+        for p in (beat_path, mureka_audio):
+            try:
+                if p.exists():
+                    p.unlink()
+            except OSError:
+                pass
+
+    name = out_mp3.name
+    rel = f"/api/storage/mureka_mix/{name}"
+    out: dict[str, Any] = {
+        "song": rel,
+        "song_url": rel,
+        "audio_url": rel,
+        "bpm": bpm,
+        "beats_detected": n_beats,
+        "pure": False,
+        "source": "mureka",
+        "stub": False,
+        "message": "Mureka AI vocals mixed with your beat. Train custom voices on platform.mureka.ai.",
+    }
+    if voice_id_ref:
+        out["voice_id"] = voice_id_ref
+    return out
 
 
 def _mureka_http(method: str, path: str, body: dict[str, Any] | None, bearer: str | None) -> dict[str, Any]:
@@ -962,14 +1316,43 @@ def api_mureka_song_query(task_id: str, authorization: str | None = Header(None)
     return _mureka_http("GET", f"/v1/song/query/{task_id}", None, token)
 
 
+@app.post("/api/pure-song-mureka")
+async def api_pure_song_mureka(
+    beat: UploadFile = File(...),
+    lyrics: str = Form(...),
+    mureka_style: str = Form("pop"),
+) -> dict[str, Any]:
+    """
+    **Mureka vocals + your beat:** calls Mureka ``/v1/song/generate``, polls, downloads,
+    mixes with the uploaded beat. Requires **MUREKA_API_KEY** on the server.
+    """
+    started = time.perf_counter()
+    raw = await beat.read()
+    try:
+        out = await _mureka_beat_vocal_mix_from_bytes(
+            raw,
+            lyrics,
+            mureka_style,
+            beat.filename or "beat.wav",
+        )
+        _record_perf("pure_song_mureka", True, (time.perf_counter() - started) * 1000.0)
+        return out
+    except HTTPException as e:
+        _record_perf("pure_song_mureka", False, (time.perf_counter() - started) * 1000.0, detail=str(e.detail))
+        raise
+    except Exception as e:
+        _record_perf("pure_song_mureka", False, (time.perf_counter() - started) * 1000.0, detail=str(e))
+        raise
+
+
 @app.post("/api/mureka/clone")
 async def api_mureka_clone(
     voice_sample: UploadFile = File(...),
     voice_name: str = Form("Custom Voice"),
 ) -> dict[str, Any]:
     """
-    F0 profile + temp WAV for **VoiceCloneStudio** (see ``voice_clone_pipeline``).
-    Stub id if the pipeline module is missing.
+    Optional **offline** voice fingerprint (Coqui F0 lab). Real custom singing voices
+    are trained on **platform.mureka.ai** — this endpoint does not replace that.
     """
     raw = await voice_sample.read()
     if len(raw) < 512:
@@ -997,43 +1380,85 @@ async def api_mureka_clone(
 
 @app.post("/api/mureka/generate")
 async def api_mureka_generate(
-    voice_id: str = Form(...),
+    voice_id: str = Form(""),
     lyrics: str = Form(...),
     beat_file: UploadFile = File(...),
+    mureka_style: str = Form("pop"),
 ) -> dict[str, Any]:
-    """Coqui TTS + F0 nudge + mix → ``/api/storage/voice_clone/*.wav`` when TTS is installed."""
+    """
+    **Default:** Mureka cloud vocals + your beat (same as ``/api/pure-song-mureka``).
+    Optional ``voice_id`` is echoed for your records; Mureka custom voices are managed on their platform.
+
+    **Legacy synthesis:** set env ``DIETER_SYNTH_VOCALS=true`` to allow Coqui TTS + F0 mix when no
+    ``MUREKA_API_KEY`` is configured (not real cloned singing — dev only).
+    """
+    started = time.perf_counter()
     beat_raw = await beat_file.read()
     if len(beat_raw) < 256:
         raise HTTPException(status_code=400, detail="Beat file too small.")
     if not (lyrics or "").strip():
         raise HTTPException(status_code=400, detail="Lyrics required.")
 
-    if vcp is not None and vcp.pipeline_available():
+    api_key = (os.environ.get("MUREKA_API_KEY") or "").strip()
+    if api_key:
         try:
-            return vcp.generate_song_with_clone(
-                voice_id=voice_id,
+            out = await _mureka_beat_vocal_mix_from_bytes(
+                beat_raw,
+                lyrics,
+                mureka_style,
+                beat_file.filename or "beat.wav",
+                voice_id_ref=(voice_id or "").strip() or None,
+            )
+            _record_perf("mureka_generate", True, (time.perf_counter() - started) * 1000.0)
+            return out
+        except HTTPException as e:
+            _record_perf("mureka_generate", False, (time.perf_counter() - started) * 1000.0, detail=str(e.detail))
+            raise
+        except Exception as e:
+            _record_perf("mureka_generate", False, (time.perf_counter() - started) * 1000.0, detail=str(e))
+            raise
+
+    if _synth_vocals_allowed() and vcp is not None and vcp.pipeline_available():
+        if not (voice_id or "").strip():
+            raise HTTPException(
+                status_code=400,
+                detail="voice_id required for offline synth, or set MUREKA_API_KEY for real Mureka vocals.",
+            )
+        try:
+            out = vcp.generate_song_with_clone(
+                voice_id=voice_id.strip(),
                 lyrics=lyrics,
                 beat_bytes=beat_raw,
                 temp_dir=BASE_DIR / "temp_voice_clone",
                 output_dir=STORAGE_DIR / "voice_clone",
                 url_prefix="/api/storage/voice_clone",
             )
+            _record_perf("mureka_generate_synth_fallback", True, (time.perf_counter() - started) * 1000.0)
+            return out
         except KeyError:
+            _record_perf("mureka_generate_synth_fallback", False, (time.perf_counter() - started) * 1000.0, detail="Voice not found")
             raise HTTPException(status_code=404, detail="Voice not found — run clone step again.") from None
         except ValueError as e:
+            _record_perf("mureka_generate_synth_fallback", False, (time.perf_counter() - started) * 1000.0, detail=str(e))
             raise HTTPException(status_code=400, detail=str(e)) from e
         except Exception as e:
             logger.exception("voice clone generate failed")
+            _record_perf("mureka_generate_synth_fallback", False, (time.perf_counter() - started) * 1000.0, detail=str(e))
             raise HTTPException(status_code=500, detail=str(e)) from e
 
-    return {
-        "stub": True,
-        "song_url": None,
-        "audio_url": None,
-        "voice_id": voice_id,
-        "message": "Coqui TTS not installed — pip install TTS torch (dieter-backend requirements).",
-        "beat_bytes": len(beat_raw),
-    }
+    _record_perf(
+        "mureka_generate",
+        False,
+        (time.perf_counter() - started) * 1000.0,
+        detail="Missing MUREKA_API_KEY and synth fallback disabled",
+    )
+    raise HTTPException(
+        status_code=503,
+        detail=(
+            "Configure MUREKA_API_KEY on the server for real Mureka AI vocals, "
+            "or set DIETER_SYNTH_VOCALS=true for optional offline TTS (not recommended)."
+        ),
+    )
 
 
 @app.post("/api/upload")
