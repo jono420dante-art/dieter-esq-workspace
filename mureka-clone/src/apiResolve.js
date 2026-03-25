@@ -53,14 +53,18 @@ export async function parseFetchJson(response) {
   if (!response.ok) {
     const methodHint =
       response.status === 405
-        ? ' Wrong HTTP method for this path (many API routes require POST, not GET).'
+        ? ' Wrong HTTP method (e.g. GET on a POST-only route, or an upstream that blocks this verb). Health and /api/local/capabilities must be GET on FastAPI.'
         : ''
     let detail = trimmed || '(empty response body)'
     if (trimmed) {
       try {
         const j = JSON.parse(trimmed)
-        if (j != null && typeof j === 'object' && 'detail' in j) {
-          detail = typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail)
+        if (j != null && typeof j === 'object') {
+          if ('detail' in j) {
+            detail = typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail)
+          } else if ('error' in j && typeof j.error === 'string') {
+            detail = j.error
+          }
         }
       } catch {
         /* keep raw text */
@@ -72,7 +76,14 @@ export async function parseFetchJson(response) {
   try {
     return JSON.parse(trimmed)
   } catch {
-    throw new Error(`Invalid JSON (HTTP ${response.status}): ${trimmed.slice(0, 240)}`)
+    const looksHtml =
+      /^<!DOCTYPE\b/i.test(trimmed) ||
+      /^<html\b/i.test(trimmed) ||
+      /<head[^>]*>/i.test(trimmed.slice(0, 400))
+    const hint = looksHtml
+      ? 'This URL returned an HTML page instead of JSON — usually the static host is serving the SPA for /api/*. On Vercel set DIETER_API_ORIGIN to your FastAPI host (same repo includes middleware.js), or set VITE_API_BASE to https://your-api…/api and redeploy. See DEPLOY_VERCEL_RAILWAY.md.'
+      : `Body is not JSON (HTTP ${response.status}).`
+    throw new Error(`${hint} First bytes: ${trimmed.slice(0, 180).replace(/\s+/g, ' ')}`)
   }
 }
 

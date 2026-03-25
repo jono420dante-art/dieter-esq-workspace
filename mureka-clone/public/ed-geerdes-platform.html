@@ -798,19 +798,33 @@
         el.textContent = 'API: checking…';
         fetch('/api/health', { method: 'GET' })
             .then(function (r) {
-                if (!r.ok) {
-                    el.textContent = 'API: HTTP ' + r.status + ' — is the FastAPI container running on this host?';
-                    return null;
-                }
-                return r.json();
+                return r.text().then(function (text) {
+                    return { r: r, text: text };
+                });
             })
-            .then(function (j) {
-                if (!j) return;
-                if (j.ok) el.textContent = 'API: OK — /api/health reachable from this page';
-                else el.textContent = 'API: unexpected response';
+            .then(function (_ref) {
+                var r = _ref.r;
+                var text = (_ref.text || '').trim();
+                if (!r.ok) {
+                    el.textContent = 'API: HTTP ' + r.status + ' — ' + (text.slice(0, 120) || 'no body');
+                    return;
+                }
+                if (/^<!DOCTYPE|^<html/i.test(text)) {
+                    el.textContent = 'API: got HTML (SPA) instead of JSON — set Vercel DIETER_API_ORIGIN or VITE_API_BASE on build.';
+                    return;
+                }
+                var j = null;
+                try {
+                    j = JSON.parse(text);
+                } catch (e) {
+                    el.textContent = 'API: not JSON — ' + text.slice(0, 100);
+                    return;
+                }
+                if (j && j.ok) el.textContent = 'API: OK — /api/health reachable from this page';
+                else el.textContent = 'API: unexpected JSON — ' + (j && j.error ? j.error : '');
             })
             .catch(function () {
-                el.textContent = 'API: offline — open merged Docker UI+API, or deploy API and use same origin.';
+                el.textContent = 'API: offline — run FastAPI, or set DIETER_API_ORIGIN on Vercel. See DEPLOY_VERCEL_RAILWAY.md.';
             });
     };
 

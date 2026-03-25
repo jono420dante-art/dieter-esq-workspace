@@ -53,7 +53,8 @@ Use this when you want **`*.vercel.app`** for the SPA and a separate API host.
 
 | Variable | Example |
 |----------|---------|
-| `VITE_API_BASE` | `https://dieter-api-production.up.railway.app/api` |
+| `DIETER_API_ORIGIN` | `https://dieter-api-production.up.railway.app` — **no** `/api` suffix. Enables **Edge middleware** (`middleware.js`) so same-origin `/api/*` proxies to FastAPI. Use this **or** `VITE_API_BASE`, not both unless you know why. |
+| `VITE_API_BASE` | `https://dieter-api-production.up.railway.app/api` — browser calls Railway **directly**; set `DIETER_CORS_ORIGINS` on the API. Omit if you rely on `DIETER_API_ORIGIN` + relative `/api`. |
 | `VITE_USE_TRPC` | `false` (REST to Railway unless you run tRPC separately) |
 | `VITE_STUDIO_LINKS` | Optional JSON array for footer links, e.g. `[{"label":"Licensing","href":"https://…"}]` — shop, socials, buyer portals |
 | `VITE_STUDIO_SHOP_URL` / `VITE_STUDIO_LICENSING_URL` / … | Optional single URLs if you prefer not to use JSON (see `mureka-clone/src/studioLinks.js`) |
@@ -76,7 +77,9 @@ If the browser blocks requests, set **`DIETER_CORS_ORIGINS`** on Railway to your
 
 | Issue | What to check |
 |-------|----------------|
+| “Invalid JSON” / HTML from `/api/health` | The SPA was handling `/api/*`. Set **`DIETER_API_ORIGIN`** on Vercel and redeploy (middleware proxies), **or** set `VITE_API_BASE` to `https://…/api` so the UI never uses same-origin `/api`. SPA rewrites now skip `/api/**`. |
 | API 404 from Vercel | `VITE_API_BASE` must end with `/api` and match Railway URL (HTTPS). Redeploy Vercel after changing env. |
+| HTTP **405** on probes | Usually wrong host, or POST used where only GET exists. Health + `/api/local/capabilities` are **GET** on FastAPI. |
 | CORS errors | `DIETER_CORS_ORIGINS` includes your Vercel origin. |
 | Local lab empty | Railway service must be the API image; confirm **`/api/health`**. |
 

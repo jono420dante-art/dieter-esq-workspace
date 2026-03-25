@@ -4,7 +4,7 @@
   "buildCommand": "cd mureka-clone && npm run build",
   "outputDirectory": "mureka-clone/dist",
   "framework": null,
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "rewrites": [{ "source": "/((?!api(?:$|/)).*)", "destination": "/index.html" }],
   "headers": [
     {
       "source": "/assets/(.*)",
