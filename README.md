@@ -10,7 +10,7 @@ Single **Docker** image: **React UI** + **FastAPI** on one URL.
 
 1. Read **[`DIETER_ESQ_START.md`](./DIETER_ESQ_START.md)** — Railway / Render / **Vercel** / local `docker compose`.
 2. Repo root **`railway.toml`** points at **`dieter-backend/Dockerfile`** (build context = this repo root).
-3. **Vercel:** repo root **`vercel.json`** builds **`mureka-clone/`**; set **`VITE_API_BASE`** to your live API (team e.g. **`jonathan-s-projects-2da2bb36`** — pick it in the Vercel UI when importing the repo). **Production UI (stable alias):** [https://dieter-esq-workspace.vercel.app](https://dieter-esq-workspace.vercel.app). **Redeploy:** from repo root run `npm run deploy:vercel` (needs `vercel login` once), or push to GitHub if the project is connected.
+3. **Vercel / Netlify (free):** root **`vercel.json`** or **`netlify.toml`**. Custom domain (**`dieter-music.app`**), **Stripe `pk_live_…`** build injection, fork + deploy: **[`docs/DIETER_MUSIC_APP.md`](./docs/DIETER_MUSIC_APP.md)**. Set **`VITE_API_BASE`** to your live API. **Production UI:** [https://dieter-esq-workspace.vercel.app](https://dieter-esq-workspace.vercel.app) (add your domain in the hosting UI). **Redeploy:** `npm run deploy:vercel` from repo root, or push to GitHub.
 
 Main code:
 

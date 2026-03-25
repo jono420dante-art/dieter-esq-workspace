@@ -3,7 +3,7 @@
  * Set VITE_SITE_URL when deploying somewhere other than the default Vercel app.
  */
 /** Stable production hostname — create this Vercel alias or set `VITE_SITE_URL` (e.g. existing *.vercel.app). */
-const DEFAULT_VERCEL_PROD = 'https://ed-geerdes.vercel.app'
+const DEFAULT_VERCEL_PROD = 'https://dieter-music.app'
 
 export function getSiteUrl() {
   const fromEnv = import.meta.env.VITE_SITE_URL?.trim()

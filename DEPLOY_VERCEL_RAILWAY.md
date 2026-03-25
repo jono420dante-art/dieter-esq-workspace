@@ -1,6 +1,8 @@
 # ED-GEERDES — Vercel (frontend) + Railway (backend)
 
-Studio product name: **ED-GEERDES**. Vercel project: link this repo with **Root Directory** = repo root (root `vercel.json` builds `mureka-clone`). Rename or alias the Vercel project to **ed-geerdes** if you want `ed-geerdes.vercel.app`. CI: `.github/workflows/vercel-production.yml` (set `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`).
+Studio product name: **ED-GEERDES**. Vercel project: link this repo with **Root Directory** = repo root (root `vercel.json` builds `mureka-clone`). **Custom domain** (e.g. `dieter-music.app`), **Stripe `pk_live_…`**, Netlify mirror, and fork/deploy steps: **`docs/DIETER_MUSIC_APP.md`**. CI: `.github/workflows/vercel-production.yml` (set `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`).
+
+**Vercel env (production):** add **`STRIPE_PUBLISHABLE_KEY`** = full `pk_live_…` so the build injects it into **`ed-geerdes-platform.html`** (see `mureka-clone/vite.config.js`).
 
 One **GitHub** repository should contain both **`mureka-clone/`** (React) and **`dieter-backend/`** (FastAPI). That matches this workspace layout and the root **`railway.toml`** / **`Dockerfile`** (full stack on one host).
 

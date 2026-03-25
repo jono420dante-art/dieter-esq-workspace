@@ -1,0 +1,20 @@
+# Netlify (free tier) — same Vite app as Vercel.
+# Fork repo → Netlify → New site from Git → set base directory to repo root, then override below OR use monorepo settings:
+#   Base directory: mureka-clone
+#   Build command:  npm ci && npm run build
+#   Publish dir:    dist
+#
+# Environment (Site settings → Environment variables):
+#   STRIPE_PUBLISHABLE_KEY = pk_live_…   (baked into ed-geerdes-platform.html at build time)
+#   VITE_API_BASE          = https://your-api.example.com/api
+#   VITE_SITE_URL          = https://dieter-music.app
+
+[build]
+  base = "mureka-clone"
+  command = "npm ci && npm run build"
+  publish = "dist"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
