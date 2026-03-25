@@ -53,7 +53,7 @@ Use this when you want **`*.vercel.app`** for the SPA and a separate API host.
 
 | Variable | Example |
 |----------|---------|
-| `DIETER_API_ORIGIN` | `https://dieter-api-production.up.railway.app` — **no** `/api` suffix. Enables **Edge middleware** (`middleware.js`) so same-origin `/api/*` proxies to FastAPI. Use this **or** `VITE_API_BASE`, not both unless you know why. |
+| `DIETER_API_ORIGIN` | `https://dieter-api-production.up.railway.app` — **no** `/api` suffix. Enables **Edge middleware** (`middleware.js`) so same-origin `/api/*` proxies to FastAPI. **Excludes** `POST /api/mureka/song/generate` and `GET /api/mureka/song/query/*` so existing **Vercel Node** handlers in `mureka-clone/api/` still run. Omit this if you only use `VITE_API_BASE` and CORS. |
 | `VITE_API_BASE` | `https://dieter-api-production.up.railway.app/api` — browser calls Railway **directly**; set `DIETER_CORS_ORIGINS` on the API. Omit if you rely on `DIETER_API_ORIGIN` + relative `/api`. |
 | `VITE_USE_TRPC` | `false` (REST to Railway unless you run tRPC separately) |
 | `VITE_STUDIO_LINKS` | Optional JSON array for footer links, e.g. `[{"label":"Licensing","href":"https://…"}]` — shop, socials, buyer portals |

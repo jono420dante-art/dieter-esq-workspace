@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "cd mureka-clone && npm ci",
+  "installCommand": "npm ci && cd mureka-clone && npm ci",
   "buildCommand": "cd mureka-clone && npm run build",
   "outputDirectory": "mureka-clone/dist",
   "framework": null,

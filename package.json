@@ -2,6 +2,9 @@
   "name": "ed-geerdes-workspace",
   "private": true,
   "description": "ED-GEERDES studio — monorepo: mureka-clone (Vite) + dieter-backend (FastAPI).",
+  "dependencies": {
+    "@vercel/edge": "^1.2.2"
+  },
   "scripts": {
     "build": "node scripts/build-frontend-to-backend.mjs",
     "build:backend": "node scripts/build-frontend-to-backend.mjs",

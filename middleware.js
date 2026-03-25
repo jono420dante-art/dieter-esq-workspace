@@ -1,30 +1,27 @@
 /**
- * Same as mureka-clone/middleware.js — use this when Vercel "Root Directory" is the repo root
- * (vercel.json at repository root with outputDirectory mureka-clone/dist).
+ * Same behavior as mureka-clone/middleware.js (repo-root Vercel projects).
+ * Requires @vercel/edge at the directory where `npm ci` runs (see root package.json + vercel.json).
  */
+import { next } from '@vercel/edge'
+
 export const config = {
   matcher: ['/api', '/api/:path*'],
 }
 
 export default async function middleware(request) {
-  const origin = (process.env.DIETER_API_ORIGIN || '').trim().replace(/\/$/, '')
   const { pathname, search } = new URL(request.url)
 
+  if (
+    pathname === '/api/mureka/song/generate' ||
+    pathname.startsWith('/api/mureka/song/query/')
+  ) {
+    return next()
+  }
+
+  const origin = (process.env.DIETER_API_ORIGIN || '').trim().replace(/\/$/, '')
+
   if (!origin) {
-    return new Response(
-      JSON.stringify({
-        ok: false,
-        error:
-          'Vercel proxy disabled: set DIETER_API_ORIGIN to your API host (e.g. https://xxx.up.railway.app), or set VITE_API_BASE on build to call the API directly.',
-      }),
-      {
-        status: 503,
-        headers: {
-          'content-type': 'application/json; charset=utf-8',
-          'cache-control': 'no-store',
-        },
-      },
-    )
+    return next()
   }
 
   const target = `${origin}${pathname}${search}`
