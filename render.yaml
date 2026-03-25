@@ -1,4 +1,5 @@
 # Render Blueprint (repository root) — see dieter-backend/DEPLOY_RENDER.md
+# Build context: repository root (must contain mureka-clone/ and dieter-backend/).
 services:
   - type: web
     name: dieter-beat-lab
@@ -13,3 +14,12 @@ services:
         value: "2"
       - key: DIETER_AUDIO_ENGINE
         value: procedural
+      # Comma-separated origins if you restrict CORS (default *). Example for Vercel-only UI:
+      # https://mureka-clone.vercel.app,https://*.vercel.app
+      - key: DIETER_CORS_ORIGINS
+        value: "*"
+      # Set in Render Dashboard → Environment (secrets): Mureka cloud generation
+      - key: MUREKA_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false

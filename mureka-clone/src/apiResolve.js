@@ -29,6 +29,39 @@ export function absoluteFromApiPath(apiRoot, pathOrUrl) {
   return `${window.location.origin}${path}`
 }
 
+/**
+ * Read JSON from a fetch Response without throwing on empty body or non-JSON errors.
+ * Surfaces HTTP status (e.g. 405 = wrong method) in the Error message.
+ */
+export async function parseFetchJson(response) {
+  const text = await response.text()
+  const trimmed = text.trim()
+  if (!response.ok) {
+    const methodHint =
+      response.status === 405
+        ? ' Wrong HTTP method for this path (many Dieter routes require POST, not GET).'
+        : ''
+    let detail = trimmed || '(empty response body)'
+    if (trimmed) {
+      try {
+        const j = JSON.parse(trimmed)
+        if (j != null && typeof j === 'object' && 'detail' in j) {
+          detail = typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail)
+        }
+      } catch {
+        /* keep raw text */
+      }
+    }
+    throw new Error(`HTTP ${response.status}${methodHint} ${detail}`.trim())
+  }
+  if (!trimmed) return null
+  try {
+    return JSON.parse(trimmed)
+  } catch {
+    throw new Error(`Invalid JSON (HTTP ${response.status}): ${trimmed.slice(0, 240)}`)
+  }
+}
+
 export function storageUrlFromKey(apiRoot, key) {
   if (!key) return ''
   const k = String(key).replace(/^\//, '')
@@ -46,7 +79,7 @@ export async function postStudioGrowth(apiRoot, kind, note = '') {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ kind, note: String(note).slice(0, 500) }),
     })
-    return r.ok ? await r.json().catch(() => ({})) : null
+    return r.ok ? (await parseFetchJson(r).catch(() => ({})) ?? {}) : null
   } catch {
     return null
   }
@@ -56,7 +89,7 @@ export async function fetchStudioGrowth(apiRoot) {
   try {
     const r = await fetch(`${apiRoot}/studio/growth`)
     if (!r.ok) return null
-    return await r.json()
+    return await parseFetchJson(r).catch(() => null)
   } catch {
     return null
   }

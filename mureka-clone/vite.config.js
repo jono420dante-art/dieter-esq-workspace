@@ -7,8 +7,9 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        // Match `uvicorn app.main:app --port 8000` in dieter-backend. Override: set env API_PROXY_TARGET.
-        target: process.env.API_PROXY_TARGET || 'http://127.0.0.1:8000',
+        // Default matches common dev: `uvicorn app.main:app --reload --port 8787` in dieter-backend.
+        // Override: `set API_PROXY_TARGET=http://127.0.0.1:8000` then `npm run dev` (Windows cmd).
+        target: process.env.API_PROXY_TARGET || 'http://127.0.0.1:8787',
         changeOrigin: true,
       },
       '/trpc': {

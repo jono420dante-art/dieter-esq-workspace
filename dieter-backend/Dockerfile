@@ -6,6 +6,10 @@
 
 FROM node:20-alpine AS frontend
 WORKDIR /src
+# Optional: pass when building for a split layout (static on Vercel, API elsewhere), e.g.
+#   docker build -f dieter-backend/Dockerfile --build-arg VITE_API_BASE=https://api.example.com .
+ARG VITE_API_BASE=
+ENV VITE_API_BASE=$VITE_API_BASE
 COPY mureka-clone/package.json mureka-clone/package-lock.json* ./mureka-clone/
 WORKDIR /src/mureka-clone
 RUN npm ci
@@ -31,6 +35,7 @@ RUN pip install -r /app/requirements.txt
 
 COPY dieter-backend/app /app/app
 COPY dieter-backend/beat_analysis.py /app/beat_analysis.py
+COPY dieter-backend/voice_clone_pipeline.py /app/voice_clone_pipeline.py
 COPY dieter-backend/scripts /app/scripts
 
 RUN mkdir -p /app/data /app/storage

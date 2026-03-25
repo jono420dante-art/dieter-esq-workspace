@@ -168,17 +168,22 @@ export default function VoiceCloneStudio({ apiBase }) {
         }
       }
 
-      setSongUrl(url ? absoluteFromApiPath(apiRoot, url) : null)
+      const resolvedUrl = url ? absoluteFromApiPath(apiRoot, url) : null
+      setSongUrl(resolvedUrl || beatPreviewUrl || null)
       setStubMessage(message)
       setStep(4)
       setStatus(
-        url ? 'Your song is ready.' : 'Request finished — no audio URL yet. Check backend wiring.',
+        resolvedUrl
+          ? 'Your song is ready.'
+          : beatPreviewUrl
+            ? 'No generated URL returned — using your uploaded beat for playback preview.'
+            : 'Request finished — no audio URL yet. Check backend wiring.',
       )
     } catch (error) {
       setStatus(error.message || 'Generation failed')
       setStep(2)
     }
-  }, [apiRoot, beatFile, lyrics, tryPureSongMureka, voiceId])
+  }, [apiRoot, beatFile, beatPreviewUrl, lyrics, tryPureSongMureka, voiceId])
 
   const statusClass = `status${isStatusError(status) ? ' status--bad' : ''}`
 

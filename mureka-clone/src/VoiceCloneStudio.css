@@ -2,7 +2,12 @@
 
 .studio {
   min-height: 100vh;
-  background: linear-gradient(135deg, #0f0f23, #1a1a2e);
+  background-image:
+    linear-gradient(145deg, rgba(15, 15, 35, 0.92), rgba(26, 26, 46, 0.9)),
+    url('/local-studio-bg.png');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
   padding: 40px 20px 100px;
   color: #f8fafc;
   box-sizing: border-box;

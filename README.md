@@ -1,5 +1,9 @@
 # Dieter Esq. workspace
 
+**GitHub:** [github.com/jono420dante-art/dieter-esq-workspace](https://github.com/jono420dante-art/dieter-esq-workspace) — clone or open this folder; that repo **is** the full product (React + FastAPI + Docker).
+
+**Cursor / VS Code:** **File → Open Workspace from File…** → choose [`dieter-esq-workspace.code-workspace`](./dieter-esq-workspace.code-workspace) so the whole tree (UI, API, deploy config) is one connected project.
+
 ## Deploy the full music studio (recommended)
 
 Single **Docker** image: **React UI** + **FastAPI** on one URL.

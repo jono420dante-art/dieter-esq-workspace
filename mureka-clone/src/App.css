@@ -3,7 +3,18 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, #0c0c14 0%, #09090f 40%);
+  background-image:
+    linear-gradient(
+      160deg,
+      rgba(4, 6, 14, 0.94) 0%,
+      rgba(8, 10, 22, 0.9) 45%,
+      rgba(5, 7, 16, 0.93) 100%
+    ),
+    url('/local-studio-bg.png');
+  background-size: cover;
+  background-position: center 38%;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
 .header {
   background: rgba(12, 14, 28, 0.95);
@@ -313,15 +324,42 @@ textarea {
   max-width: 720px;
 }
 
+/* Hero: studio photo + dark overlay — image: public/local-studio-bg.png */
 .local-studio {
-  padding: 1rem 0 2rem;
-  border-bottom: 1px solid rgba(168, 85, 247, 0.15);
+  position: relative;
+  padding: 1.25rem 1rem 2rem;
   margin-bottom: 1.5rem;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  border-bottom: 1px solid rgba(168, 85, 247, 0.15);
+  background-color: #0a0a12;
+  background-image:
+    linear-gradient(
+      155deg,
+      rgba(6, 8, 18, 0.94) 0%,
+      rgba(10, 12, 26, 0.88) 35%,
+      rgba(8, 10, 22, 0.9) 70%,
+      rgba(4, 6, 14, 0.93) 100%
+    ),
+    url('/local-studio-bg.png');
+  background-size: cover;
+  background-position: center 38%;
+  background-repeat: no-repeat;
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.45);
 }
 .local-studio-title {
   font-size: 1.1rem;
   margin: 0 0 0.5rem;
   color: #f5f3ff;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.85);
+}
+.local-studio .field-hint {
+  color: #cbd5e1;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 .quick-steps {
   margin: 0 0 1rem 1.1rem;
@@ -333,12 +371,74 @@ textarea {
   font-size: 0.82rem;
   line-height: 1.65;
 }
+.local-studio .quick-steps {
+  margin-left: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-color: rgba(34, 197, 94, 0.4);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+}
+.local-studio .local-sub {
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.85);
+}
+.local-studio .caps-pre {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.local-studio .beat-result {
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(168, 85, 247, 0.28);
+}
+.local-api-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.75rem 1rem;
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+}
+.local-api-banner--bad {
+  background: rgba(69, 10, 10, 0.55);
+  border: 1px solid rgba(248, 113, 113, 0.45);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+}
+.local-api-banner-text {
+  margin: 0;
+  flex: 1;
+  min-width: 200px;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: #fecaca;
+}
+.local-api-cmd {
+  display: inline-block;
+  margin-top: 0.25rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  font-size: 0.78rem;
+  color: #fef08a;
+}
+.local-lyrics-hint {
+  margin: 0.25rem 0 0.4rem !important;
+  font-size: 0.8rem !important;
+}
 .make-song-card {
+  position: relative;
+  z-index: 2;
+  isolation: isolate;
   margin: 1rem 0 1.5rem;
   padding: 1rem 1.1rem;
   border-radius: 12px;
-  border: 1px solid rgba(168, 85, 247, 0.35);
-  background: linear-gradient(165deg, rgba(88, 28, 135, 0.2), rgba(15, 15, 22, 0.6));
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  background: linear-gradient(165deg, rgba(45, 20, 80, 0.55), rgba(10, 10, 18, 0.82));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 .make-song-card label {
   display: block;
@@ -623,18 +723,35 @@ textarea {
   margin: 1.25rem 0 0.35rem;
   color: #e9d5ff;
 }
+.local-studio .local-textarea {
+  position: relative;
+  z-index: 1;
+}
 .local-textarea {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
   margin: 0.35rem 0 0.75rem;
-  padding: 0.6rem 0.75rem;
+  padding: 0.65rem 0.8rem;
+  min-height: 5rem;
   border-radius: 8px;
-  border: 1px solid rgba(168, 85, 247, 0.25);
-  background: rgba(15, 15, 24, 0.9);
+  border: 1px solid rgba(168, 85, 247, 0.45);
+  background: rgba(6, 6, 12, 0.96);
   color: #f5f3ff;
   font-family: inherit;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.local-textarea::placeholder {
+  color: rgba(196, 181, 253, 0.55);
+}
+.local-textarea:focus {
+  outline: none;
+  border-color: rgba(168, 85, 247, 0.75);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 2px rgba(168, 85, 247, 0.25);
 }
 .local-num {
   width: 4.5rem;

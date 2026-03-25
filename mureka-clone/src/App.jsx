@@ -7,12 +7,12 @@ import BeatLab from './BeatLab.jsx'
 import VoiceCloneStudio from './VoiceCloneStudio.jsx'
 import MurekaPromptStudio from './MurekaPromptStudio.jsx'
 import { fetchStudioGrowth, normalizeApiRoot, postStudioGrowth } from './apiResolve.js'
+import { dieterInitialApiBase, dieterUseTrpc, audioCrossOriginForSrc } from './dieterClientConfig.js'
 import { extractAudioUrl } from './murekaHelpers.js'
 import { useBeatVisualizer } from './useBeatVisualizer.js'
 
 const DEFAULT_BASE = import.meta.env.VITE_API_BASE || '/api'
-/** When true (default), Mureka calls go through Dieter tRPC → FastAPI. Set VITE_USE_TRPC=false to use REST /api only. */
-const USE_TRPC = import.meta.env.VITE_USE_TRPC !== 'false'
+const USE_TRPC = dieterUseTrpc()
 
 const STYLE_PRESETS = [
   'Grand Piano',
@@ -45,20 +45,16 @@ function buildCreationPrompt({ instrumental, lyrics, style, vocal, title }) {
 
 export default function App() {
   /** `create` = Mureka hero. `local` / `beatlab` / `voicestudio` / `cloud` = labs + advanced cloud form. */
-  const [appMode, setAppMode] = useState(
-    () =>
-      import.meta.env.VITE_DEFAULT_MODE === 'create'
-        ? 'create'
-        : import.meta.env.VITE_DEFAULT_MODE === 'cloud'
-          ? 'cloud'
-          : import.meta.env.VITE_DEFAULT_MODE === 'beatlab'
-            ? 'beatlab'
-            : import.meta.env.VITE_DEFAULT_MODE === 'voicestudio'
-              ? 'voicestudio'
-              : import.meta.env.VITE_DEFAULT_MODE === 'local'
-                ? 'local'
-                : 'create',
-  )
+  const [appMode, setAppMode] = useState(() => {
+    const m = import.meta.env.VITE_DEFAULT_MODE
+    if (m === 'create') return 'create'
+    if (m === 'cloud') return 'cloud'
+    if (m === 'beatlab') return 'beatlab'
+    if (m === 'voicestudio') return 'voicestudio'
+    if (m === 'local') return 'local'
+    /** Default: Local lab (lyrics + beat, Dieter API) — no Mureka key. Set VITE_DEFAULT_MODE=create for Mureka-first. */
+    return 'local'
+  })
   const [lyrics, setLyrics] = useState('')
   const [style, setStyle] = useState('Melodic Trap')
   const [title, setTitle] = useState('')
@@ -66,9 +62,7 @@ export default function App() {
   const [instrumental, setInstrumental] = useState(false)
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('mureka_api_key') || '')
   const [openaiKey, setOpenaiKey] = useState(() => localStorage.getItem('openai_api_key') || '')
-  const [apiBase, setApiBase] = useState(() =>
-    normalizeApiRoot(localStorage.getItem('dieter_api_base') || DEFAULT_BASE),
-  )
+  const [apiBase, setApiBase] = useState(() => dieterInitialApiBase())
   const [showAuth, setShowAuth] = useState(false)
   const [status, setStatus] = useState('')
   const [err, setErr] = useState('')
@@ -354,14 +348,14 @@ export default function App() {
             className={appMode === 'local' ? 'pill-btn' : 'btn-mode'}
             onClick={() => setAppMode('local')}
           >
-            Local (8787)
+            Local
           </button>
           <button
             type="button"
             className={appMode === 'beatlab' ? 'pill-btn' : 'btn-mode'}
             onClick={() => setAppMode('beatlab')}
           >
-            Beat lab (8000)
+            Beat lab
           </button>
           <button
             type="button"
@@ -377,7 +371,11 @@ export default function App() {
           >
             Cloud
           </button>
-          {(appMode === 'cloud' || appMode === 'create') && (
+          {(appMode === 'cloud' ||
+            appMode === 'create' ||
+            appMode === 'local' ||
+            appMode === 'beatlab' ||
+            appMode === 'voicestudio') && (
             <button type="button" className="pill-btn" onClick={() => setShowAuth(true)}>
               API keys
             </button>
@@ -391,18 +389,22 @@ export default function App() {
           <div className="modal-card">
             <h2>Connections</h2>
             <p className="hint">
-              <strong>Mureka</strong> key from{' '}
+              <strong>Mureka</strong> is optional — use the <strong>Local</strong> tab for lyrics + beat + Dieter API
+              without it. Add a Mureka key from{' '}
               <a href="https://platform.mureka.ai" target="_blank" rel="noreferrer">
                 platform.mureka.ai
-              </a>
-              . Dev: Vite proxies <code>/trpc</code> → tRPC (8790) and <code>/api</code> → FastAPI (see{' '}
-              <code>vite.config.js</code>).
+              </a>{' '}
+              only when you want cloud generation from the Create tab.
+              <br />
+              Dev: Vite proxies <code>/trpc</code> → tRPC (8790) and <code>/api</code> → FastAPI (see{' '}
+              <code>vite.config.js</code>). <strong>tRPC</strong> is on by default in dev only; production builds use{' '}
+              <strong>REST</strong> unless you set <code>VITE_USE_TRPC=true</code>.
               <br />
               <strong>Production (full app)</strong>: deploy the <strong>single Docker image</strong> (
               <code>dieter-backend/Dockerfile</code> from repo root). Open your host URL — UI and <code>/api</code> are
               the same origin (see <code>DIETER_ESQ_START.md</code> in the repo). Only if you host the UI separately
-              (e.g. Cloudflare Pages) set <code>VITE_API_BASE</code> and optional <code>DIETER_CORS_ORIGINS</code> on
-              the API.
+              (e.g. Vercel + Railway) set <code>VITE_API_BASE</code> and optional <code>DIETER_CORS_ORIGINS</code> on
+              the API — see <code>DEPLOY_VERCEL_RAILWAY.md</code> in the repo root.
               <br />
               <strong>OpenAI</strong> (optional): set <code>OPENAI_API_KEY</code> on the FastAPI server for AI lyrics;
               or paste a key here to pass through to the backend. Generate/Optimize call FastAPI via tRPC (or{' '}
@@ -448,6 +450,14 @@ export default function App() {
           apiKey={apiKey}
           onOpenKeys={() => setShowAuth(true)}
           onStudioPulse={(g) => setStudioPulse(g)}
+          onGoLocalWithLyrics={(text) => {
+            try {
+              sessionStorage.setItem('dieter_local_lyrics_seed', String(text || '').trim())
+            } catch {
+              /* ignore quota / private mode */
+            }
+            setAppMode('local')
+          }}
         />
       ) : appMode === 'local' ? (
         <main className="main main-local">
@@ -607,7 +617,7 @@ export default function App() {
               ref={audioRef}
               controls
               src={audioUrl}
-              crossOrigin="anonymous"
+              crossOrigin={audioCrossOriginForSrc(audioUrl)}
               className="player"
             />
             <canvas ref={canvasRef} width={800} height={160} className="viz" />

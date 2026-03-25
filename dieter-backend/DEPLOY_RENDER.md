@@ -35,3 +35,11 @@ See `dieter-backend/render.yaml` in this repo — adjust service name and remove
 ## 5. Cold starts
 
 Free/starter tiers **spin down** after idle. First request may take **30–60s**. Upgrade or use a keep-alive ping if needed.
+
+## 6. Vercel UI + Render API (split origin)
+
+If the React app is on **Vercel** and the API on **Render**, set **Vercel → Project → Environment Variables**:
+
+- **`VITE_API_BASE`** = your Render service origin **without** a path, e.g. `https://dieter-beat-lab.onrender.com` (the client appends `/api`).
+
+Redeploy Vercel after changing env vars so the value is baked into the bundle. Optionally set **`DIETER_CORS_ORIGINS`** on Render to a comma list including `https://your-app.vercel.app` (default `*` already allows browser calls from Vercel).

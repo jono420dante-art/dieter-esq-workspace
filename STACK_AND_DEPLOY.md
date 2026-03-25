@@ -52,13 +52,15 @@ flowchart LR
 
 ### B) Split front + API (optional advanced)
 
-1. **Railway**: deploy from repo root; `railway.toml` points at `dieter-backend/Dockerfile`.
+Full checklist (**Vercel + Railway**, env vars, `Dockerfile.api`): **`DEPLOY_VERCEL_RAILWAY.md`**.
+
+1. **Railway**: deploy API with **`dieter-backend/Dockerfile.api`** (repo root context), or full **`dieter-backend/Dockerfile`** if you accept unused static in the image.
 2. Copy the public URL, e.g. `https://dieter-api-production.up.railway.app`.
-3. **Cloudflare Pages**: connect `mureka-clone`, build command `npm run build`, output `dist`.
-4. **Environment variables (Pages build)**:
+3. **Vercel** or **Cloudflare Pages**: connect `mureka-clone`, build `npm run build`, output `dist`.
+4. **Environment variables (frontend build)**:
    - `VITE_API_BASE=https://YOUR_RAILWAY_HOST/api`
 5. **Railway variables** (optional, stricter CORS):
-   - `DIETER_CORS_ORIGINS=https://YOUR_PAGES_DOMAIN`
+   - `DIETER_CORS_ORIGINS=https://YOUR_VERCEL_OR_PAGES_DOMAIN`
 6. **Static HTML** (`/dieter-sdc420.html`): open with query `?api=https://YOUR_RAILWAY_HOST/api`.
 
 ### Frontend deploy script (Pages)

@@ -29,8 +29,8 @@ Optional environment variables (in Railway → Variables):
 
 ### 2. First visit checklist
 
-1. Open the **root** of the URL (`/`). Default tab is **Create** — Mureka-style prompt + genre / mood / tempo / vocals, wired to Dieter’s **same** `/api` (or **tRPC** when enabled).
-2. Click **Connections · Mureka key** (or **API keys** in the header), paste your **Mureka** key, **Save**. Then **Generate music**.
+1. Open the **root** of the URL (`/`). **Create** = prompts + optional Mureka cloud; **Local** = your lyrics + a beat via Dieter (**no Mureka key**). In dev, `.env` can set `VITE_DEFAULT_MODE=local` to open on Local first.
+2. **Mureka is optional.** For cloud tracks: **Connections** → Mureka key → **Generate with Mureka**. For poems/lyrics + beat: **Local** → paste lines, drop audio, **Make Song**.
 3. Confirm API: `https://YOUR_HOST/api/health` returns `{"ok":true,...}`.
 4. Use **Local**, **Beat lab**, and **Voice studio** for stems, FFmpeg pipeline, and reference voice — all on the same host.
 5. **Cloud** tab = advanced form (lyrics + style presets) — same Mureka backend path.
@@ -43,6 +43,8 @@ Use **`dieter-backend/Dockerfile`** from the **repository root** as context, hea
 
 ### 4. Vercel (static React UI + API elsewhere)
 
+Step-by-step for **GitHub → Vercel + Railway** (env vars, CORS, API-only Docker): see **`DEPLOY_VERCEL_RAILWAY.md`** at the repo root. For API-only Railway builds use **`dieter-backend/Dockerfile.api`** (no `mureka-clone` in the image).
+
 Vercel hosts the **Vite build** from **`mureka-clone`** only. Your **FastAPI** backend must already be live (Railway / Render / Docker) — the browser calls that host via `VITE_API_BASE`.
 
 1. In [Vercel](https://vercel.com), switch to team **`jonathan-s-projects-2da2bb36`** (team menu, top left), then **Add New → Project** and import **[dieter-esq-workspace](https://github.com/jono420dante-art/dieter-esq-workspace)**.
@@ -53,7 +55,7 @@ Vercel hosts the **Vite build** from **`mureka-clone`** only. Your **FastAPI** b
 | Variable | Example | Purpose |
 |----------|---------|---------|
 | `VITE_API_BASE` | `https://your-api.up.railway.app/api` | All `/api` traffic from the UI |
-| `VITE_USE_TRPC` | `false` | Use REST against FastAPI (single Docker service has no `/trpc`) |
+| `VITE_USE_TRPC` | omit (defaults **REST** on Vercel/production) | Set `true` only if you deploy **`dieter-trpc`** and want the UI to call `/trpc` |
 
 Optional: `VITE_TRPC_URL` if you deploy **`dieter-backend/dieter-trpc`** separately; `VITE_DEFAULT_MODE`, `MUREKA_API_KEY` on the **backend** for server-side Mureka.
 

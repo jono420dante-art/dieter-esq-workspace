@@ -1,0 +1,22 @@
+{
+  "folders": [
+    {
+      "name": "Dieter Esq. · workspace",
+      "path": "."
+    }
+  ],
+  "settings": {
+    "files.associations": {
+      "railway.toml": "toml",
+      "vercel.json": "jsonc"
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/.venv": true
+    }
+  },
+  "extensions": {
+    "recommendations": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"]
+  }
+}

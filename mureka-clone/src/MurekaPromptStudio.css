@@ -1,7 +1,20 @@
-/* Mureka-style hero + Dieter glass system */
+/* Mureka-style hero + Dieter glass system — same studio photo as .app (public/local-studio-bg.png) */
 .mps-page {
   min-height: calc(100vh - 72px);
-  background: linear-gradient(145deg, #070714 0%, #12082a 38%, #061a2e 72%, #0a0618 100%);
+  background-color: #070714;
+  background-image:
+    linear-gradient(
+      145deg,
+      rgba(7, 7, 20, 0.9) 0%,
+      rgba(18, 8, 42, 0.84) 38%,
+      rgba(6, 26, 46, 0.86) 72%,
+      rgba(10, 6, 24, 0.92) 100%
+    ),
+    url('/local-studio-bg.png');
+  background-size: cover;
+  background-position: center 38%;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: #f8fafc;
   position: relative;
   overflow-x: hidden;
@@ -229,6 +242,162 @@
 
 .mps-status--err {
   color: #fca5a5;
+}
+
+.mps-banner {
+  max-width: 42rem;
+  margin: 0.75rem auto 0;
+  padding: 0.75rem 1rem;
+  line-height: 1.45;
+  text-align: left;
+  border-radius: 12px;
+  background: rgba(127, 29, 29, 0.35);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+}
+
+.mps-banner--warn {
+  background: rgba(30, 58, 95, 0.45);
+  border-color: rgba(96, 165, 250, 0.35);
+  color: rgba(226, 232, 240, 0.95);
+}
+
+.mps-muted {
+  color: rgba(148, 163, 184, 0.95) !important;
+}
+
+.mps-card--local-bridge {
+  margin-bottom: 1.25rem;
+  border: 1px solid rgba(167, 139, 250, 0.45);
+  background: linear-gradient(165deg, rgba(46, 16, 80, 0.55), rgba(12, 12, 22, 0.88));
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+.mps-local-bridge-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #e9d5ff;
+}
+
+.mps-local-bridge-hint {
+  margin: 0 0 1rem;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: rgba(226, 232, 240, 0.88);
+}
+
+.mps-local-bridge-btn {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(167, 139, 250, 0.5);
+  background: linear-gradient(180deg, rgba(109, 40, 217, 0.45), rgba(59, 7, 100, 0.55));
+  color: #faf5ff;
+  font-weight: 600;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.mps-local-bridge-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(109, 40, 217, 0.35);
+}
+
+.mps-local-bridge-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.mps-card--offline {
+  margin-bottom: 1.25rem;
+  border: 1px solid rgba(52, 211, 153, 0.28);
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.08);
+}
+
+.mps-offline-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #a7f3d0;
+}
+
+.mps-offline-hint {
+  margin: 0 0 1rem;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: rgba(226, 232, 240, 0.82);
+}
+
+.mps-preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.mps-preset-chip {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(45, 212, 191, 0.4);
+  background: rgba(6, 78, 59, 0.35);
+  color: #ccfbf1;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.mps-preset-chip:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.28);
+  border-color: rgba(110, 231, 183, 0.55);
+}
+
+.mps-preset-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.mps-offline-gen {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  padding: 0.85rem 1rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #ecfdf5;
+  background: linear-gradient(135deg, rgba(6, 95, 70, 0.55), rgba(4, 120, 87, 0.45));
+  cursor: pointer;
+  transition: filter 0.2s, transform 0.2s;
+}
+
+.mps-offline-gen:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.mps-offline-gen:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mps-dl {
+  display: inline-block;
+  margin-top: 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #a5b4fc;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(165, 180, 252, 0.45);
+}
+
+.mps-dl:hover {
+  color: #c7d2fe;
+  border-bottom-color: rgba(199, 210, 254, 0.8);
 }
 
 .mps-player {

@@ -2,6 +2,12 @@
 
 This is the real backend API for DIETER (jobs, storage, WAV generation).
 
+## Lyrics and poems without a Mureka key
+
+Use the **Local** tab in the Vite app: paste lines, drop a beat file, **Make Song** (Dieter API only). On **Create**, use **Open Local lab with my lyrics** to send your prompt text to Local. Mureka is optional for cloud tracks.
+
+**GitHub + Vercel + Railway:** keep **`mureka-clone`** and **`dieter-backend`** in one repo (see **`DIETER_ESQ_START.md`** and **`DEPLOY_VERCEL_RAILWAY.md`** at the repository root).
+
 ## Production (Gunicorn + static UI)
 
 Build the React app into `static/`, then run the API (same process serves `/` and `/api/*`):

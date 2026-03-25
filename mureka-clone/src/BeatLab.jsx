@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import WaveSurfer from 'wavesurfer.js'
 import Regions from 'wavesurfer.js/dist/plugins/regions.esm.js'
 import BeatLabPro from './BeatLabPro.jsx'
-import { absoluteFromApiPath, postStudioGrowth } from './apiResolve.js'
+import { absoluteFromApiPath, parseFetchJson, postStudioGrowth } from './apiResolve.js'
 
 /** Empty = same origin (FastAPI serves React + /api). Dev: set VITE_BEAT_API_URL=http://127.0.0.1:8000 if API runs on another port. */
 const BEAT_API = (import.meta.env.VITE_BEAT_API_URL ?? '').replace(/\/$/, '')
@@ -76,8 +76,7 @@ export default function BeatLab({ apiBase: apiBaseProp }) {
       const fd = new FormData()
       fd.append('file', file)
       const r = await fetch(`${apiRoot}/analyze-beats`, { method: 'POST', body: fd })
-      if (!r.ok) throw new Error(await r.text())
-      const data = await r.json()
+      const data = await parseFetchJson(r)
 
       setBpm(data.bpm)
       setBeats(Array.isArray(data.beats) ? data.beats : [])
@@ -182,8 +181,7 @@ export default function BeatLab({ apiBase: apiBaseProp }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bpm, beats, lyrics }),
       })
-      if (!r.ok) throw new Error(await r.text())
-      const j = await r.json()
+      const j = await parseFetchJson(r)
       setSyncMsg(j.message || JSON.stringify(j))
     } catch (e) {
       setSyncMsg(String(e.message || e))

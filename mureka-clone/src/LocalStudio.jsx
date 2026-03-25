@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { absoluteFromApiPath, normalizeApiRoot, storageUrlFromKey } from './apiResolve.js'
+import { audioCrossOriginForSrc } from './dieterClientConfig.js'
 
 /** Voice presets for local procedural layer (swap for RVC profile later). */
 const VOICE_CHOICES = [
@@ -40,7 +41,7 @@ export default function LocalStudio({ apiBase }) {
   const [caps, setCaps] = useState(null)
   const [vocalStatus, setVocalStatus] = useState(null)
 
-  const [lyrics, setLyrics] = useState('Drop the bass, feel the rhythm tonight')
+  const [lyrics, setLyrics] = useState('')
   const [pitchSemitones, setPitchSemitones] = useState(0)
   const [voiceId, setVoiceId] = useState('man2')
   const [vocalPreset, setVocalPreset] = useState('Man-2')
@@ -52,6 +53,18 @@ export default function LocalStudio({ apiBase }) {
   const [proceduralUrl, setProceduralUrl] = useState('')
   const [alignFrom, setAlignFrom] = useState('')
   const [alignTo, setAlignTo] = useState('')
+
+  /** `null` until first check; then `ok` or `fail` */
+  const [apiHealth, setApiHealth] = useState(null)
+
+  const pingHealth = useCallback(async () => {
+    try {
+      const r = await fetch(`${base}/health`, { cache: 'no-store' })
+      setApiHealth(r.ok ? 'ok' : 'fail')
+    } catch {
+      setApiHealth('fail')
+    }
+  }, [base])
 
   const loadCaps = useCallback(async () => {
     try {
@@ -75,6 +88,23 @@ export default function LocalStudio({ apiBase }) {
     loadCaps()
     loadVocalStatus()
   }, [loadCaps, loadVocalStatus])
+
+  useEffect(() => {
+    void pingHealth()
+  }, [pingHealth])
+
+  /** Seed lyrics when user clicks "Open Local lab with my lyrics" from the Create tab. */
+  useEffect(() => {
+    try {
+      const seed = sessionStorage.getItem('dieter_local_lyrics_seed')
+      if (seed != null && seed !== '') {
+        sessionStorage.removeItem('dieter_local_lyrics_seed')
+        setLyrics((prev) => (prev.trim() ? prev : seed))
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [])
 
   /** @param {{ silentBusy?: boolean }} o — silentBusy: don't toggle global busy (used inside Make Song) */
   const runBeatDetect = async (file, o = {}) => {
@@ -247,6 +277,10 @@ export default function LocalStudio({ apiBase }) {
   }
 
   const generateProceduralVocal = async () => {
+    if (!lyrics.trim()) {
+      setErr('Type a line of lyrics first (same box as Make Song).')
+      return
+    }
     setBusy(true)
     setErr('')
     setPitchWarning('')
@@ -312,6 +346,23 @@ export default function LocalStudio({ apiBase }) {
   return (
     <section className="local-studio">
       <h2 className="local-studio-title">Dieter Esq. · Local lab</h2>
+      {apiHealth === 'fail' && (
+        <div className="local-api-banner local-api-banner--bad" role="status">
+          <p className="local-api-banner-text">
+            <strong>Cannot reach the Dieter API.</strong> The UI talks to your machine through the Vite proxy (
+            <code>/api</code> → port <strong>8787</strong> by default). Start the backend from{' '}
+            <code>dieter-backend</code>:{' '}
+            <code className="local-api-cmd">uvicorn app.main:app --reload --host 127.0.0.1 --port 8787</code>
+            <br />
+            If you use another port, set <code>API_PROXY_TARGET</code> when starting Vite, or open{' '}
+            <strong>API keys</strong> and set <strong>API base (REST)</strong> to your full URL including{' '}
+            <code>/api</code>.
+          </p>
+          <button type="button" className="btn-secondary btn-tiny" onClick={() => void pingHealth()}>
+            Check again
+          </button>
+        </div>
+      )}
       <ol className="quick-steps">
         <li>
           Pick a voice (e.g. <strong>Man 2</strong>)
@@ -364,14 +415,19 @@ export default function LocalStudio({ apiBase }) {
         </div>
 
         <label htmlFor="local-lyrics-quick">Lyrics</label>
+        <p className="field-hint local-lyrics-hint">
+          One or more lines here feed the procedural vocal and <strong>Make Song</strong>. Start typing — nothing is
+          sent until you click a button.
+        </p>
         <textarea
           id="local-lyrics-quick"
-          rows={3}
+          rows={4}
           value={lyrics}
           onChange={(e) => setLyrics(e.target.value)}
           disabled={busy}
           className="local-textarea"
-          placeholder="Drop the bass, feel the rhythm tonight"
+          placeholder="e.g. Drop the bass, feel the rhythm tonight"
+          spellCheck={true}
         />
 
         <div
@@ -426,7 +482,12 @@ export default function LocalStudio({ apiBase }) {
         {playUrl && (
           <div className="play-download">
             <p className="mini-label">Result</p>
-            <audio controls src={playUrl} className="mix-player" />
+            <audio
+              controls
+              src={playUrl}
+              className="mix-player"
+              crossOrigin={audioCrossOriginForSrc(playUrl)}
+            />
             <a className="btn-dl" href={playUrl} download="dieter-mix.mp3">
               ⬇ Download mix
             </a>

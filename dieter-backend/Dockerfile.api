@@ -1,0 +1,32 @@
+# API-only image for split deploy: Vercel (mureka-clone) + Railway (FastAPI).
+# Build from repository root:
+#   docker build -f dieter-backend/Dockerfile.api .
+# No static/ — app serves /api/*; /docs available when SPA is not mounted.
+
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PORT=8080 \
+    WEB_CONCURRENCY=2
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY dieter-backend/requirements.txt /app/requirements.txt
+RUN pip install -r /app/requirements.txt
+
+COPY dieter-backend/app /app/app
+COPY dieter-backend/beat_analysis.py /app/beat_analysis.py
+COPY dieter-backend/voice_clone_pipeline.py /app/voice_clone_pipeline.py
+COPY dieter-backend/scripts /app/scripts
+
+RUN mkdir -p /app/data /app/storage
+
+EXPOSE 8080
+
+CMD ["sh", "-c", "gunicorn app.main:app -k uvicorn.workers.UvicornWorker -w ${WEB_CONCURRENCY} -b 0.0.0.0:${PORT} --timeout 120 --access-logfile - --error-logfile -"]
