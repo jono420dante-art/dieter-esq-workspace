@@ -17,6 +17,7 @@ Main code:
 - **`mureka-clone/`** — Vite + React app  
 - **`dieter-backend/`** — FastAPI (`app/`), beat lab, pipelines  
 - **Architecture:** [`docs/GATEWAY_ARCHITECTURE.md`](./docs/GATEWAY_ARCHITECTURE.md) — gateway, sync/portal routing, plugin extension points  
+- **WAM ecosystem:** [`docs/WAM_ECOSYSTEM.md`](./docs/WAM_ECOSYSTEM.md) — community plugins, pedalboard, Open Studio DAW, Sequencer Party  
 
 ## Other tools in this folder
 

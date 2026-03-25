@@ -36,19 +36,20 @@ Checkout still requires a **server** (FastAPI/Edge function) to create **Checkou
 
 ## 5. GitHub integrations (roadmap)
 
+Curated **WAM** table (community plugins, pedalboard, Open Studio DAW, Sequencer Party): **[WAM_ECOSYSTEM.md](./WAM_ECOSYSTEM.md)**.
+
 Planned / optional wiring — not all are embedded in this repo yet:
 
 ```
 GitHub integrations (roadmap)
-├── OpenDAW              → full in-browser DAW (evaluate: opendaw / open-source DAW projects on GitHub)
-├── Web Audio Modules    → plugin graph (WAM): github.com/WebAudioModules
-├── TensorFlow.js        → Magenta / MusicVAE-style models: www.tensorflow.org/js, magenta-js
-└── Stripe               → payments: stripe.com/docs; publishable key in env; sessions on backend
+├── Open Studio / Sequencer.Party / PedalBoard → see WAM_ECOSYSTEM.md
+├── Web Audio Modules org → https://github.com/webaudiomodules
+├── TensorFlow.js / Magenta → www.tensorflow.org/js (heavy; prefer server stems when possible)
+└── Stripe → stripe.com/docs; publishable key in env; Checkout Session on backend
 ```
 
-- **Full DAW:** research **OpenDAW**-family repos and embed or link from `ed-geerdes-platform.html`.
-- **WAM:** load WAM hosts from CDN; connect to your mixer bus logic later.
-- **MusicVAE / stems:** TF.js models are heavy; prefer **server-side** stems (`/api/mix/suno-mureka/render`, Mureka, etc.) until you host a model URL you control.
+- **WAM hosts:** load SDK + community `plugins.json`; connect to your mixer bus later.
+- **MusicVAE / stems:** prefer **server-side** stems (`/api/mix/suno-mureka/render`, Mureka) until you host a model you control.
 - **Stripe:** marketplace **Buy** must call your API to create a **Session** with **price_** IDs from Stripe Dashboard.
 
 ## Related files
