@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dieter V3 · AI Music Suite (demo)</title>
+    <script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a15;
+            --glass: rgba(255,255,255,0.04);
+            --accent: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --neon: #00f5ff;
+            --glow: 0 0 30px rgba(0,245,255,0.35);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: min(320px, 92vw);
+            height: 100vh;
+            background: var(--glass);
+            backdrop-filter: blur(40px);
+            border-right: 1px solid rgba(255,255,255,0.06);
+            transform: translateX(-100%);
+            transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            z-index: 1000;
+            padding: 40px 24px;
+            overflow-y: auto;
+        }
+
+        .sidebar.open { transform: translateX(0); }
+
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.35s ease, visibility 0.35s ease;
+            z-index: 999;
+        }
+
+        .sidebar.open + .sidebar-overlay {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .sidebar h2 { font-size: 1.25rem; font-weight: 700; margin: 0; }
+        .sidebar .section h3 {
+            margin: 28px 0 14px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            opacity: 0.92;
+        }
+
+        .sync-btn {
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(0,0,0,0.25);
+            color: #fff;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-align: left;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .sync-btn:hover {
+            border-color: rgba(0,245,255,0.45);
+            box-shadow: var(--glow);
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: var(--glass);
+            backdrop-filter: blur(40px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            align-items: center;
+            padding: 0 20px 0 16px;
+            z-index: 100;
+            gap: 16px;
+        }
+
+        .logo {
+            font-size: 1.45rem;
+            font-weight: 800;
+            background: var(--accent);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .menu-toggle {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: none;
+            color: rgba(255,255,255,0.8);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: background 0.25s, box-shadow 0.25s;
+        }
+
+        .menu-toggle:hover {
+            background: rgba(255,255,255,0.08);
+            box-shadow: var(--glow);
+        }
+
+        .nav-links {
+            margin-left: auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .nav-links a {
+            color: var(--neon);
+            font-size: 0.75rem;
+            text-decoration: none;
+            opacity: 0.85;
+        }
+
+        .nav-links a:hover { text-decoration: underline; }
+
+        .workspace {
+            margin-top: 70px;
+            min-height: calc(100vh - 70px);
+            padding: 40px 24px 120px;
+        }
+
+        .prompt-area {
+            max-width: 900px;
+            margin: 0 auto 40px;
+            text-align: center;
+        }
+
+        .lyrics-input {
+            width: 100%;
+            min-height: 180px;
+            padding: 28px;
+            border-radius: 22px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.35);
+            color: #fff;
+            font-size: 1rem;
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.25s, box-shadow 0.25s;
+        }
+
+        .lyrics-input:focus {
+            outline: none;
+            border-color: var(--neon);
+            box-shadow: var(--glow);
+        }
+
+        .fab {
+            position: fixed;
+            width: 68px;
+            height: 68px;
+            border-radius: 50%;
+            border: none;
+            font-size: 1.6rem;
+            cursor: pointer;
+            transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            z-index: 50;
+        }
+
+        .fab-main {
+            bottom: 88px;
+            right: 24px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+            box-shadow: var(--glow);
+        }
+
+        .fab-social {
+            bottom: 88px;
+            right: 108px;
+            background: rgba(255,255,255,0.12);
+            color: #fff;
+            opacity: 0;
+            transform: scale(0.85) rotate(-12deg);
+            pointer-events: none;
+        }
+
+        .fab:hover { transform: scale(1.06); }
+
+        .fab-social.show {
+            opacity: 1;
+            transform: scale(1) rotate(0);
+            pointer-events: auto;
+        }
+
+        .video-preview {
+            max-width: 900px;
+            margin: 0 auto 32px;
+            height: min(500px, 55vh);
+            min-height: 240px;
+            background: rgba(0,0,0,0.45);
+            border-radius: 22px;
+            border: 1px solid rgba(255,255,255,0.1);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .video-preview canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .video-preview .placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            pointer-events: none;
+            opacity: 0.35;
+        }
+
+        .progress {
+            position: fixed;
+            bottom: 22px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(400px, 88vw);
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--neon);
+            width: 0%;
+            transition: width 0.35s ease;
+        }
+
+        .download-area {
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(16px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+
+        .download-area.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 28px;
+            margin: 8px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+            border: none;
+            border-radius: 999px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: var(--glow);
+            transition: transform 0.25s, box-shadow 0.25s;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 20px 50px rgba(102,126,234,0.45);
+        }
+
+        #demoNote {
+            text-align: center;
+            font-size: 0.8rem;
+            opacity: 0.55;
+            margin-top: 16px;
+            max-width: 520px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar" id="sidebar" aria-label="Suite tools">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:28px;">
+            <h2>Dieter Suite</h2>
+            <button type="button" class="menu-toggle" onclick="toggleSidebar()" aria-label="Close">×</button>
+        </div>
+
+        <div class="section">
+            <h3>Lyrics → Song</h3>
+            <textarea class="lyrics-input" id="lyricsInput"
+                placeholder="Write lyrics…&#10;[Verse]&#10;Under neon lights we dance…"></textarea>
+        </div>
+
+        <div class="section">
+            <h3>Social</h3>
+            <button type="button" class="sync-btn" onclick="shareSpotify()">Spotify</button>
+            <button type="button" class="sync-btn" onclick="shareApple()">Apple Music</button>
+            <button type="button" class="sync-btn" onclick="shareTikTok()">TikTok</button>
+            <button type="button" class="sync-btn" onclick="shareInsta()">Instagram</button>
+        </div>
+
+        <div class="section">
+            <h3>Agents (demo)</h3>
+            <button type="button" class="sync-btn" onclick="runAICodingAgent()">Code agent</button>
+            <button type="button" class="sync-btn" onclick="runMusicAgent()">Music agent</button>
+            <button type="button" class="sync-btn" onclick="runVideoAgent()">Video agent</button>
+        </div>
+    </div>
+    <div class="sidebar-overlay" onclick="toggleSidebar()" role="presentation"></div>
+
+    <header class="header">
+        <button type="button" class="menu-toggle" onclick="toggleSidebar()" aria-label="Menu">☰</button>
+        <h1 class="logo">Dieter V3</h1>
+        <span style="font-size:0.82rem;opacity:0.8;">Pipeline: <strong id="pipelineStatus">Ready</strong></span>
+        <nav class="nav-links">
+            <a href="/">Studio</a>
+            <a href="/ed-geerdes-platform.html">Showroom</a>
+            <a href="/dieter-v3-passion.html">Passion</a>
+        </nav>
+    </header>
+
+    <main class="workspace">
+        <div class="prompt-area">
+            <h2 style="margin-bottom:12px;font-weight:300;opacity:0.92;">Lyrics → Song → Video</h2>
+            <p style="opacity:0.65;max-width:580px;margin:0 auto 28px;line-height:1.55;font-size:0.92rem;">
+                Demo timeline: analysis → short Tone melody → placeholder vocals/mix → Three.js preview. No files are produced.
+            </p>
+        </div>
+
+        <div class="video-preview" id="videoPreview">
+            <span class="placeholder" id="videoPlaceholder">Run pipeline for preview</span>
+        </div>
+
+        <div class="progress" aria-hidden="true">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <div class="download-area" id="downloadArea">
+            <h3 style="margin-bottom:20px;font-weight:600;">Pipeline finished (demo)</h3>
+            <button type="button" class="download-btn" onclick="downloadSong()">Song (WAV)</button>
+            <button type="button" class="download-btn" onclick="downloadVideo()">Video (MP4)</button>
+            <button type="button" class="download-btn" onclick="downloadStems()">Stems</button>
+        </div>
+        <p id="demoNote">Downloads only confirm the click — connect your backend for real assets.</p>
+    </main>
+
+    <button type="button" class="fab fab-main" id="fabMain" title="Run pipeline demo">🚀</button>
+    <button type="button" class="fab fab-social" id="fabSocial" title="Social shortcuts" onclick="toggleSocial()">🌐</button>
+
+    <script>
+        (function () {
+            var pipeline = ['lyrics', 'melody', 'vocals', 'mix', 'video'];
+            var toneSeq = null;
+            var toneSynth = null;
+            var threeCtx = {
+                renderer: null,
+                scene: null,
+                camera: null,
+                mesh: null,
+                raf: null,
+                resizeHandler: null,
+            };
+
+            function toggleSidebar() {
+                document.getElementById('sidebar').classList.toggle('open');
+            }
+            window.toggleSidebar = toggleSidebar;
+
+            function toggleSocial() {
+                var s = document.getElementById('fabSocial');
+                s.classList.add('show');
+                setTimeout(function () { s.classList.remove('show'); }, 3200);
+            }
+            window.toggleSocial = toggleSocial;
+
+            function stopTone() {
+                try {
+                    Tone.Transport.stop();
+                    Tone.Transport.cancel(0);
+                } catch (e) { /* ignore */ }
+                if (toneSeq) {
+                    try { toneSeq.dispose(); } catch (e2) { /* ignore */ }
+                    toneSeq = null;
+                }
+                if (toneSynth) {
+                    try { toneSynth.dispose(); } catch (e3) { /* ignore */ }
+                    toneSynth = null;
+                }
+            }
+
+            function disposeThree() {
+                if (threeCtx.raf) {
+                    cancelAnimationFrame(threeCtx.raf);
+                    threeCtx.raf = null;
+                }
+                if (threeCtx.resizeHandler) {
+                    window.removeEventListener('resize', threeCtx.resizeHandler);
+                    threeCtx.resizeHandler = null;
+                }
+                if (threeCtx.mesh) {
+                    threeCtx.mesh.geometry.dispose();
+                    threeCtx.mesh.material.dispose();
+                    threeCtx.mesh = null;
+                }
+                if (threeCtx.renderer) {
+                    var el = threeCtx.renderer.domElement;
+                    if (el && el.parentNode) el.parentNode.removeChild(el);
+                    threeCtx.renderer.dispose();
+                    threeCtx.renderer = null;
+                }
+                threeCtx.scene = null;
+                threeCtx.camera = null;
+            }
+
+            function analyzeLyrics(lyrics) {
+                console.log('Lyrics analyzed (stub):', {
+                    chars: (lyrics || '').length,
+                    structure: 'Verse-Chorus (demo)',
+                });
+            }
+
+            function generateMelody() {
+                stopTone();
+                if (typeof Tone === 'undefined') return;
+                toneSynth = new Tone.Synth({ oscillator: { type: 'triangle' } }).toDestination();
+                var notes = ['C4', 'E4', 'G4', 'B4', 'A4', 'F4', 'D4', 'C4'];
+                toneSeq = new Tone.Sequence(
+                    function (time, note) {
+                        toneSynth.triggerAttackRelease(note, '8n', time, 0.55);
+                    },
+                    notes,
+                    '8n',
+                );
+                Tone.Transport.bpm.value = 96;
+                toneSeq.start(0);
+                Tone.Transport.start();
+            }
+
+            function renderVocals() {
+                stopTone();
+                console.log('Vocals (stub): plug neural / clone pipeline here');
+            }
+
+            function masterMix() {
+                console.log('Mix (stub): multi-bus mastering here');
+            }
+
+            function generateVideo() {
+                if (typeof THREE === 'undefined') {
+                    console.warn('Three.js not loaded');
+                    return;
+                }
+                disposeThree();
+                var container = document.getElementById('videoPreview');
+                var ph = document.getElementById('videoPlaceholder');
+                if (ph) ph.style.display = 'none';
+
+                var w = container.clientWidth;
+                var h = container.clientHeight;
+                threeCtx.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                threeCtx.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+                threeCtx.renderer.setSize(w, h);
+                threeCtx.renderer.setClearColor(0x0a0a15, 1);
+                container.appendChild(threeCtx.renderer.domElement);
+
+                threeCtx.scene = new THREE.Scene();
+                threeCtx.camera = new THREE.PerspectiveCamera(55, w / h, 0.1, 100);
+                threeCtx.camera.position.z = 4.2;
+
+                var geo = new THREE.IcosahedronGeometry(1.1, 1);
+                var mat = new THREE.MeshStandardMaterial({
+                    color: 0x00f5ff,
+                    emissive: 0x221144,
+                    metalness: 0.35,
+                    roughness: 0.35,
+                });
+                threeCtx.mesh = new THREE.Mesh(geo, mat);
+                threeCtx.scene.add(threeCtx.mesh);
+
+                var amb = new THREE.AmbientLight(0x8899ff, 0.4);
+                threeCtx.scene.add(amb);
+                var dir = new THREE.DirectionalLight(0xffffff, 1.1);
+                dir.position.set(2, 3, 4);
+                threeCtx.scene.add(dir);
+
+                threeCtx.resizeHandler = function () {
+                    if (!threeCtx.renderer || !threeCtx.camera) return;
+                    var cw = container.clientWidth;
+                    var ch = container.clientHeight;
+                    threeCtx.camera.aspect = cw / ch;
+                    threeCtx.camera.updateProjectionMatrix();
+                    threeCtx.renderer.setSize(cw, ch);
+                };
+                window.addEventListener('resize', threeCtx.resizeHandler);
+
+                var t0 = performance.now();
+                function loop(now) {
+                    if (!threeCtx.mesh) return;
+                    var t = (now - t0) / 1000;
+                    threeCtx.mesh.rotation.x = t * 0.55;
+                    threeCtx.mesh.rotation.y = t * 0.72;
+                    threeCtx.renderer.render(threeCtx.scene, threeCtx.camera);
+                    threeCtx.raf = requestAnimationFrame(loop);
+                }
+                threeCtx.raf = requestAnimationFrame(loop);
+                console.log('Three.js preview running');
+            }
+
+            async function generatePipeline() {
+                var lyricsEl = document.getElementById('lyricsInput');
+                var lyrics = (lyricsEl && lyricsEl.value) ? lyricsEl.value.trim() : '';
+                if (!lyrics) {
+                    if (lyricsEl) {
+                        lyricsEl.focus();
+                        lyricsEl.style.boxShadow = '0 0 0 2px rgba(0,245,255,0.5)';
+                        setTimeout(function () { lyricsEl.style.boxShadow = ''; }, 1400);
+                    }
+                    return;
+                }
+
+                var fab = document.getElementById('fabMain');
+                var bar = document.getElementById('progressBar');
+                var statusEl = document.getElementById('pipelineStatus');
+                var dl = document.getElementById('downloadArea');
+
+                dl.classList.remove('show');
+                fab.disabled = true;
+                fab.style.transform = 'rotate(180deg) scale(0.92)';
+
+                try {
+                    for (var i = 0; i < pipeline.length; i++) {
+                        statusEl.textContent = pipeline[i].toUpperCase();
+                        bar.style.width = (((i + 1) / pipeline.length) * 100) + '%';
+                        switch (pipeline[i]) {
+                            case 'lyrics':
+                                analyzeLyrics(lyrics);
+                                break;
+                            case 'melody':
+                                generateMelody();
+                                break;
+                            case 'vocals':
+                                renderVocals();
+                                break;
+                            case 'mix':
+                                masterMix();
+                                break;
+                            case 'video':
+                                generateVideo();
+                                break;
+                            default:
+                                break;
+                        }
+                        await new Promise(function (r) { setTimeout(r, 780); });
+                    }
+                    fab.textContent = '✅';
+                    fab.style.background = 'rgba(34,197,94,0.85)';
+                    dl.classList.add('show');
+                } finally {
+                    fab.disabled = false;
+                    fab.style.transform = '';
+                }
+            }
+            window.generatePipeline = generatePipeline;
+
+            document.getElementById('fabMain').addEventListener('click', generatePipeline);
+
+            function shareSpotify() {
+                window.open('https://open.spotify.com', '_blank', 'noopener,noreferrer');
+            }
+            function shareApple() {
+                window.open('https://music.apple.com', '_blank', 'noopener,noreferrer');
+            }
+            function shareTikTok() {
+                window.open('https://www.tiktok.com', '_blank', 'noopener,noreferrer');
+            }
+            function shareInsta() {
+                window.open('https://www.instagram.com', '_blank', 'noopener,noreferrer');
+            }
+            window.shareSpotify = shareSpotify;
+            window.shareApple = shareApple;
+            window.shareTikTok = shareTikTok;
+            window.shareInsta = shareInsta;
+
+            function runAICodingAgent() {
+                console.log('Code agent (stub)');
+                alert('Demo only — wire your IDE or API for real codegen.');
+            }
+            function runMusicAgent() {
+                console.log('Music agent (stub)');
+            }
+            function runVideoAgent() {
+                generateVideo();
+                console.log('Video agent: started WebGL preview');
+            }
+            window.runAICodingAgent = runAICodingAgent;
+            window.runMusicAgent = runMusicAgent;
+            window.runVideoAgent = runVideoAgent;
+
+            function downloadSong() {
+                alert('Demo: no WAV on disk. Export from your render service.');
+            }
+            function downloadVideo() {
+                alert('Demo: no MP4. Use ffmpeg or your video worker.');
+            }
+            function downloadStems() {
+                alert('Demo: no stems ZIP. Offer stems from your DAW pipeline.');
+            }
+            window.downloadSong = downloadSong;
+            window.downloadVideo = downloadVideo;
+            window.downloadStems = downloadStems;
+
+            window.addEventListener('beforeunload', function () {
+                stopTone();
+                disposeThree();
+            });
+        })();
+    </script>
+</body>
+</html>
