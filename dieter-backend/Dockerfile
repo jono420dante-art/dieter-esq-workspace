@@ -9,7 +9,12 @@ WORKDIR /src
 # Optional: pass when building for a split layout (static on Vercel, API elsewhere), e.g.
 #   docker build -f dieter-backend/Dockerfile --build-arg VITE_API_BASE=https://api.example.com .
 ARG VITE_API_BASE=
+# With docker-compose + DIETER_TRPC_UPSTREAM, enable tRPC at same host (/trpc proxy).
+ARG VITE_USE_TRPC=false
+ARG VITE_TRPC_URL=/trpc
 ENV VITE_API_BASE=$VITE_API_BASE
+ENV VITE_USE_TRPC=$VITE_USE_TRPC
+ENV VITE_TRPC_URL=$VITE_TRPC_URL
 COPY mureka-clone/package.json mureka-clone/package-lock.json* ./mureka-clone/
 WORKDIR /src/mureka-clone
 RUN npm ci

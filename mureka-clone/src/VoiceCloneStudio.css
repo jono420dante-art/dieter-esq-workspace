@@ -307,6 +307,7 @@
   left: 50%;
   transform: translateX(-50%);
   z-index: 50;
+  pointer-events: none;
   max-width: min(90vw, 560px);
   background: rgba(0, 0, 0, 0.8);
   padding: 15px 30px;

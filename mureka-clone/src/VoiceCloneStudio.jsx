@@ -42,6 +42,7 @@ export default function VoiceCloneStudio({ apiBase }) {
   const [status, setStatus] = useState('')
   const [stubMessage, setStubMessage] = useState('')
   const [beatPreviewUrl, setBeatPreviewUrl] = useState(null)
+  const [murekaKey, setMurekaKey] = useState(() => localStorage.getItem('mureka_api_key') || '')
 
   const apiRoot = useMemo(() => normalizeApiRoot(apiBase || '/api'), [apiBase])
 
@@ -128,8 +129,12 @@ export default function VoiceCloneStudio({ apiBase }) {
     fd.append('lyrics', lyrics.trim())
     fd.append('mureka_style', murekaStyle)
 
+    const headers = {}
+    const key = (murekaKey || '').trim()
+    if (key) headers.Authorization = `Bearer ${key}`
     const res = await fetch(`${apiRoot}/pure-song-mureka`, {
       method: 'POST',
+      headers,
       body: fd,
     })
     const text = await res.text()
@@ -145,7 +150,7 @@ export default function VoiceCloneStudio({ apiBase }) {
       throw new Error(msg || res.statusText || `HTTP ${res.status}`)
     }
     return data
-  }, [apiRoot, beatFile, lyrics, murekaStyle])
+  }, [apiRoot, beatFile, lyrics, murekaKey, murekaStyle])
 
   const generateSong = useCallback(async () => {
     if (!lyrics.trim() || !beatFile) {
@@ -296,6 +301,26 @@ export default function VoiceCloneStudio({ apiBase }) {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="file-row">
+            <label>
+              Mureka API key (optional if server has <code>MUREKA_API_KEY</code>):{' '}
+              <input
+                type="password"
+                value={murekaKey}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setMurekaKey(v)
+                  try {
+                    localStorage.setItem('mureka_api_key', v)
+                  } catch {
+                    /* ignore */
+                  }
+                }}
+                placeholder="paste key or leave blank"
+              />
+            </label>
           </div>
 
           <textarea

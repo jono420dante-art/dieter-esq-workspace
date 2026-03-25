@@ -6,7 +6,16 @@ import LocalStudio from './LocalStudio.jsx'
 import BeatLab from './BeatLab.jsx'
 import VoiceCloneStudio from './VoiceCloneStudio.jsx'
 import MurekaPromptStudio from './MurekaPromptStudio.jsx'
-import { fetchStudioGrowth, normalizeApiRoot, postStudioGrowth } from './apiResolve.js'
+import StudioV5 from './StudioV5.jsx'
+import CoverStudio from './CoverStudio.jsx'
+import {
+  fetchStudioGrowth,
+  normalizeApiRoot,
+  parseFetchJson,
+  postStudioGrowth,
+  publicOriginForApiRoot,
+  absoluteFromApiPath,
+} from './apiResolve.js'
 import { dieterInitialApiBase, dieterUseTrpc, audioCrossOriginForSrc } from './dieterClientConfig.js'
 import { extractAudioUrl } from './murekaHelpers.js'
 import { useBeatVisualizer } from './useBeatVisualizer.js'
@@ -50,6 +59,8 @@ export default function App() {
   const [appMode, setAppMode] = useState(() => {
     const m = import.meta.env.VITE_DEFAULT_MODE
     if (m === 'create') return 'create'
+    if (m === 'v5') return 'v5'
+    if (m === 'cover') return 'cover'
     if (m === 'cloud') return 'cloud'
     if (m === 'beatlab') return 'beatlab'
     if (m === 'voicestudio') return 'voicestudio'
@@ -70,6 +81,7 @@ export default function App() {
   const [err, setErr] = useState('')
   const [audioUrl, setAudioUrl] = useState('')
   const [lyricsBusy, setLyricsBusy] = useState(false)
+  const [procBusy, setProcBusy] = useState(false)
   const [lyricsReport, setLyricsReport] = useState(null)
   const [lyricsAnalyzeErr, setLyricsAnalyzeErr] = useState('')
   const [studioPulse, setStudioPulse] = useState(null)
@@ -314,6 +326,88 @@ export default function App() {
     }
   }, [apiKey, base, instrumental, lyrics, style, title, vocal])
 
+  /** Procedural multitrack WAV from the DIETER engine (FastAPI job); uses tRPC when enabled — real .wav mix + stems on disk. */
+  const submitProceduralWav = useCallback(async () => {
+    setErr('')
+    setProcBusy(true)
+    setStatus('')
+    const effectiveInstrumental = instrumental || !lyrics.trim()
+    const prompt = buildCreationPrompt({
+      instrumental: effectiveInstrumental,
+      lyrics,
+      style,
+      vocal,
+      title,
+    })
+    const lyricPayload = effectiveInstrumental ? '' : lyrics.trim()
+    const payload = {
+      prompt,
+      lyrics: lyricPayload || undefined,
+      bpm: 128,
+      mood: (style || '—').trim() || '—',
+      style: style.trim() || 'Cinematic',
+      language: 'en',
+      vocalPreset: 'Radio',
+      modelLine: 'V7.5',
+      tier: 'pro',
+      stems: true,
+      durationSec: 45,
+    }
+    const origin = publicOriginForApiRoot(base)
+    setStatus(
+      USE_TRPC ? 'Generating procedural WAV (tRPC → FastAPI job)…' : 'Generating procedural WAV (REST job)…',
+    )
+    try {
+      let jobId = ''
+      if (USE_TRPC) {
+        const gen = await trpc.musicGenerate.mutate(payload)
+        jobId = String(gen?.jobId || '')
+      } else {
+        const r = await fetch(`${base}/music/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        const j = await parseFetchJson(r)
+        jobId = String(j?.jobId || '')
+      }
+      if (!jobId) throw new Error('No jobId from server')
+
+      for (let i = 0; i < 120; i++) {
+        let row
+        if (USE_TRPC) {
+          row = await trpc.jobWithPlaybackUrls.query({
+            jobId,
+            publicOrigin: origin || undefined,
+          })
+        } else {
+          const r = await fetch(`${base}/jobs/${encodeURIComponent(jobId)}`)
+          row = await parseFetchJson(r)
+        }
+        const st = String(row?.status || '')
+        if (st === 'succeeded' && row?.output?.mix?.wavUrl) {
+          const mix = row.output.mix
+          const playUrl =
+            (typeof mix.wavUrlAbsolute === 'string' && mix.wavUrlAbsolute) ||
+            absoluteFromApiPath(base, mix.wavUrl)
+          setAudioUrl(playUrl)
+          void postStudioGrowth(base, 'procedural_wav_ready', jobId)
+          void fetchStudioGrowth(base).then((g) => g && setStudioPulse(g))
+          setStatus('Procedural mix ready — lossless WAV from the backend engine.')
+          return
+        }
+        if (st === 'failed') throw new Error(row?.error || 'Job failed')
+        await new Promise((res) => setTimeout(res, 500))
+      }
+      throw new Error('Timeout waiting for procedural job')
+    } catch (e) {
+      setErr(String(e.message || e))
+      setStatus('')
+    } finally {
+      setProcBusy(false)
+    }
+  }, [base, instrumental, lyrics, style, title, vocal])
+
   const recordVideo = useCallback(() => {
     const canvas = canvasRef.current
     const audio = audioRef.current
@@ -389,6 +483,16 @@ export default function App() {
             onClick={() => setAppMode('create')}
           >
             Create
+          </button>
+          <button type="button" className={appMode === 'v5' ? 'pill-btn' : 'btn-mode'} onClick={() => setAppMode('v5')}>
+            V5
+          </button>
+          <button
+            type="button"
+            className={appMode === 'cover' ? 'pill-btn' : 'btn-mode'}
+            onClick={() => setAppMode('cover')}
+          >
+            Cover
           </button>
           <button
             type="button"
@@ -507,6 +611,14 @@ export default function App() {
             setAppMode('local')
           }}
         />
+      ) : appMode === 'v5' ? (
+        <main className="main main-local">
+          <StudioV5 apiBase={base} />
+        </main>
+      ) : appMode === 'cover' ? (
+        <main className="main main-local">
+          <CoverStudio apiBase={base} />
+        </main>
       ) : appMode === 'local' ? (
         <main className="main main-local">
           <LocalStudio apiBase={base} />
@@ -697,6 +809,14 @@ export default function App() {
 
         <button type="button" className="primary wide" onClick={submit}>
           Create
+        </button>
+        <p className="field-hint" style={{ marginTop: 10 }}>
+          <strong>Local WAV engine:</strong> render a real multitrack <code>.wav</code> on the API (
+          {USE_TRPC ? 'via tRPC' : 'REST'}) — no Mureka key. Same lyrics/style as above; uses the procedural engine on the
+          server.
+        </p>
+        <button type="button" className="btn-secondary wide" disabled={procBusy} onClick={submitProceduralWav}>
+          {procBusy ? '…' : 'Generate procedural WAV (backend)'}
         </button>
         {status && <p className="ok">{status}</p>}
         {err && <p className="bad">{err}</p>}

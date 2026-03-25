@@ -1,5 +1,6 @@
 # Web API
 fastapi
+httpx
 uvicorn[standard]
 gunicorn
 pydantic

@@ -1,18 +1,34 @@
-# DIETER API + AI Beat Lab (single container: React static + FastAPI)
+# FastAPI + static UI + tRPC (browser uses /trpc on port 8080 via API proxy).
 # From repo root:
 #   docker compose build
 #   docker compose up
 #
-# Open http://localhost:8080  —  API: http://localhost:8080/api/health
+# Open http://localhost:8080  —  API: http://localhost:8080/api/health  —  tRPC: /trpc (proxied)
 
 services:
   web:
     build:
       context: .
       dockerfile: dieter-backend/Dockerfile
+      args:
+        VITE_API_BASE: /api
+        VITE_USE_TRPC: "true"
+        VITE_TRPC_URL: /trpc
     ports:
       - "8080:8080"
     environment:
       PORT: "8080"
       WEB_CONCURRENCY: "2"
       DIETER_AUDIO_ENGINE: procedural
+      DIETER_TRPC_UPSTREAM: http://trpc:8790
+
+  trpc:
+    build:
+      context: ./dieter-backend/dieter-trpc
+    environment:
+      DIETER_FASTAPI_BASE: http://web:8080
+      DIETER_TRPC_PORT: "8790"
+    expose:
+      - "8790"
+    depends_on:
+      - web

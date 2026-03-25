@@ -46,6 +46,7 @@ from .local_pipeline import (
     pitch_shift_semitones_preserve_duration,
     stretch_audio_to_bpm_ratio,
 )
+from .cover_pipeline import decode_to_wav, mix_parallel, render_cover_two_takes
 
 import librosa
 
@@ -348,6 +349,87 @@ class LyricsGenerateBody(BaseModel):
 class LyricsOptimizeBody(BaseModel):
     lyrics: str = Field(..., min_length=1)
     openaiApiKey: Optional[str] = None
+
+
+class LyricsAnalyzeBody(BaseModel):
+    lyrics: str = Field(..., min_length=1)
+
+
+def _count_syllables_rough(word: str) -> int:
+    """
+    Heuristic syllable counter (offline, dependency-free). Not perfect, but stable.
+    """
+    w = re.sub(r"[^a-z]", "", (word or "").lower())
+    if not w:
+        return 0
+    vowels = "aeiouy"
+    count = 0
+    prev_vowel = False
+    for ch in w:
+        is_v = ch in vowels
+        if is_v and not prev_vowel:
+            count += 1
+        prev_vowel = is_v
+    # silent e
+    if w.endswith("e") and count > 1 and not w.endswith(("le", "ye")):
+        count -= 1
+    return max(1, count)
+
+
+def _rhyme_key_rough(line: str) -> str:
+    t = re.sub(r"[^a-zA-Z\\s']", " ", (line or "")).strip().lower()
+    if not t:
+        return ""
+    last = t.split()[-1]
+    last = re.sub(r"[^a-z]", "", last)
+    if not last:
+        return ""
+    # last vowel group + trailing consonants
+    m = re.search(r"[aeiouy]+[^aeiouy]*$", last)
+    return m.group(0) if m else last[-3:]
+
+
+@app.post("/api/lyrics/analyze")
+def api_lyrics_analyze(req: LyricsAnalyzeBody) -> dict[str, Any]:
+    """
+    Offline lyric rhythm/prosody analysis:
+    - per-line syllable estimate
+    - rough stress guess (caps/!/? markers)
+    - naive rhyme scheme based on last word vowel group
+    """
+    text = (req.lyrics or "").strip()
+    lines = [ln.rstrip() for ln in text.splitlines()]
+    out_lines: list[dict[str, Any]] = []
+    rhyme_map: dict[str, str] = {}
+    next_letter = ord("A")
+
+    for i, ln in enumerate(lines):
+        words = [w for w in re.split(r"\\s+", ln.strip()) if w]
+        syll = sum(_count_syllables_rough(w) for w in words)
+        rk = _rhyme_key_rough(ln)
+        if rk and rk not in rhyme_map:
+            rhyme_map[rk] = chr(next_letter)
+            next_letter = min(next_letter + 1, ord("Z"))
+        rh = rhyme_map.get(rk, "") if rk else ""
+        out_lines.append(
+            {
+                "i": i,
+                "text": ln,
+                "words": len(words),
+                "syllables": syll,
+                "rhyme": rh,
+                "rhymeKey": rk,
+            }
+        )
+
+    scheme = "".join((l.get("rhyme") or " ") for l in out_lines).strip() or ""
+    return {
+        "ok": True,
+        "lines": out_lines,
+        "rhymeScheme": scheme,
+        "totalLines": len(out_lines),
+        "totalSyllables": sum(int(l["syllables"]) for l in out_lines),
+    }
 
 
 @app.post("/api/lyrics/generate")
@@ -1135,7 +1217,12 @@ def api_storage(asset_id: str, filename: str):
         if ext == ".webm"
         else "application/octet-stream"
     )
-    return FileResponse(str(p), media_type=media, filename=filename)
+    return FileResponse(
+        str(p),
+        media_type=media,
+        filename=filename,
+        content_disposition_type="inline",
+    )
 
 
 MUREKA_API_BASE = os.environ.get("MUREKA_API_BASE", "https://api.mureka.ai").rstrip("/")
@@ -1154,12 +1241,13 @@ async def _mureka_beat_vocal_mix_from_bytes(
     beat_filename: str,
     *,
     voice_id_ref: str | None = None,
+    api_key_override: str | None = None,
 ) -> dict[str, Any]:
     """
     Mureka ``/v1/song/generate`` → poll → download, mix with user's beat (real cloud vocals).
     Output MP3 under ``storage/mureka_mix/`` served at ``/api/storage/mureka_mix/…``.
     """
-    api_key = (os.environ.get("MUREKA_API_KEY") or "").strip()
+    api_key = (api_key_override or os.environ.get("MUREKA_API_KEY") or "").strip()
     if not api_key:
         raise HTTPException(
             status_code=503,
@@ -1191,7 +1279,16 @@ async def _mureka_beat_vocal_mix_from_bytes(
 
     try:
         beat_path.write_bytes(beat_raw)
-        y_beat, sr_beat = librosa.load(str(beat_path), sr=None, mono=True)
+        try:
+            y_beat, sr_beat = librosa.load(str(beat_path), sr=None, mono=True)
+        except Exception as e:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Could not decode beat audio. Upload a real .wav/.mp3 file. "
+                    "If you're running locally, install FFmpeg so librosa/audioread can decode."
+                ),
+            ) from e
         analysis = analyze(y_beat, sr_beat, max_beats_report=None)
         bpm = float(analysis["tempo_bpm"])
         n_beats = len(analysis["beats_all"])
@@ -1321,6 +1418,7 @@ async def api_pure_song_mureka(
     beat: UploadFile = File(...),
     lyrics: str = Form(...),
     mureka_style: str = Form("pop"),
+    authorization: str | None = Header(None),
 ) -> dict[str, Any]:
     """
     **Mureka vocals + your beat:** calls Mureka ``/v1/song/generate``, polls, downloads,
@@ -1329,11 +1427,15 @@ async def api_pure_song_mureka(
     started = time.perf_counter()
     raw = await beat.read()
     try:
+        key_override = None
+        if authorization and authorization.lower().startswith("bearer "):
+            key_override = authorization[7:].strip()
         out = await _mureka_beat_vocal_mix_from_bytes(
             raw,
             lyrics,
             mureka_style,
             beat.filename or "beat.wav",
+            api_key_override=key_override,
         )
         _record_perf("pure_song_mureka", True, (time.perf_counter() - started) * 1000.0)
         return out
@@ -1384,6 +1486,7 @@ async def api_mureka_generate(
     lyrics: str = Form(...),
     beat_file: UploadFile = File(...),
     mureka_style: str = Form("pop"),
+    authorization: str | None = Header(None),
 ) -> dict[str, Any]:
     """
     **Default:** Mureka cloud vocals + your beat (same as ``/api/pure-song-mureka``).
@@ -1400,6 +1503,8 @@ async def api_mureka_generate(
         raise HTTPException(status_code=400, detail="Lyrics required.")
 
     api_key = (os.environ.get("MUREKA_API_KEY") or "").strip()
+    if not api_key and authorization and authorization.lower().startswith("bearer "):
+        api_key = authorization[7:].strip()
     if api_key:
         try:
             out = await _mureka_beat_vocal_mix_from_bytes(
@@ -1408,6 +1513,7 @@ async def api_mureka_generate(
                 mureka_style,
                 beat_file.filename or "beat.wav",
                 voice_id_ref=(voice_id or "").strip() or None,
+                api_key_override=api_key,
             )
             _record_perf("mureka_generate", True, (time.perf_counter() - started) * 1000.0)
             return out
@@ -1582,6 +1688,123 @@ async def api_local_master_audio(file: UploadFile = File(...)) -> dict[str, Any]
         }
     finally:
         Path(tmp_in).unlink(missing_ok=True)
+
+
+class CoverGenerateResponse(BaseModel):
+    originalUrl: str
+    take1Url: str
+    take2Url: str
+    mixUrl: Optional[str] = None
+    bpm: Optional[float] = None
+    meta: dict[str, Any] = {}
+
+
+@app.post("/api/cover/generate")
+async def api_cover_generate(
+    stem: UploadFile = File(...),
+    instrument: str = Form("electric_guitar"),
+    style_prompt: str = Form(""),
+    harmony_instrument: str = Form(""),
+    harmony_semitones: float = Form(4.0),
+    cover_blend: float = Form(0.3),
+    original_gain_db: float = Form(0.0),
+    cover_gain_db: float = Form(-6.0),
+) -> CoverGenerateResponse:
+    """
+    Take ANY clip/stem → resynthesize a new instrument layer with timing/melody preserved.
+    Produces two takes (variation seeds) + optional harmony layer, and an optional parallel blend mix.
+    """
+    raw = await stem.read()
+    if len(raw) < 256:
+        raise HTTPException(status_code=400, detail="Stem file too small.")
+    if len(raw) > 120 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Stem too large (max ~120MB)")
+
+    suffix = Path(stem.filename or "stem.wav").suffix.lower() or ".wav"
+    cov_dir = STORAGE_DIR / "cover"
+    tmp_dir = STORAGE_DIR / "_cover_tmp"
+    cov_dir.mkdir(parents=True, exist_ok=True)
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+
+    job = _new_id("cover")
+    try:
+        decoded = decode_to_wav(raw, suffix=suffix, out_dir=tmp_dir, target_sr=48000, mono=True)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail="Could not decode audio. Upload a real .wav/.mp3 clip (install FFmpeg on the API host).",
+        ) from e
+
+    # Save original under storage/cover for later mixing
+    original_out = cov_dir / f"{job}_original.wav"
+    shutil.copyfile(str(decoded), str(original_out))
+
+    inst = (instrument or "").strip() or "electric_guitar"
+    harm_inst = (harmony_instrument or "").strip() or None
+    try:
+        take1, take2 = render_cover_two_takes(
+            decoded,
+            out_dir=cov_dir,
+            instrument=inst,  # type: ignore[arg-type]
+            style_prompt=style_prompt,
+            harmony=harm_inst,  # type: ignore[arg-type]
+            harmony_semitones=float(harmony_semitones),
+            seed=abs(hash(job)) % (2**31),
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.exception("cover generate failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    finally:
+        decoded.unlink(missing_ok=True)
+
+    # Rename takes to stable names for URLs
+    t1_out = cov_dir / f"{job}_take1.wav"
+    t2_out = cov_dir / f"{job}_take2.wav"
+    try:
+        shutil.move(str(take1.wav_path), str(t1_out))
+        shutil.move(str(take2.wav_path), str(t2_out))
+    except OSError:
+        t1_out = take1.wav_path
+        t2_out = take2.wav_path
+
+    bpm_val: float | None = None
+    try:
+        # quick beat detect (optional; may fail for non-percussive stems)
+        bd = detect_beats_from_path(original_out)
+        bpm_val = float(bd.get("tempo_bpm")) if bd and bd.get("tempo_bpm") else None
+    except Exception:
+        bpm_val = None
+
+    mix_url: str | None = None
+    try:
+        mix_out = cov_dir / f"{job}_mix.wav"
+        _ = mix_parallel(
+            original_wav=original_out,
+            cover_wav=t1_out,
+            out_path=mix_out,
+            original_gain_db=float(original_gain_db),
+            cover_gain_db=float(cover_gain_db),
+            cover_blend=float(cover_blend),
+        )
+        mix_url = f"/api/storage/cover/{mix_out.name}"
+    except Exception:
+        mix_url = None
+
+    return CoverGenerateResponse(
+        originalUrl=f"/api/storage/cover/{original_out.name}",
+        take1Url=f"/api/storage/cover/{t1_out.name}",
+        take2Url=f"/api/storage/cover/{t2_out.name}",
+        mixUrl=mix_url,
+        bpm=bpm_val,
+        meta={
+            "instrument": inst,
+            "harmony_instrument": harm_inst,
+            "harmony_semitones": float(harmony_semitones),
+            "note": "Two takes for Take Lanes. Default cover gain is -6dB; use parallel blend for richness.",
+        },
+    )
 
 
 @app.post("/api/pipeline/generate-master")
@@ -2018,6 +2241,38 @@ def api_local_vocal_status() -> dict[str, Any]:
         },
         "next": "Expose a small HTTP shim on your GPU host and set RVC_BASE_URL; optional body POST forwarder can be added next.",
     }
+
+
+_TRPC_UPSTREAM = os.environ.get("DIETER_TRPC_UPSTREAM", "").strip().rstrip("/")
+
+if _TRPC_UPSTREAM:
+    from fastapi import Request
+    from fastapi.responses import Response
+    import httpx
+
+    @app.api_route("/trpc/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
+    async def _proxy_trpc(path: str, request: Request) -> Response:
+        """Forward browser /trpc → internal DIETER tRPC (docker-compose or sidecar). Same-origin tRPC + REST on one port."""
+        q = request.query_params
+        qs = f"?{q}" if q else ""
+        url = f"{_TRPC_UPSTREAM}/trpc/{path}{qs}"
+        body = await request.body()
+        headers = {
+            k: v
+            for k, v in request.headers.items()
+            if k.lower() not in ("host", "connection", "content-length", "transfer-encoding")
+        }
+        timeout = httpx.Timeout(300.0, connect=30.0)
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            try:
+                r = await client.request(request.method, url, content=body, headers=headers)
+            except httpx.RequestError as e:
+                raise HTTPException(status_code=502, detail=f"tRPC upstream failed: {e}") from e
+        pass_headers = {}
+        for h in ("content-type", "content-length"):
+            if h in r.headers:
+                pass_headers[h] = r.headers[h]
+        return Response(content=r.content, status_code=r.status_code, headers=pass_headers)
 
 
 # --- Production: React SPA from static/ (see Dockerfile + DEPLOY_RENDER.md) ---

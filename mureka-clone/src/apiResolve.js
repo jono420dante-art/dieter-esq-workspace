@@ -29,6 +29,20 @@ export function absoluteFromApiPath(apiRoot, pathOrUrl) {
   return `${window.location.origin}${path}`
 }
 
+/** Origin for tRPC `jobWithPlaybackUrls` and absolute WAV URLs (no /api path). */
+export function publicOriginForApiRoot(apiRoot) {
+  const r = (apiRoot || '').trim()
+  if (r.startsWith('http://') || r.startsWith('https://')) {
+    try {
+      return new URL(r).origin
+    } catch {
+      return ''
+    }
+  }
+  if (typeof window !== 'undefined') return window.location.origin
+  return ''
+}
+
 /**
  * Read JSON from a fetch Response without throwing on empty body or non-JSON errors.
  * Surfaces HTTP status (e.g. 405 = wrong method) in the Error message.

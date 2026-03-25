@@ -1,19 +1,98 @@
 import cors from "cors";
 import express from "express";
-import { initTRPC } from "@trpc/server";
+import { initTRPC, TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 
 const FASTAPI_BASE = process.env.DIETER_FASTAPI_BASE ?? "http://127.0.0.1:8787";
 const PORT = Number(process.env.DIETER_TRPC_PORT ?? 8790);
+/** Optional: public browser-facing API origin (e.g. https://studio.example.com) for absolute WAV URLs */
+const DEFAULT_PUBLIC_ORIGIN = (process.env.DIETER_PUBLIC_API_ORIGIN ?? "").trim().replace(/\/$/, "");
 
 const t = initTRPC.create();
 
+async function fastapiJson(path: string, init?: RequestInit): Promise<unknown> {
+  const url = path.startsWith("http") ? path : `${FASTAPI_BASE}${path.startsWith("/") ? "" : "/"}${path}`;
+  let res: Response;
+  try {
+    res = await fetch(url, init);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: `FastAPI unreachable (${url}): ${msg}`,
+    });
+  }
+  const text = await res.text();
+  if (!res.ok) {
+    let detail = text?.trim() || `HTTP ${res.status}`;
+    try {
+      const j = JSON.parse(text) as { detail?: unknown };
+      if (j?.detail != null) {
+        detail = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail);
+      }
+    } catch {
+      /* keep raw text */
+    }
+    throw new TRPCError({
+      code: res.status >= 500 ? "INTERNAL_SERVER_ERROR" : "BAD_REQUEST",
+      message: detail.slice(0, 2000),
+    });
+  }
+  if (!text.trim()) return null;
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: `FastAPI returned non-JSON (${url}): ${text.slice(0, 240)}`,
+    });
+  }
+}
+
+function stripTrailingSlash(s: string): string {
+  return s.replace(/\/$/, "");
+}
+
+/** Turn `/api/storage/...` into absolute URLs for browser playback when UI and API differ by path-only same host, or cross-host. */
+function resolveWavUrlsInOutput(
+  output: unknown,
+  publicOrigin: string
+): unknown {
+  if (!output || typeof output !== "object") return output;
+  const origin = stripTrailingSlash(publicOrigin);
+  const abs = (u: unknown): unknown => {
+    if (typeof u !== "string") return u;
+    if (/^https?:\/\//i.test(u)) return u;
+    if (!u.startsWith("/")) return u;
+    return `${origin}${u}`;
+  };
+  const deep = JSON.parse(JSON.stringify(output)) as Record<string, unknown>;
+  const mix = deep.mix;
+  if (mix && typeof mix === "object") {
+    const m = mix as Record<string, unknown>;
+    if (typeof m.wavUrl === "string") {
+      m.wavUrlAbsolute = abs(m.wavUrl);
+    }
+  }
+  if (Array.isArray(deep.stems)) {
+    for (const s of deep.stems) {
+      if (s && typeof s === "object" && typeof (s as Record<string, unknown>).wavUrl === "string") {
+        const st = s as Record<string, unknown>;
+        st.wavUrlAbsolute = abs(st.wavUrl);
+      }
+    }
+  }
+  return deep;
+}
+
 const appRouter = t.router({
   health: t.procedure.query(async () => {
-    const res = await fetch(`${FASTAPI_BASE}/api/health`);
-    if (!res.ok) throw new Error(`FastAPI health failed (${res.status})`);
-    return (await res.json()) as { ok: boolean; time: number };
+    const data = (await fastapiJson("/api/health")) as { ok?: boolean; time?: number };
+    if (!data || data.ok !== true) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "FastAPI health response invalid" });
+    }
+    return data as { ok: boolean; time: number };
   }),
 
   musicPlan: t.procedure
@@ -26,13 +105,11 @@ const appRouter = t.router({
       })
     )
     .mutation(async ({ input }) => {
-      const res = await fetch(`${FASTAPI_BASE}/api/music/plan`, {
+      return fastapiJson("/api/music/plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
       });
-      if (!res.ok) throw new Error(`plan failed (${res.status})`);
-      return (await res.json()) as unknown;
     }),
 
   musicGenerate: t.procedure
@@ -52,20 +129,42 @@ const appRouter = t.router({
       })
     )
     .mutation(async ({ input }) => {
-      const res = await fetch(`${FASTAPI_BASE}/api/music/generate`, {
+      return fastapiJson("/api/music/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
-      });
-      if (!res.ok) throw new Error(`generate failed (${res.status})`);
-      return (await res.json()) as { jobId: string; status: string };
+      }) as Promise<{ jobId: string; status: string }>;
     }),
 
   job: t.procedure.input(z.object({ jobId: z.string().min(1) })).query(async ({ input }) => {
-    const res = await fetch(`${FASTAPI_BASE}/api/jobs/${encodeURIComponent(input.jobId)}`);
-    if (!res.ok) throw new Error(`job poll failed (${res.status})`);
-    return (await res.json()) as unknown;
+    return fastapiJson(`/api/jobs/${encodeURIComponent(input.jobId)}`);
   }),
+
+  /**
+   * Same as `job`, plus `wavUrlAbsolute` on mix and stems when `publicOrigin` or `DIETER_PUBLIC_API_ORIGIN` is set.
+   * Use the browser-visible API origin (e.g. https://api.example.com or https://app.example.com if /api is same host).
+   */
+  jobWithPlaybackUrls: t.procedure
+    .input(
+      z.object({
+        jobId: z.string().min(1),
+        /** Full origin only (no path), e.g. https://myapp.railway.app */
+        publicOrigin: z.string().url().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      const raw = (await fastapiJson(`/api/jobs/${encodeURIComponent(input.jobId)}`)) as Record<string, unknown>;
+      const origin = (input.publicOrigin ?? DEFAULT_PUBLIC_ORIGIN).trim();
+      if (!origin) return raw;
+      const out = raw.output;
+      if (raw.status === "succeeded" && out && typeof out === "object") {
+        return {
+          ...raw,
+          output: resolveWavUrlsInOutput(out, origin),
+        };
+      }
+      return raw;
+    }),
 
   /** Proxies to FastAPI `POST /api/mureka/song/generate` (Mureka key in procedure input for browser clients). */
   murekaSongGenerate: t.procedure
@@ -79,7 +178,7 @@ const appRouter = t.router({
     )
     .mutation(async ({ input }) => {
       const { murekaApiKey, ...body } = input;
-      const res = await fetch(`${FASTAPI_BASE}/api/mureka/song/generate`, {
+      return fastapiJson("/api/mureka/song/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -87,9 +186,6 @@ const appRouter = t.router({
         },
         body: JSON.stringify({ lyrics: body.lyrics, model: body.model, prompt: body.prompt }),
       });
-      const text = await res.text();
-      if (!res.ok) throw new Error(text || `mureka generate failed (${res.status})`);
-      return JSON.parse(text) as unknown;
     }),
 
   /** Proxies to FastAPI `GET /api/mureka/song/query/:taskId`. */
@@ -101,15 +197,9 @@ const appRouter = t.router({
       })
     )
     .query(async ({ input }) => {
-      const res = await fetch(
-        `${FASTAPI_BASE}/api/mureka/song/query/${encodeURIComponent(input.taskId)}`,
-        {
-          headers: { Authorization: `Bearer ${input.murekaApiKey}` },
-        }
-      );
-      const text = await res.text();
-      if (!res.ok) throw new Error(text || `mureka query failed (${res.status})`);
-      return JSON.parse(text) as unknown;
+      return fastapiJson(`/api/mureka/song/query/${encodeURIComponent(input.taskId)}`, {
+        headers: { Authorization: `Bearer ${input.murekaApiKey}` },
+      });
     }),
 
   /** FastAPI `POST /api/lyrics/generate` — OpenAI via server env or optional key. */
@@ -123,14 +213,11 @@ const appRouter = t.router({
       })
     )
     .mutation(async ({ input }) => {
-      const res = await fetch(`${FASTAPI_BASE}/api/lyrics/generate`, {
+      return fastapiJson("/api/lyrics/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
-      });
-      const text = await res.text();
-      if (!res.ok) throw new Error(text || `lyrics generate failed (${res.status})`);
-      return JSON.parse(text) as { text: string; source: "openai" | "local" };
+      }) as Promise<{ text: string; source: "openai" | "local" }>;
     }),
 
   /** FastAPI `POST /api/lyrics/optimize`. */
@@ -142,14 +229,11 @@ const appRouter = t.router({
       })
     )
     .mutation(async ({ input }) => {
-      const res = await fetch(`${FASTAPI_BASE}/api/lyrics/optimize`, {
+      return fastapiJson("/api/lyrics/optimize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
-      });
-      const text = await res.text();
-      if (!res.ok) throw new Error(text || `lyrics optimize failed (${res.status})`);
-      return JSON.parse(text) as { text: string; source: "openai" | "local" };
+      }) as Promise<{ text: string; source: "openai" | "local" }>;
     }),
 });
 
@@ -169,4 +253,3 @@ app.listen(PORT, () => {
   // eslint-disable-next-line no-console
   console.log(`Proxying FastAPI at ${FASTAPI_BASE}`);
 });
-

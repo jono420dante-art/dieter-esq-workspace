@@ -1,0 +1,224 @@
+:root {
+  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #ec4899 100%);
+  --neon-cyan: #00f5ff;
+  --glass: rgba(255, 255, 255, 0.08);
+  --glow: 0 30px 60px rgba(0, 245, 255, 0.25);
+}
+
+.v5-studio {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 20px 90px;
+}
+
+.v5-hero {
+  background: var(--glass);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border-radius: 40px;
+  padding: 56px 40px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  margin-bottom: 60px;
+  box-shadow: var(--glow);
+}
+
+.v5-logo {
+  font-size: clamp(2.4rem, 6vw, 4.3rem);
+  font-weight: 900;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 14px;
+  letter-spacing: -2px;
+}
+
+.v5-subtitle {
+  font-size: 1.25rem;
+  opacity: 0.92;
+  max-width: 860px;
+  margin: 0 auto 12px;
+}
+
+.v5-subhint {
+  opacity: 0.78;
+  font-size: 1.02rem;
+}
+
+.v5-h3 {
+  font-size: 1.05rem;
+  margin: 0 0 14px;
+  letter-spacing: -0.01em;
+}
+
+.prompt-engine {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 40px;
+  margin-bottom: 50px;
+}
+
+.prompt-input,
+.v5-controls {
+  background: var(--glass);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border-radius: 25px;
+  padding: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.prompt-area {
+  width: 100%;
+  min-height: 220px;
+  padding: 18px 18px;
+  border-radius: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.35);
+  color: white;
+  font-family: inherit;
+  font-size: 16px;
+  resize: vertical;
+  margin-bottom: 16px;
+  outline: none;
+}
+
+.prompt-area:focus {
+  border-color: rgba(0, 245, 255, 0.55);
+  box-shadow: 0 0 0 4px rgba(0, 245, 255, 0.14);
+}
+
+.prompt-controls {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.control-btn {
+  padding: 10px 18px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.22s ease;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.control-btn:hover {
+  background: rgba(0, 245, 255, 0.18);
+  border-color: rgba(0, 245, 255, 0.5);
+  transform: translateY(-1px);
+}
+
+.v5-field {
+  margin-bottom: 16px;
+}
+
+.v5-field label {
+  display: block;
+  opacity: 0.9;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.v5-field select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.35);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  outline: none;
+}
+
+.v5-generate {
+  width: 100%;
+  padding: 18px 20px;
+  background: var(--primary-gradient);
+  color: white;
+  border: none;
+  border-radius: 999px;
+  font-size: 1.1rem;
+  font-weight: 900;
+  cursor: pointer;
+  margin: 18px 0 8px;
+  box-shadow: var(--glow);
+  transition: all 0.25s ease;
+}
+
+.v5-generate:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 40px 90px rgba(102, 126, 234, 0.4);
+}
+
+.v5-generate:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.v5-status {
+  margin-top: 10px;
+  opacity: 0.9;
+  font-weight: 650;
+}
+
+.v5-err {
+  margin-top: 10px;
+  color: #fecaca;
+  font-weight: 650;
+}
+
+.track-player {
+  background: rgba(0, 245, 255, 0.12);
+  border: 1px solid rgba(0, 245, 255, 0.5);
+  border-radius: 25px;
+  padding: 28px;
+  text-align: center;
+}
+
+#v5Player {
+  width: 100%;
+  max-width: 720px;
+  border-radius: 18px;
+  margin-bottom: 16px;
+}
+
+.stems {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.stem-btn {
+  padding: 12px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.stem-btn.disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.v5-note {
+  margin-top: 12px;
+  opacity: 0.75;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 860px) {
+  .prompt-engine {
+    grid-template-columns: 1fr;
+  }
+}
+
