@@ -8,6 +8,7 @@ import VoiceCloneStudio from './VoiceCloneStudio.jsx'
 import MurekaPromptStudio from './MurekaPromptStudio.jsx'
 import StudioV5 from './StudioV5.jsx'
 import CoverStudio from './CoverStudio.jsx'
+import StudioPortal from './StudioPortal.jsx'
 import {
   fetchStudioGrowth,
   normalizeApiRoot,
@@ -27,6 +28,7 @@ const USE_TRPC = dieterUseTrpc()
 
 /** Header subtitle per mode — keep in sync with mode button order (gateway / AI labs first). */
 const APP_MODE_HEADER = {
+  portal: 'Portal & guide',
   create: 'Create',
   cloud: 'Cloud',
   voicestudio: 'Voice',
@@ -35,6 +37,42 @@ const APP_MODE_HEADER = {
   cover: 'Cover',
   local: 'Local',
 }
+
+const HASH_TO_MODE = {
+  portal: 'portal',
+  guide: 'portal',
+  create: 'create',
+  cloud: 'cloud',
+  voicestudio: 'voicestudio',
+  beatlab: 'beatlab',
+  v5: 'v5',
+  cover: 'cover',
+  local: 'local',
+}
+
+const SIDEBAR_GROUPS = [
+  {
+    title: 'Start here',
+    items: [{ id: 'portal', label: 'Portal & guide', hint: 'Health, links, Mureka' }],
+  },
+  {
+    title: 'Mureka cloud',
+    items: [
+      { id: 'create', label: 'Create', hint: 'Mureka gateway' },
+      { id: 'cloud', label: 'Cloud', hint: 'Lyrics + cloud' },
+      { id: 'voicestudio', label: 'Voice studio', hint: 'Clone & cloud' },
+    ],
+  },
+  {
+    title: 'Labs',
+    items: [
+      { id: 'beatlab', label: 'Beat lab' },
+      { id: 'local', label: 'Local pipeline' },
+      { id: 'v5', label: 'V5' },
+      { id: 'cover', label: 'Cover' },
+    ],
+  },
+]
 
 const STYLE_PRESETS = [
   'Grand Piano',
@@ -68,7 +106,12 @@ function buildCreationPrompt({ instrumental, lyrics, style, vocal, title }) {
 export default function App() {
   /** `create` = Mureka hero. `local` / `beatlab` / `voicestudio` / `cloud` = labs + advanced cloud form. */
   const [appMode, setAppMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const h = (window.location.hash || '').replace(/^#/, '').toLowerCase().trim()
+      if (h && HASH_TO_MODE[h]) return HASH_TO_MODE[h]
+    }
     const m = import.meta.env.VITE_DEFAULT_MODE
+    if (m === 'portal') return 'portal'
     if (m === 'create') return 'create'
     if (m === 'v5') return 'v5'
     if (m === 'cover') return 'cover'
@@ -110,6 +153,22 @@ export default function App() {
 
   const base = useMemo(() => normalizeApiRoot(apiBase || DEFAULT_BASE), [apiBase])
   const outboundLinks = useMemo(() => getStudioOutboundLinks(), [])
+
+  const goMode = useCallback((mode) => {
+    setAppMode(mode)
+    if (typeof window !== 'undefined' && window.history?.replaceState) {
+      window.history.replaceState(null, '', `#${mode === 'portal' ? 'portal' : mode}`)
+    }
+  }, [])
+
+  useEffect(() => {
+    const onHash = () => {
+      const h = (window.location.hash || '').replace(/^#/, '').toLowerCase().trim()
+      if (h && HASH_TO_MODE[h]) setAppMode(HASH_TO_MODE[h])
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -471,72 +530,61 @@ export default function App() {
     }, Math.min(180000, Math.max(4000, dur * 1000 + 800)))
   }, [])
 
+  const showKeysFab =
+    appMode === 'cloud' ||
+    appMode === 'create' ||
+    appMode === 'local' ||
+    appMode === 'beatlab' ||
+    appMode === 'voicestudio' ||
+    appMode === 'portal'
+
   return (
     <div className="app">
-      <header className="header">
-        <nav className="nav-main">
-          <strong>
-            {STUDIO_NAME} · {APP_MODE_HEADER[appMode] ?? 'Studio'}
-          </strong>
-        </nav>
-        <div className="user-actions" style={{ flexWrap: 'wrap', gap: 8 }}>
-          <button
-            type="button"
-            className={appMode === 'create' ? 'pill-btn' : 'btn-mode'}
-            onClick={() => setAppMode('create')}
-          >
-            Create
-          </button>
-          <button
-            type="button"
-            className={appMode === 'cloud' ? 'pill-btn' : 'btn-mode'}
-            onClick={() => setAppMode('cloud')}
-          >
-            Cloud
-          </button>
-          <button
-            type="button"
-            className={appMode === 'voicestudio' ? 'pill-btn' : 'btn-mode'}
-            onClick={() => setAppMode('voicestudio')}
-          >
-            Voice studio
-          </button>
-          <button
-            type="button"
-            className={appMode === 'beatlab' ? 'pill-btn' : 'btn-mode'}
-            onClick={() => setAppMode('beatlab')}
-          >
-            Beat lab
-          </button>
-          <button type="button" className={appMode === 'v5' ? 'pill-btn' : 'btn-mode'} onClick={() => setAppMode('v5')}>
-            V5
-          </button>
-          <button
-            type="button"
-            className={appMode === 'cover' ? 'pill-btn' : 'btn-mode'}
-            onClick={() => setAppMode('cover')}
-          >
-            Cover
-          </button>
-          <button
-            type="button"
-            className={appMode === 'local' ? 'pill-btn' : 'btn-mode'}
-            onClick={() => setAppMode('local')}
-          >
-            Local
-          </button>
-          {(appMode === 'cloud' ||
-            appMode === 'create' ||
-            appMode === 'local' ||
-            appMode === 'beatlab' ||
-            appMode === 'voicestudio') && (
-            <button type="button" className="pill-btn" onClick={() => setShowAuth(true)}>
-              API keys
-            </button>
-          )}
-        </div>
-      </header>
+      <div className="app-shell">
+        <aside className="app-sidebar" aria-label="Studio navigation">
+          <div className="sidebar-brand">
+            <span className="sidebar-brand-title">{STUDIO_NAME}</span>
+            <span className="sidebar-brand-sub">Mureka + API</span>
+          </div>
+          <nav className="sidebar-nav">
+            {SIDEBAR_GROUPS.map((g) => (
+              <div key={g.title} className="sidebar-group">
+                <div className="sidebar-group-title">{g.title}</div>
+                {g.items.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={'sidebar-nav-btn' + (appMode === item.id ? ' sidebar-nav-btn-active' : '')}
+                    onClick={() => goMode(item.id)}
+                    title={item.hint || item.label}
+                  >
+                    <span className="sidebar-nav-label">{item.label}</span>
+                    {item.hint ? <span className="sidebar-nav-hint">{item.hint}</span> : null}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </nav>
+          <div className="sidebar-footer">
+            <a className="sidebar-linkout" href="/ed-geerdes-platform.html">
+              Static showroom ↗
+            </a>
+            {showKeysFab && (
+              <button type="button" className="sidebar-keys-btn" onClick={() => setShowAuth(true)}>
+                API keys &amp; sync
+              </button>
+            )}
+          </div>
+        </aside>
 
+        <div className="app-main">
+          <header className="header header-compact">
+            <nav className="nav-main">
+              <strong>{APP_MODE_HEADER[appMode] ?? 'Studio'}</strong>
+            </nav>
+          </header>
+
+          <div className="app-main-body">
       {showAuth && (
         <div className="modal" role="dialog">
           <div className="modal-bg" onClick={() => setShowAuth(false)} aria-hidden />
@@ -601,7 +649,9 @@ export default function App() {
         </div>
       )}
 
-      {appMode === 'create' ? (
+      {appMode === 'portal' ? (
+        <StudioPortal apiBase={base} onOpenKeys={() => setShowAuth(true)} onNavigateMode={goMode} />
+      ) : appMode === 'create' ? (
         <MurekaPromptStudio
           apiBase={base}
           apiKey={apiKey}
@@ -613,7 +663,7 @@ export default function App() {
             } catch {
               /* ignore quota / private mode */
             }
-            setAppMode('local')
+            goMode('local')
           }}
         />
       ) : appMode === 'v5' ? (
@@ -850,6 +900,7 @@ export default function App() {
       </main>
         </>
       )}
+          </div>
 
       <footer
         className="studio-pulse-footer"
@@ -886,7 +937,18 @@ export default function App() {
             ))}
           </div>
         )}
+        <div style={{ marginTop: 10 }}>
+          <a className="footer-link" href="#portal" onClick={(e) => { e.preventDefault(); goMode('portal') }}>
+            Portal &amp; API health
+          </a>
+          {' · '}
+          <a className="footer-link" href="/ed-geerdes-platform.html">
+            ED-GEERDES showroom
+          </a>
+        </div>
       </footer>
+        </div>
+      </div>
     </div>
   )
 }

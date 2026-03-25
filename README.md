@@ -10,7 +10,7 @@ Single **Docker** image: **React UI** + **FastAPI** on one URL.
 
 1. Read **[`DIETER_ESQ_START.md`](./DIETER_ESQ_START.md)** — Railway / Render / **Vercel** / local `docker compose`.
 2. Repo root **`railway.toml`** points at **`dieter-backend/Dockerfile`** (build context = this repo root).
-3. **Vercel / Netlify (free):** root **`vercel.json`** or **`netlify.toml`**. Custom domain (**`dieter-music.app`**), **Stripe `pk_live_…`** build injection, fork + deploy: **[`docs/DIETER_MUSIC_APP.md`](./docs/DIETER_MUSIC_APP.md)**. Set **`VITE_API_BASE`** to your live API. **Production UI:** [https://dieter-esq-workspace.vercel.app](https://dieter-esq-workspace.vercel.app) (add your domain in the hosting UI). **Redeploy:** `npm run deploy:vercel` from repo root, or push to GitHub.
+3. **Vercel / Netlify (free):** root **`vercel.json`** or **`netlify.toml`**. Custom domain (**`dieter-music.app`**), **Stripe `pk_live_…`** build injection, fork + deploy: **[`docs/DIETER_MUSIC_APP.md`](./docs/DIETER_MUSIC_APP.md)**. Set **`VITE_API_BASE`** to your live API. **After each push:** CI build + channel checklist — **[`docs/DEPLOY_CHANNELS_PERFORMANCE.md`](./docs/DEPLOY_CHANNELS_PERFORMANCE.md)** (Portal `/#portal`, static health, CORS). **Production UI:** [https://dieter-esq-workspace.vercel.app](https://dieter-esq-workspace.vercel.app) (add your domain in the hosting UI). **Redeploy:** `npm run deploy:vercel` from repo root, or push to GitHub.
 
 Main code:
 
@@ -18,6 +18,7 @@ Main code:
 - **`dieter-backend/`** — FastAPI (`app/`), beat lab, pipelines  
 - **Architecture:** [`docs/GATEWAY_ARCHITECTURE.md`](./docs/GATEWAY_ARCHITECTURE.md) — gateway, sync/portal routing, plugin extension points  
 - **WAM ecosystem:** [`docs/WAM_ECOSYSTEM.md`](./docs/WAM_ECOSYSTEM.md) — community plugins, pedalboard, Open Studio DAW, Sequencer Party  
+- **Web audio stack (synths, Faust/LV2 caveats, snippets):** [`docs/DIETER_WEB_AUDIO_STACK.md`](./docs/DIETER_WEB_AUDIO_STACK.md)  
 
 ## Other tools in this folder
 

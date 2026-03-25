@@ -21,4 +21,4 @@ Short map of hosts and projects that pair well with **ED-GEERDES** when you want
 - **Payments / stems** can stay on your **FastAPI** (`/api/upload`, `/api/mix/suno-mureka/render`, etc.); WAM is the **front-end audio graph**.
 - Search **YouTube** for *Web Audio Modules*, *wam-openstudio*, or *wam pedalboard* for walkthroughs — URLs change; not pinned here.
 
-See also **[DIETER_MUSIC_APP.md](./DIETER_MUSIC_APP.md)** (deploy, domain, Stripe).
+See also **[DIETER_MUSIC_APP.md](./DIETER_MUSIC_APP.md)** (deploy, domain, Stripe) and **[DIETER_WEB_AUDIO_STACK.md](./DIETER_WEB_AUDIO_STACK.md)** (Tone, synth repos, Faust/LV2 reality checks, snippets).

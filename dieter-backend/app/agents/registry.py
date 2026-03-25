@@ -4,6 +4,7 @@ from typing import Any
 
 from ..lyrics_analyze import analyze_lyrics
 from ..seo_service import build_seo_pack
+from ..suno_mureka_mix import preset_summary
 
 
 def list_agents() -> list[dict[str, Any]]:
@@ -30,6 +31,12 @@ def list_agents() -> list[dict[str, Any]]:
                 "genre": "optional string",
                 "openaiApiKey": "optional string (else OPENAI_API_KEY on server)",
             },
+        },
+        {
+            "id": "mix_bus_preset",
+            "title": "Suno / Mureka-style bus + master recipe (FFmpeg)",
+            "description": "Returns vocal/drum/instrument bus gains, delays, HPF, reverb, master chain. Render via POST /api/mix/suno-mureka/render.",
+            "payload": {},
         },
     ]
 
@@ -59,4 +66,6 @@ def run_agent(agent_id: str, payload: dict[str, Any]) -> dict[str, Any]:
             openai_api_key=payload.get("openaiApiKey"),
         )
         return {"pack": pack, "source": source}
+    if aid == "mix_bus_preset":
+        return preset_summary()
     raise ValueError(f"Unknown agent: {agent_id!r}")

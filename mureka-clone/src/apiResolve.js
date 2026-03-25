@@ -108,3 +108,41 @@ export async function fetchStudioGrowth(apiRoot) {
     return null
   }
 }
+
+/**
+ * GET /api/health — latency + JSON for Portal & static pages.
+ */
+export async function fetchApiHealth(apiRoot) {
+  const t0 = typeof performance !== 'undefined' ? performance.now() : 0
+  try {
+    const r = await fetch(`${apiRoot}/health`, { method: 'GET' })
+    const ms = typeof performance !== 'undefined' ? Math.round(performance.now() - t0) : null
+    let json = null
+    try {
+      json = await parseFetchJson(r)
+    } catch (e) {
+      return {
+        ok: false,
+        status: r.status,
+        ms,
+        json: null,
+        error: e?.message || `HTTP ${r.status}`,
+      }
+    }
+    return { ok: true, status: r.status, ms, json, error: null }
+  } catch (e) {
+    const ms = typeof performance !== 'undefined' ? Math.round(performance.now() - t0) : null
+    return { ok: false, status: 0, ms, json: null, error: e?.message || String(e) }
+  }
+}
+
+/** GET /api/local/capabilities — lightweight “is local DSP wired?” probe. */
+export async function fetchLocalCapsSummary(apiRoot) {
+  try {
+    const r = await fetch(`${apiRoot}/local/capabilities`, { method: 'GET' })
+    await parseFetchJson(r)
+    return { ok: true, error: null }
+  } catch (e) {
+    return { ok: false, error: e?.message || String(e) }
+  }
+}

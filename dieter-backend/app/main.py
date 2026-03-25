@@ -47,6 +47,7 @@ from .local_pipeline import (
     stretch_audio_to_bpm_ratio,
 )
 from .cover_pipeline import decode_to_wav, mix_parallel, render_cover_two_takes
+from .suno_mureka_mix import build_suno_mureka_mix, preset_summary
 
 import librosa
 
@@ -1648,6 +1649,57 @@ def api_local_merge(req: LocalMergeBody) -> dict[str, Any]:
         "mixId": mix_id,
         "key": rel,
         "url": f"/api/storage/local/{out_path.name}",
+    }
+
+
+class SunoMurekaMixBody(BaseModel):
+    """Role names → storage keys (``uploads/…`` or ``local/…``). See GET ``/api/mix/suno-mureka/preset``."""
+
+    stems: dict[str, str] = Field(
+        ...,
+        description="e.g. lead, double, harmony, kick, snare, bass — values are storage keys",
+    )
+    applyMaster: bool = Field(True, description="Apply Suno-style master chain after bus sum")
+
+
+@app.get("/api/mix/suno-mureka/preset")
+def api_mix_suno_mureka_preset() -> dict[str, Any]:
+    """Full bus + master recipe (JSON) and allowed stem role names."""
+    return preset_summary()
+
+
+@app.post("/api/mix/suno-mureka/render")
+def api_mix_suno_mureka_render(body: SunoMurekaMixBody) -> dict[str, Any]:
+    """
+    Mix stem files through the **vocal / drum / instrument** bus graph (FFmpeg), then optional master chain.
+    Upload stems first via ``POST /api/upload`` or use existing ``local/…`` keys.
+    """
+    if not body.stems:
+        raise HTTPException(status_code=400, detail="stems must not be empty")
+    paths: dict[str, Path] = {}
+    for role, raw_key in body.stems.items():
+        k = (raw_key or "").strip()
+        if not k:
+            raise HTTPException(status_code=400, detail=f"Empty storage key for role {role!r}")
+        paths[role] = _safe_storage_relative_key(k)
+    mix_id = _new_id("suno")
+    out_dir = STORAGE_DIR / "local"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / f"{mix_id}_suno_mureka.mp3"
+    try:
+        meta = build_suno_mureka_mix(paths, out_path, master=body.applyMaster)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    name = out_path.name
+    return {
+        **meta,
+        "mixId": mix_id,
+        "key": f"local/{name}",
+        "url": f"/api/storage/local/{name}",
     }
 
 

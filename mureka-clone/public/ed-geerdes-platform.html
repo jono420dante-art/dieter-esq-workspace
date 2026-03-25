@@ -256,10 +256,219 @@
         }
 
         a.api-link { color: var(--neon-cyan); }
+
+        .discovery-hero {
+            background: var(--glass);
+            backdrop-filter: blur(25px);
+            border-radius: 25px;
+            padding: 28px 32px;
+            border: 1px solid rgba(255,255,255,0.15);
+            margin-bottom: 28px;
+        }
+
+        .discovery-hero h2 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            font-weight: 800;
+        }
+
+        .discovery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .discovery-card {
+            background: var(--glass);
+            backdrop-filter: blur(25px);
+            border-radius: 22px;
+            padding: 24px 26px;
+            border: 1px solid rgba(255,255,255,0.12);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .discovery-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--glow);
+        }
+
+        .discovery-card h3 {
+            font-size: 1.05rem;
+            font-weight: 800;
+            margin-bottom: 12px;
+            color: var(--neon-cyan);
+        }
+
+        .discovery-card p {
+            font-size: 0.92rem;
+            line-height: 1.55;
+            opacity: 0.92;
+        }
+
+        .layout-shell {
+            display: flex;
+            min-height: 100vh;
+            align-items: stretch;
+        }
+
+        .eg-sidebar {
+            width: 260px;
+            flex-shrink: 0;
+            background: rgba(6, 8, 18, 0.96);
+            border-right: 1px solid rgba(0, 245, 255, 0.15);
+            display: flex;
+            flex-direction: column;
+            position: sticky;
+            top: 0;
+            align-self: flex-start;
+            max-height: 100vh;
+            overflow-y: auto;
+        }
+
+        .eg-sidebar-brand {
+            padding: 18px 16px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .eg-sidebar-logo {
+            display: block;
+            font-size: 1.35rem;
+            font-weight: 900;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .eg-sidebar-tag {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            opacity: 0.65;
+            margin-top: 4px;
+            display: block;
+        }
+
+        .eg-sidebar-nav {
+            padding: 12px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1;
+        }
+
+        .eg-side-tab {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.88);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.88rem;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .eg-side-tab:hover {
+            border-color: var(--neon-cyan);
+        }
+
+        .eg-side-tab.active {
+            border-color: var(--neon-cyan);
+            background: rgba(0, 245, 255, 0.12);
+            color: #fff;
+        }
+
+        .eg-health {
+            padding: 12px 14px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .eg-health-status {
+            font-size: 0.78rem;
+            line-height: 1.45;
+            opacity: 0.9;
+            word-break: break-word;
+        }
+
+        .eg-health-refresh {
+            padding: 8px 12px;
+            font-size: 0.8rem;
+        }
+
+        .eg-sidebar-links {
+            padding: 10px 14px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .eg-link-main {
+            color: var(--neon-cyan);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .eg-link-main:hover {
+            text-decoration: underline;
+        }
+
+        .eg-main {
+            flex: 1;
+            min-width: 0;
+        }
+
+        @media (max-width: 920px) {
+            .layout-shell { flex-direction: column; }
+            .eg-sidebar {
+                width: 100%;
+                max-height: none;
+                position: relative;
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            .eg-sidebar-nav {
+                flex-direction: row;
+                flex-wrap: wrap;
+                flex: 1;
+            }
+            .eg-side-tab { width: auto; flex: 1 1 120px; }
+        }
     </style>
 </head>
 <!-- Build replaces data-stripe-pk via STRIPE_PUBLISHABLE_KEY (Vercel / Netlify). Default: pk_live_… placeholder. -->
 <body data-stripe-pk="pk_live_YOUR_FULL_PUBLISHABLE_KEY_SET_STRIPE_PUBLISHABLE_KEY_IN_HOSTING">
+<div class="layout-shell">
+    <aside class="eg-sidebar" aria-label="ED-GEERDES sections">
+        <div class="eg-sidebar-brand">
+            <span class="eg-sidebar-logo">ED-GEERDES</span>
+            <span class="eg-sidebar-tag">Showroom · syncs with React studio</span>
+        </div>
+        <nav class="eg-sidebar-nav" role="tablist">
+            <button type="button" class="tab eg-side-tab active" onclick="showTab('studio', this)">AI Studio</button>
+            <button type="button" class="tab eg-side-tab" onclick="showTab('marketplace', this)">Marketplace</button>
+            <button type="button" class="tab eg-side-tab" onclick="showTab('mytracks', this)">My tracks</button>
+            <button type="button" class="tab eg-side-tab" onclick="showTab('discovery', this)">Discovery</button>
+            <button type="button" class="tab eg-side-tab" onclick="showTab('promo', this)">Promo</button>
+        </nav>
+        <div class="eg-health">
+            <span class="eg-health-status" id="egHealthStatus" role="status">API: not checked yet</span>
+            <button type="button" class="control-btn eg-health-refresh" onclick="refreshEgHealth()">Refresh health</button>
+        </div>
+        <div class="eg-sidebar-links">
+            <a class="eg-link-main" href="/">→ Full React studio (Mureka + labs)</a>
+            <a class="eg-link-main" href="/#portal">→ Portal, API health &amp; handoff</a>
+        </div>
+    </aside>
+    <div class="eg-main">
 <div class="app-container">
     <header class="header">
         <h1 class="logo">ED-GEERDES</h1>
@@ -267,18 +476,11 @@
             <div class="balance" id="balanceDisplay">— Demo wallet —</div>
             <button type="button" class="control-btn" onclick="showModal('walletModal')">Wallet</button>
             <button type="button" class="control-btn" onclick="showModal('profileModal')">Profile</button>
-            <a class="control-btn" href="/" style="text-decoration:none;display:inline-block;">Main studio app</a>
+            <a class="control-btn" href="/" style="text-decoration:none;display:inline-block;">Main studio</a>
         </div>
     </header>
 
-    <p class="hint">Static showroom page. Real generation uses the <a class="api-link" href="/">Vite app</a> → <code>/api</code> (Mureka, local pipeline). Stripe needs your publishable key + server Checkout session.</p>
-
-    <div class="tabs" role="tablist">
-        <button type="button" class="tab active" onclick="showTab('studio', this)">AI Studio</button>
-        <button type="button" class="tab" onclick="showTab('marketplace', this)">Marketplace</button>
-        <button type="button" class="tab" onclick="showTab('mytracks', this)">My tracks</button>
-        <button type="button" class="tab" onclick="showTab('promo', this)">Promo</button>
-    </div>
+    <p class="hint">Static showroom. Generation runs in the <a class="api-link" href="/">React app</a> → same-origin <code>/api</code> (Mureka proxy, local DSP). Use the <strong>left nav</strong> for sections; <strong>Refresh health</strong> pings <code>/api/health</code>.</p>
 
     <div id="studio" class="tab-content active">
         <div class="studio-grid">
@@ -288,9 +490,21 @@
                 <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 16px;">
                     <button type="button" class="generate-btn" id="btnGenerate" onclick="generateTrack(this)">Generate demo tone</button>
                     <button type="button" class="generate-btn" id="btnTonePattern" onclick="toggleTonePattern(this)">Tone.js arp + reverb</button>
+                    <button type="button" class="generate-btn" id="btnWebReverb" onclick="toggleWebReverbDemo(this)">Convolver reverb</button>
+                    <button type="button" class="generate-btn" id="btnWebDelay" onclick="toggleWebDelayDemo(this)">Delay line</button>
                     <button type="button" class="generate-btn" id="btnStems" onclick="generateStems(this)">Stems (placeholder)</button>
                 </div>
-                <p class="hint">Web Audio demo (buffer) or <strong>Tone.js 14.8.49</strong> (<code>Pattern</code> + <code>Reverb</code> + <code>Transport</code>) loaded from unpkg on first play. BPM slider drives the arp. For full tracks, use the main app + <code>VITE_API_BASE</code>.</p>
+                <p class="hint">Web Audio demo (buffer) or <strong>Tone.js 14.8.49</strong> (<code>Pattern</code> + <code>Reverb</code> + <code>Transport</code>) loaded from unpkg on first play. <strong>Convolver reverb</strong> uses a short synthetic hall IR (no network; external IRs need CORS). <strong>Delay line</strong> is a feedback <code>DelayNode</code> (wet only); echo time follows half a beat from the BPM slider.</p>
+                <div style="margin-top: 22px; padding: 22px; border-radius: 22px; border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.28);">
+                    <h3 style="margin: 0 0 6px; font-size: 1.05rem; font-weight: 800;">Plugin rack (web demos)</h3>
+                    <p class="hint" style="margin-top: 0; margin-bottom: 14px;">Web Audio API stubs only — not Surge XT / Dexed binaries. See <code>docs/DIETER_WEB_AUDIO_STACK.md</code> for real synths, WAM, and Faust.</p>
+                    <div id="pluginRack" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                        <button type="button" class="control-btn" onclick="pluginRackSawNote()">Saw note</button>
+                        <button type="button" class="control-btn" onclick="pluginRackCompressorNote()">Compressor</button>
+                        <button type="button" class="control-btn" onclick="toggleWebReverbDemo(document.getElementById('btnWebReverb'))">Reverb</button>
+                        <button type="button" class="control-btn" onclick="toggleWebDelayDemo(document.getElementById('btnWebDelay'))">Delay</button>
+                    </div>
+                </div>
             </div>
             <div class="studio-controls">
                 <h3>Controls</h3>
@@ -316,6 +530,40 @@
         <h2>My tracks</h2>
         <div id="myTracksList"></div>
         <button type="button" class="generate-btn" onclick="uploadMyTrack()" style="margin-top: 20px;">Upload new (demo)</button>
+    </div>
+
+    <div id="discovery" class="tab-content">
+        <div class="discovery-hero">
+            <h2>Swipe-first discovery</h2>
+            <p class="hint" style="margin-top: 0; max-width: 52rem;">Product vision for ED-GEERDES: connect streaming libraries, learn taste from gestures, and surface tracks people actually want — without killing the vibe with paywalls on every swipe.</p>
+            <p class="hint" style="margin-bottom: 0;"><strong>Implementation:</strong> Spotify and Apple Music require OAuth, approved developer programs, and server-side token handling — wire this tab’s flows to your FastAPI or edge functions when you are ready.</p>
+        </div>
+        <div class="discovery-grid">
+            <article class="discovery-card">
+                <h3>Seamless integration</h3>
+                <p>Connects effortlessly with Spotify and Apple Music to sync playlists and music preferences.</p>
+            </article>
+            <article class="discovery-card">
+                <h3>Swipe-based discovery</h3>
+                <p>Engaging swipe interface lets users quickly like or dislike tracks, influencing personalized recommendations.</p>
+            </article>
+            <article class="discovery-card">
+                <h3>Advanced algorithm</h3>
+                <p>Learns user taste through swiping behavior to suggest tailored music and hidden gems.</p>
+            </article>
+            <article class="discovery-card">
+                <h3>Unlimited swipes</h3>
+                <p>No restrictions on the number of swipes, enabling continuous music exploration without limits.</p>
+            </article>
+            <article class="discovery-card">
+                <h3>Social features</h3>
+                <p>Allows sharing tracks, following friends, and creating collaborative playlists to build a music community.</p>
+            </article>
+            <article class="discovery-card">
+                <h3>Customizable filters</h3>
+                <p>Offers advanced tuning options to refine music discovery based on genres, remixes, and other preferences.</p>
+            </article>
+        </div>
     </div>
 
     <div id="promo" class="tab-content">
@@ -353,9 +601,33 @@
         </div>
     </div>
 </div>
+    </div>
+</div>
 
 <script>
 (function () {
+    window.refreshEgHealth = function () {
+        var el = document.getElementById('egHealthStatus');
+        if (!el) return;
+        el.textContent = 'API: checking…';
+        fetch('/api/health', { method: 'GET' })
+            .then(function (r) {
+                if (!r.ok) {
+                    el.textContent = 'API: HTTP ' + r.status + ' — is the FastAPI container running on this host?';
+                    return null;
+                }
+                return r.json();
+            })
+            .then(function (j) {
+                if (!j) return;
+                if (j.ok) el.textContent = 'API: OK — /api/health reachable from this page';
+                else el.textContent = 'API: unexpected response';
+            })
+            .catch(function () {
+                el.textContent = 'API: offline — open merged Docker UI+API, or deploy API and use same origin.';
+            });
+    };
+
     const pk = document.body.getAttribute('data-stripe-pk') || '';
     let stripe = null;
     if (pk && typeof Stripe === 'function') {
@@ -423,6 +695,264 @@
             alert('Stem separation / AI stems: use the main app (Local lab, Mureka) or server routes like /api/mix/suno-mureka/render with uploaded stems.');
             el.disabled = false;
         }, 200);
+    };
+
+    /** Exponential-decay noise IR — works offline; sounds “hall-ish” for demos. */
+    function createSyntheticImpulseResponse(ac, durationSec, decay) {
+        const sr = ac.sampleRate;
+        const len = Math.max(1, Math.floor(sr * durationSec));
+        const buf = ac.createBuffer(2, len, sr);
+        for (let c = 0; c < buf.numberOfChannels; c++) {
+            const d = buf.getChannelData(c);
+            for (let i = 0; i < len; i++) {
+                const t = i / len;
+                d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, decay);
+            }
+        }
+        return buf;
+    }
+
+    /**
+     * ConvolverNode wrap — same idea as fetching a WAV IR, but external URLs need CORS.
+     * Freesound previews are typically not fetchable from random sites (CORS + licensing).
+     */
+    class WebReverb {
+        constructor(context) {
+            this.context = context;
+            this.convolver = context.createConvolver();
+            this.loadSynthetic();
+        }
+
+        loadSynthetic() {
+            this.convolver.buffer = createSyntheticImpulseResponse(this.context, 2.2, 3.2);
+        }
+
+        /** @returns {Promise<void>} resolves when buffer is set (fallback to synthetic on failure) */
+        loadIR(url) {
+            const ctx = this.context;
+            const self = this;
+            if (!url || !String(url).trim()) {
+                self.loadSynthetic();
+                return Promise.resolve();
+            }
+            return fetch(String(url).trim(), { mode: 'cors' })
+                .then(function (r) {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.arrayBuffer();
+                })
+                .then(function (ab) { return ctx.decodeAudioData(ab); })
+                .then(function (impulse) {
+                    self.convolver.buffer = impulse;
+                })
+                .catch(function (err) {
+                    console.warn('WebReverb.loadIR failed — using synthetic IR.', err);
+                    self.loadSynthetic();
+                });
+        }
+
+        connect(source, destination) {
+            source.connect(this.convolver);
+            this.convolver.connect(destination);
+        }
+    }
+
+    /**
+     * Simple feedback delay: source → delay → destination, with delay → gain → delay loop.
+     * Feedback is clamped below 1 so the loop does not self-oscillate into clipping.
+     */
+    class WebDelay {
+        constructor(context, time, feedback) {
+            this.context = context;
+            var t = time == null ? 0.25 : Number(time);
+            var f = feedback == null ? 0.5 : Number(feedback);
+            t = Math.min(30, Math.max(0, t));
+            f = Math.min(0.94, Math.max(0, f));
+            var maxD = Math.max(1, t + 0.01);
+            this.delay = context.createDelay(maxD);
+            this.feedback = context.createGain();
+            this.feedback.gain.value = f;
+            this.delay.delayTime.value = t;
+            this.delay.connect(this.feedback);
+            this.feedback.connect(this.delay);
+        }
+
+        connect(source, destination) {
+            source.connect(this.delay);
+            this.delay.connect(destination);
+        }
+    }
+
+    /** DynamicsCompressorNode wrapper (same idea as “LSP-style” stomp in docs — browser built-in). */
+    class WebDynamicsCompressor {
+        constructor(context, ratio, threshold) {
+            this.context = context;
+            this.node = context.createDynamicsCompressor();
+            this.node.ratio.value = ratio == null ? 4 : ratio;
+            this.node.threshold.value = threshold == null ? -24 : threshold;
+            this.node.knee.value = 30;
+            this.node.attack.value = 0.003;
+            this.node.release.value = 0.25;
+        }
+
+        connect(source, destination) {
+            source.connect(this.node);
+            this.node.connect(destination);
+        }
+    }
+
+    /** One new oscillator per note — safe overlap vs reusing one node. */
+    function playSawNoteDemo(freq, durationSec) {
+        var ac = getAudio();
+        if (ac.state === 'suspended') ac.resume();
+        var f = freq == null ? 440 : Number(freq);
+        var d = durationSec == null ? 1.25 : Number(durationSec);
+        var osc = ac.createOscillator();
+        var g = ac.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.value = f;
+        osc.connect(g);
+        g.connect(ac.destination);
+        var t = ac.currentTime;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.22, t + 0.04);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+        osc.start(t);
+        osc.stop(t + d + 0.06);
+    }
+
+    window.pluginRackSawNote = function () {
+        playSawNoteDemo(440, 1.35);
+    };
+
+    window.pluginRackCompressorNote = function () {
+        var ac = getAudio();
+        if (ac.state === 'suspended') ac.resume();
+        var comp = new WebDynamicsCompressor(ac, 12, -34);
+        var osc = ac.createOscillator();
+        var g = ac.createGain();
+        g.gain.value = 0.55;
+        osc.type = 'sine';
+        osc.frequency.value = 180;
+        osc.connect(g);
+        comp.connect(g, ac.destination);
+        var t = ac.currentTime;
+        osc.start(t);
+        osc.stop(t + 1.1);
+    };
+
+    var __webReverbDemo = { running: false, osc: null, gain: null, reverb: null };
+
+    function stopWebReverbDemo() {
+        var d = __webReverbDemo;
+        try {
+            if (d.osc) {
+                d.osc.stop();
+                d.osc.disconnect();
+            }
+        } catch (e) { /* ignore */ }
+        try {
+            if (d.gain) d.gain.disconnect();
+        } catch (e) { /* ignore */ }
+        try {
+            if (d.reverb && d.reverb.convolver) d.reverb.convolver.disconnect();
+        } catch (e) { /* ignore */ }
+        d.osc = null;
+        d.gain = null;
+        d.reverb = null;
+        d.running = false;
+    }
+
+    window.toggleWebReverbDemo = function (btn) {
+        var el = btn || document.getElementById('btnWebReverb');
+        if (__webReverbDemo.running) {
+            stopWebReverbDemo();
+            el.textContent = 'Convolver reverb';
+            return;
+        }
+        el.disabled = true;
+        el.textContent = 'Starting…';
+        try {
+            var ac = getAudio();
+            if (ac.state === 'suspended') ac.resume();
+            var reverb = new WebReverb(ac);
+            var gain = ac.createGain();
+            gain.gain.value = 0.12;
+            var osc = ac.createOscillator();
+            osc.type = 'sawtooth';
+            osc.frequency.value = 110;
+            osc.connect(gain);
+            reverb.connect(gain, ac.destination);
+            osc.start();
+            __webReverbDemo.osc = osc;
+            __webReverbDemo.gain = gain;
+            __webReverbDemo.reverb = reverb;
+            __webReverbDemo.running = true;
+            el.textContent = 'Stop convolver demo';
+        } catch (e) {
+            alert('WebReverb: ' + (e && e.message ? e.message : e));
+            el.textContent = 'Convolver reverb';
+        }
+        el.disabled = false;
+    };
+
+    var __webDelayDemo = { running: false, osc: null, gain: null, delayFx: null };
+
+    function stopWebDelayDemo() {
+        var d = __webDelayDemo;
+        try {
+            if (d.osc) {
+                d.osc.stop();
+                d.osc.disconnect();
+            }
+        } catch (e) { /* ignore */ }
+        try {
+            if (d.gain) d.gain.disconnect();
+        } catch (e) { /* ignore */ }
+        try {
+            if (d.delayFx) {
+                d.delayFx.delay.disconnect();
+                d.delayFx.feedback.disconnect();
+            }
+        } catch (e) { /* ignore */ }
+        d.osc = null;
+        d.gain = null;
+        d.delayFx = null;
+        d.running = false;
+    }
+
+    window.toggleWebDelayDemo = function (btn) {
+        var el = btn || document.getElementById('btnWebDelay');
+        if (__webDelayDemo.running) {
+            stopWebDelayDemo();
+            el.textContent = 'Delay line';
+            return;
+        }
+        el.disabled = true;
+        el.textContent = 'Starting…';
+        try {
+            var ac = getAudio();
+            if (ac.state === 'suspended') ac.resume();
+            var bpm = parseInt(document.getElementById('bpmSlider').value, 10) || 128;
+            var delayTime = (60 / bpm) / 2;
+            var delayFx = new WebDelay(ac, delayTime, 0.52);
+            var gain = ac.createGain();
+            gain.gain.value = 0.14;
+            var osc = ac.createOscillator();
+            osc.type = 'square';
+            osc.frequency.value = 220;
+            osc.connect(gain);
+            delayFx.connect(gain, ac.destination);
+            osc.start();
+            __webDelayDemo.osc = osc;
+            __webDelayDemo.gain = gain;
+            __webDelayDemo.delayFx = delayFx;
+            __webDelayDemo.running = true;
+            el.textContent = 'Stop delay demo';
+        } catch (e) {
+            alert('WebDelay: ' + (e && e.message ? e.message : e));
+            el.textContent = 'Delay line';
+        }
+        el.disabled = false;
     };
 
     /** Tone.js 14.8.49 — load from unpkg, Pattern + Reverb + Transport (routing fixed vs raw snippet). */
@@ -666,6 +1196,7 @@
 
     renderMarketplace();
     renderMyTracks();
+    window.refreshEgHealth();
 })();
 </script>
 </body>

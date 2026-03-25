@@ -26,6 +26,9 @@ jobs:
         run: |
           npm ci
           npm run build
+      - name: Post-build verify (docs)
+        run: |
+          echo "After deploy: curl API /api/health; open site /#portal and /ed-geerdes-platform.html — see docs/DEPLOY_CHANNELS_PERFORMANCE.md"
       - name: Install Vercel CLI
         run: npm i -g vercel@latest
       - name: Deploy production
