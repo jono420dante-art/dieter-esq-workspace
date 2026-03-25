@@ -25,6 +25,17 @@ import { STUDIO_NAME, STUDIO_SLUG } from './studioBrand.js'
 const DEFAULT_BASE = import.meta.env.VITE_API_BASE || '/api'
 const USE_TRPC = dieterUseTrpc()
 
+/** Header subtitle per mode — keep in sync with mode button order (gateway / AI labs first). */
+const APP_MODE_HEADER = {
+  create: 'Create',
+  cloud: 'Cloud',
+  voicestudio: 'Voice',
+  beatlab: 'Beat lab',
+  v5: 'V5',
+  cover: 'Cover',
+  local: 'Local',
+}
+
 const STYLE_PRESETS = [
   'Grand Piano',
   'Melodic Trap',
@@ -465,15 +476,7 @@ export default function App() {
       <header className="header">
         <nav className="nav-main">
           <strong>
-            {appMode === 'create'
-              ? `${STUDIO_NAME} · Create`
-              : appMode === 'local'
-                ? `${STUDIO_NAME} · Local`
-                : appMode === 'beatlab'
-                  ? `${STUDIO_NAME} · Beat lab`
-                  : appMode === 'voicestudio'
-                    ? `${STUDIO_NAME} · Voice`
-                    : `${STUDIO_NAME} · Cloud`}
+            {STUDIO_NAME} · {APP_MODE_HEADER[appMode] ?? 'Studio'}
           </strong>
         </nav>
         <div className="user-actions" style={{ flexWrap: 'wrap', gap: 8 }}>
@@ -483,6 +486,27 @@ export default function App() {
             onClick={() => setAppMode('create')}
           >
             Create
+          </button>
+          <button
+            type="button"
+            className={appMode === 'cloud' ? 'pill-btn' : 'btn-mode'}
+            onClick={() => setAppMode('cloud')}
+          >
+            Cloud
+          </button>
+          <button
+            type="button"
+            className={appMode === 'voicestudio' ? 'pill-btn' : 'btn-mode'}
+            onClick={() => setAppMode('voicestudio')}
+          >
+            Voice studio
+          </button>
+          <button
+            type="button"
+            className={appMode === 'beatlab' ? 'pill-btn' : 'btn-mode'}
+            onClick={() => setAppMode('beatlab')}
+          >
+            Beat lab
           </button>
           <button type="button" className={appMode === 'v5' ? 'pill-btn' : 'btn-mode'} onClick={() => setAppMode('v5')}>
             V5
@@ -500,27 +524,6 @@ export default function App() {
             onClick={() => setAppMode('local')}
           >
             Local
-          </button>
-          <button
-            type="button"
-            className={appMode === 'beatlab' ? 'pill-btn' : 'btn-mode'}
-            onClick={() => setAppMode('beatlab')}
-          >
-            Beat lab
-          </button>
-          <button
-            type="button"
-            className={appMode === 'voicestudio' ? 'pill-btn' : 'btn-mode'}
-            onClick={() => setAppMode('voicestudio')}
-          >
-            Voice studio
-          </button>
-          <button
-            type="button"
-            className={appMode === 'cloud' ? 'pill-btn' : 'btn-mode'}
-            onClick={() => setAppMode('cloud')}
-          >
-            Cloud
           </button>
           {(appMode === 'cloud' ||
             appMode === 'create' ||
@@ -540,13 +543,15 @@ export default function App() {
           <div className="modal-card">
             <h2>Connections</h2>
             <p className="hint">
-              <strong>Mureka</strong> powers <strong>real AI vocals</strong> on the Create and Voice studio tabs. Get a key
-              from{' '}
+              <strong>Gateway:</strong> this panel is your <strong>sync portal</strong> for keys and API base.{' '}
+              <strong>Mureka</strong> powers cloud models on <strong>Create</strong>, <strong>Cloud</strong>, and{' '}
+              <strong>Voice studio</strong>. Get a key from{' '}
               <a href="https://platform.mureka.ai" target="_blank" rel="noreferrer">
                 platform.mureka.ai
               </a>
-              ; for Voice studio + Docker, set <code>MUREKA_API_KEY</code> on the server. The <strong>Local</strong> tab
-              stays offline (placeholder vocal stem).
+              ; in Docker/Railway set <code>MUREKA_API_KEY</code> on the server so clients do not need to paste it. The{' '}
+              <strong>Local</strong> tab runs <strong>server-side DSP</strong> (ffmpeg / stems) through the same API — not
+              an in-browser demo synth.
               <br />
               Dev: Vite proxies <code>/trpc</code> → tRPC (8790) and <code>/api</code> → FastAPI (see{' '}
               <code>vite.config.js</code>). <strong>tRPC</strong> is on by default in dev only; production builds use{' '}

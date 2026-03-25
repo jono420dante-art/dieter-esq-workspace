@@ -3,7 +3,6 @@ import { trpc } from './trpc.js'
 import { buildLandingMurekaPrompt, extractAudioUrl } from './murekaHelpers.js'
 import { fetchStudioGrowth, parseFetchJson, postStudioGrowth } from './apiResolve.js'
 import { dieterUseTrpc, audioCrossOriginForSrc } from './dieterClientConfig.js'
-import { BUILT_IN_PRESETS } from './offlinePresets.js'
 import { useBeatVisualizer } from './useBeatVisualizer.js'
 import { isTransientMurekaError, sleep, withMurekaRetries } from './murekaResilience.js'
 import './MurekaPromptStudio.css'
@@ -12,7 +11,8 @@ import { STUDIO_NAME } from './studioBrand.js'
 const USE_TRPC = dieterUseTrpc()
 
 /**
- * Mureka-style hero: one prompt + controls → same pipeline as Cloud tab (tRPC or REST).
+ * Create tab: ordered gateway — Connections → prompt/controls → Mureka (cloud AI).
+ * Audio is produced by Mureka via {STUDIO_NAME} FastAPI proxy, not in-browser synthesis.
  */
 export default function MurekaPromptStudio({ apiBase, apiKey, onOpenKeys, onStudioPulse, onGoLocalWithLyrics }) {
   const [userPrompt, setUserPrompt] = useState('')
@@ -21,28 +21,14 @@ export default function MurekaPromptStudio({ apiBase, apiKey, onOpenKeys, onStud
   const [tempo, setTempo] = useState('120')
   const [vocal, setVocal] = useState('female')
   const [busy, setBusy] = useState(false)
-  const [offlineBusy, setOfflineBusy] = useState(false)
   const [status, setStatus] = useState('')
   const [err, setErr] = useState('')
   const [audioUrl, setAudioUrl] = useState('')
   const [apiHealth, setApiHealth] = useState(null)
-  const blobUrlRef = useRef(null)
 
   const audioRef = useRef(null)
   const canvasRef = useRef(null)
   useBeatVisualizer(audioRef, canvasRef, audioUrl)
-
-  const setPlayerUrl = useCallback((url) => {
-    if (blobUrlRef.current && blobUrlRef.current.startsWith('blob:')) {
-      try {
-        URL.revokeObjectURL(blobUrlRef.current)
-      } catch {
-        /* ignore */
-      }
-    }
-    blobUrlRef.current = url && url.startsWith('blob:') ? url : null
-    setAudioUrl(url)
-  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -64,14 +50,13 @@ export default function MurekaPromptStudio({ apiBase, apiKey, onOpenKeys, onStud
     setErr('')
     setStatus('')
     if (!apiKey?.trim()) {
-      setErr(
-        'Mureka cloud needs a key under Connections — or use “Open Local lab with my lyrics” above: your poem + a beat, no Mureka.',
-      )
+      setErr('Add your Mureka API key: click Connections (step 1), then Save.')
+      onOpenKeys?.()
       return
     }
     const text = userPrompt.trim()
     if (!text) {
-      setErr('Describe your track in the prompt field.')
+      setErr('Enter a creative prompt (step 2) — style direction or lyrics.')
       return
     }
 
@@ -87,8 +72,8 @@ export default function MurekaPromptStudio({ apiBase, apiKey, onOpenKeys, onStud
     const key = apiKey.trim()
 
     setBusy(true)
-    setPlayerUrl('')
-    setStatus(USE_TRPC ? 'Starting Mureka (via tRPC)…' : 'Starting Mureka (REST)…')
+    setAudioUrl('')
+    setStatus(USE_TRPC ? 'Gateway: starting Mureka (tRPC)…' : 'Gateway: starting Mureka (REST)…')
     try {
       let j
       if (USE_TRPC) {
@@ -121,7 +106,7 @@ export default function MurekaPromptStudio({ apiBase, apiKey, onOpenKeys, onStud
       let transientPollFails = 0
       const maxTransientPoll = 18
       for (let i = 0; i < 90; i++) {
-        setStatus(`Rendering… ${i + 1}/90${USE_TRPC ? ' · tRPC' : ''}`)
+        setStatus(`Gateway: rendering… ${i + 1}/90${USE_TRPC ? ' · tRPC' : ''}`)
         let qj
         try {
           if (USE_TRPC) {
@@ -141,7 +126,7 @@ export default function MurekaPromptStudio({ apiBase, apiKey, onOpenKeys, onStud
           if (isTransientMurekaError(msg) && transientPollFails < maxTransientPoll) {
             transientPollFails += 1
             setStatus(
-              `Mureka gateway busy / network — retry poll ${transientPollFails}/${maxTransientPoll} (task ${taskId.slice(0, 8)}…)`,
+              `Gateway sync — retry ${transientPollFails}/${maxTransientPoll} (task ${taskId.slice(0, 8)}…)`,
             )
             await sleep(3200 + transientPollFails * 400)
             i -= 1
@@ -151,11 +136,11 @@ export default function MurekaPromptStudio({ apiBase, apiKey, onOpenKeys, onStud
         }
         const url = extractAudioUrl(qj)
         if (url) {
-          setPlayerUrl(url)
+          setAudioUrl(url)
           void postStudioGrowth(apiBase, 'mureka_song_ready', taskId)
           const g = await fetchStudioGrowth(apiBase)
           if (g && onStudioPulse) onStudioPulse(g)
-          setStatus('Ready — press play.')
+          setStatus('Ready — Play streams from Mureka through your gateway.')
           return
         }
         const st = (qj.status || qj.state || '').toString().toLowerCase()
@@ -169,19 +154,7 @@ export default function MurekaPromptStudio({ apiBase, apiKey, onOpenKeys, onStud
     } finally {
       setBusy(false)
     }
-  }, [apiBase, apiKey, genre, mood, onOpenKeys, onStudioPulse, setPlayerUrl, tempo, userPrompt, vocal])
-
-  useEffect(() => {
-    return () => {
-      if (blobUrlRef.current?.startsWith('blob:')) {
-        try {
-          URL.revokeObjectURL(blobUrlRef.current)
-        } catch {
-          /* ignore */
-        }
-      }
-    }
-  }, [])
+  }, [apiBase, apiKey, genre, mood, onOpenKeys, onStudioPulse, tempo, userPrompt, vocal])
 
   return (
     <div className="mps-page">
@@ -189,159 +162,66 @@ export default function MurekaPromptStudio({ apiBase, apiKey, onOpenKeys, onStud
       <div className="mps-hero">
         <div className="mps-logo">{STUDIO_NAME}</div>
         <p className="mps-tagline">
-          <strong>Mureka cloud</strong> gives you real AI vocals and full tracks when you add a key in Connections. The{' '}
-          <strong>Local</strong> tab is an offline beat + placeholder-vocal lab (no Mureka account on that path).
+          <strong>AI music gateway</strong> — this app routes your prompts to <strong>Mureka</strong> through the{' '}
+          {STUDIO_NAME} API (<code>/api/mureka/*</code>): one portal for authentication, retries, and same-origin speed
+          when you deploy the full stack. Tracks and vocals are generated by Mureka’s models, not by toy synthesizers in
+          the browser.
         </p>
-        <div className="mps-api-pill" title="REST base; tRPC uses /trpc when enabled">
-          API {USE_TRPC ? '· tRPC + ' : '· '}
+        <div className="mps-api-pill" title="FastAPI gateway base">
+          Gateway {USE_TRPC ? '· tRPC + ' : '· REST '}
           {apiBase}
         </div>
 
         {apiHealth === false && (
           <p className="mps-status mps-banner mps-banner--warn" role="status">
-            API offline — connect your <strong>{STUDIO_NAME}</strong> API (<strong>VITE_API_BASE</strong> or same-origin
-            Docker) for{' '}
-            <strong>Mureka</strong> proxy and Voice studio. Until then, use <strong>Local</strong> only for offline
-            previews.
+            API unreachable — set <strong>VITE_API_BASE</strong> (split UI) or deploy the <strong>single Docker</strong> URL
+            so the UI and <code>/api</code> share one host. Without the gateway, Mureka cannot run from this page.
           </p>
         )}
 
-        <div className="mps-card mps-card--local-bridge">
-          <h3 className="mps-local-bridge-title">Poems &amp; lyrics → song (no Mureka key)</h3>
-          <p className="mps-local-bridge-hint">
-            Paste your lines in the <strong>Prompt</strong> field below (or describe the vibe — your words still seed the
-            Local mix). Then open the <strong>Local</strong> tab: drop a beat, press <strong>Make Song</strong> — vocal +
-            mix run on your API host (<code>/api</code>), not Mureka.
-          </p>
-          <button
-            type="button"
-            className="mps-local-bridge-btn"
-            disabled={busy || offlineBusy}
-            onClick={() => {
-              const t = userPrompt.trim()
-              if (!t) {
-                setErr('Paste your poem or lyrics into the Prompt field first.')
-                return
-              }
-              setErr('')
-              onGoLocalWithLyrics?.(t)
-            }}
-          >
-            Open Local lab with my lyrics
-          </button>
-        </div>
+        <ol className="mps-flow-steps" aria-label="Create workflow">
+          <li>
+            <strong>1 · Connections</strong> — Mureka key + API base (server can hold <code>MUREKA_API_KEY</code>).
+          </li>
+          <li>
+            <strong>2 · Prompt &amp; controls</strong> — describe the track; genre, mood, tempo, vocals shape the request.
+          </li>
+          <li>
+            <strong>3 · Generate</strong> — cloud AI renders audio; playback uses the returned streaming URL.
+          </li>
+        </ol>
 
-        <div className="mps-card mps-card--offline">
-          <h3 className="mps-offline-title">Built-in royalty-free music</h3>
-          <p className="mps-offline-hint">
-            Generated in your browser with Tone.js — no samples, no account. Use for previews, scratch ideas, and
-            placeholders. Download WAV for your timeline; connect the API when you want full Mureka tracks.
-          </p>
-          <div className="mps-preset-row" role="group" aria-label="Quick presets">
-            {BUILT_IN_PRESETS.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                className="mps-preset-chip"
-                disabled={offlineBusy || busy}
-                onClick={async () => {
-                  setErr('')
-                  setStatus('')
-                  setOfflineBusy(true)
-                  setPlayerUrl('')
-                  try {
-                    setStatus(`Rendering “${p.label}”…`)
-                    const { renderRoyaltyFreePreview } = await import('./offlineRoyaltyFreeStudio.js')
-                    const url = await renderRoyaltyFreePreview({
-                      genre: p.genre,
-                      mood: p.mood,
-                      tempoBpm: p.tempo,
-                      vocal: p.vocal,
-                      userPrompt: p.label,
-                    })
-                    setPlayerUrl(url)
-                    setStatus('Ready — press play. Download WAV if you need the file.')
-                  } catch (e) {
-                    setErr(String(e?.message || e))
-                    setStatus('')
-                  } finally {
-                    setOfflineBusy(false)
-                  }
-                }}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            className="mps-offline-gen"
-            disabled={offlineBusy || busy}
-            onClick={async () => {
-              setErr('')
-              setStatus('')
-              setOfflineBusy(true)
-              setPlayerUrl('')
-              try {
-                setStatus('Rendering from your controls…')
-                const { renderRoyaltyFreePreview } = await import('./offlineRoyaltyFreeStudio.js')
-                const url = await renderRoyaltyFreePreview({
-                  genre,
-                  mood,
-                  tempoBpm: tempo,
-                  vocal,
-                  userPrompt: userPrompt.trim() || `${STUDIO_NAME} session`,
-                })
-                setPlayerUrl(url)
-                setStatus('Ready — press play.')
-              } catch (e) {
-                setErr(String(e?.message || e))
-                setStatus('')
-              } finally {
-                setOfflineBusy(false)
-              }
-            }}
-          >
-            {offlineBusy ? 'Rendering…' : 'Generate from controls (genre · mood · tempo · vocals)'}
-          </button>
-        </div>
-
-        <div className="mps-card">
+        <div className="mps-card mps-card--primary">
           <div className="mps-keys-row">
             <button type="button" className="mps-keys-btn" onClick={() => onOpenKeys?.()}>
-              Connections · Mureka key
+              1 — Connections · keys &amp; API base
             </button>
             {apiKey?.trim() ? (
               <span className="mps-status" style={{ marginTop: 0 }}>
-                Key on file
+                Mureka key connected
               </span>
             ) : (
               <span className="mps-status mps-muted" style={{ marginTop: 0 }}>
-                Mureka key needed for cloud only
+                Mureka key required for cloud generation
               </span>
             )}
           </div>
 
           <label className="mps-field-label" htmlFor="mps-prompt">
-            Prompt
+            2 — Prompt
           </label>
           <input
             id="mps-prompt"
             className="mps-input"
             value={userPrompt}
             onChange={(e) => setUserPrompt(e.target.value)}
-            placeholder="e.g. upbeat electronic, synth leads, Daft Punk energy, 128 BPM"
+            placeholder="e.g. upbeat electronic, synth leads, Daft Punk energy, 128 BPM — or paste lyrics"
             maxLength={500}
-            disabled={busy || offlineBusy}
+            disabled={busy}
           />
 
           <div className="mps-grid">
-            <select
-              className="mps-select"
-              value={genre}
-              onChange={(e) => setGenre(e.target.value)}
-              disabled={busy || offlineBusy}
-            >
+            <select className="mps-select" value={genre} onChange={(e) => setGenre(e.target.value)} disabled={busy}>
               <option value="all">Genre · All</option>
               <option value="pop">Pop</option>
               <option value="electronic">Electronic</option>
@@ -349,28 +229,28 @@ export default function MurekaPromptStudio({ apiBase, apiKey, onOpenKeys, onStud
               <option value="jazz">Jazz</option>
               <option value="rock">Rock</option>
             </select>
-            <select className="mps-select" value={mood} onChange={(e) => setMood(e.target.value)} disabled={busy || offlineBusy}>
+            <select className="mps-select" value={mood} onChange={(e) => setMood(e.target.value)} disabled={busy}>
               <option value="happy">Mood · Happy</option>
               <option value="relaxed">Relaxed</option>
               <option value="energetic">Energetic</option>
               <option value="sad">Sad</option>
               <option value="inspired">Inspired</option>
             </select>
-            <select className="mps-select" value={tempo} onChange={(e) => setTempo(e.target.value)} disabled={busy || offlineBusy}>
+            <select className="mps-select" value={tempo} onChange={(e) => setTempo(e.target.value)} disabled={busy}>
               <option value="120">Tempo · 120 BPM</option>
               <option value="90">90 BPM</option>
               <option value="140">140 BPM</option>
               <option value="80">80 BPM</option>
             </select>
-            <select className="mps-select" value={vocal} onChange={(e) => setVocal(e.target.value)} disabled={busy || offlineBusy}>
+            <select className="mps-select" value={vocal} onChange={(e) => setVocal(e.target.value)} disabled={busy}>
               <option value="female">Vocals · Female</option>
               <option value="male">Male</option>
               <option value="none">Instrumental</option>
             </select>
           </div>
 
-          <button type="button" className="mps-gen" disabled={busy || offlineBusy} onClick={generate}>
-            {busy ? 'Working…' : 'Generate with Mureka (cloud)'}
+          <button type="button" className="mps-gen" disabled={busy} onClick={generate}>
+            {busy ? '3 — Working…' : '3 — Generate with Mureka (cloud AI)'}
           </button>
 
           {status && <p className="mps-status">{status}</p>}
@@ -386,34 +266,60 @@ export default function MurekaPromptStudio({ apiBase, apiKey, onOpenKeys, onStud
                 crossOrigin={audioCrossOriginForSrc(audioUrl)}
               />
               <canvas ref={canvasRef} className="mps-viz" width={800} height={160} />
-              {audioUrl.startsWith('blob:') && (
-                <a className="mps-dl" href={audioUrl} download={`dieter-royalty-free-${Date.now()}.wav`}>
-                  Download WAV
-                </a>
-              )}
             </div>
           )}
+        </div>
+
+        <div className="mps-card mps-card--local-bridge">
+          <h3 className="mps-local-bridge-title">Optional · Local pipeline (same gateway)</h3>
+          <p className="mps-local-bridge-hint">
+            Beat + vocal mix runs on <strong>your FastAPI host</strong> (Librosa, FFmpeg, pipeline modules) — not a
+            browser demo. Paste lyrics in the prompt above, then open <strong>Local</strong> and use{' '}
+            <strong>Make Song</strong> with a beat file.
+          </p>
+          <button
+            type="button"
+            className="mps-local-bridge-btn"
+            disabled={busy}
+            onClick={() => {
+              const t = userPrompt.trim()
+              if (!t) {
+                setErr('Enter prompt or lyrics first (step 2).')
+                return
+              }
+              setErr('')
+              onGoLocalWithLyrics?.(t)
+            }}
+          >
+            Continue to Local lab with this text
+          </button>
         </div>
       </div>
 
       <section className="mps-features">
         <div className="mps-fcard">
-          <div className="mps-ficon">SONG</div>
-          <h3>Full tracks</h3>
+          <div className="mps-ficon">GATE</div>
+          <h3>Single portal</h3>
           <p>
-            Mureka generates arrangement and vocals (unless instrumental) — routed through {STUDIO_NAME} so your key
-            never hits a random domain.
+            Browser → <code>/api</code> → Mureka and optional OpenAI for lyrics. Keys and quotas stay behind the server
+            when you configure env vars — see gateway docs in the repo.
           </p>
         </div>
         <div className="mps-fcard">
-          <div className="mps-ficon">BEAT</div>
-          <h3>Then refine</h3>
-          <p>Switch to Beat lab or Local for stems, FFmpeg tools, and the release pipeline on the same API.</p>
+          <div className="mps-ficon">SYNC</div>
+          <h3>Resilient calls</h3>
+          <p>
+            Automatic retries on rate limits and transient upstream errors; polling stays in sync until the render URL is
+            ready.
+          </p>
         </div>
         <div className="mps-fcard">
-          <div className="mps-ficon">VOX</div>
-          <h3>Voice lab</h3>
-          <p>Use Voice studio for reference registration and clone-path experiments alongside cloud creation.</p>
+          <div className="mps-ficon">PLUG</div>
+          <h3>Extensions</h3>
+          <p>
+            Beat lab, voice path, and storage plug into the same FastAPI surface so you can add engines and learning
+            modules server-side without changing Mureka’s contracts.
+          </p>
         </div>
       </section>
     </div>

@@ -16,6 +16,7 @@ Main code:
 
 - **`mureka-clone/`** — Vite + React app  
 - **`dieter-backend/`** — FastAPI (`app/`), beat lab, pipelines  
+- **Architecture:** [`docs/GATEWAY_ARCHITECTURE.md`](./docs/GATEWAY_ARCHITECTURE.md) — gateway, sync/portal routing, plugin extension points  
 
 ## Other tools in this folder
 
