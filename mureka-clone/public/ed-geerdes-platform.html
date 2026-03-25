@@ -287,9 +287,10 @@
                 <textarea class="prompt-area" id="musicPrompt" placeholder="e.g. upbeat melodic trap, female vocal, 128 BPM, 2:30…"></textarea>
                 <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 16px;">
                     <button type="button" class="generate-btn" id="btnGenerate" onclick="generateTrack(this)">Generate demo tone</button>
+                    <button type="button" class="generate-btn" id="btnTonePattern" onclick="toggleTonePattern(this)">Tone.js arp + reverb</button>
                     <button type="button" class="generate-btn" id="btnStems" onclick="generateStems(this)">Stems (placeholder)</button>
                 </div>
-                <p class="hint">Demo builds a short Web Audio tone in-browser. For full tracks, use the React studio with <code>VITE_API_BASE</code>.</p>
+                <p class="hint">Web Audio demo (buffer) or <strong>Tone.js 14.8.49</strong> (<code>Pattern</code> + <code>Reverb</code> + <code>Transport</code>) loaded from unpkg on first play. BPM slider drives the arp. For full tracks, use the main app + <code>VITE_API_BASE</code>.</p>
             </div>
             <div class="studio-controls">
                 <h3>Controls</h3>
@@ -422,6 +423,97 @@
             alert('Stem separation / AI stems: use the main app (Local lab, Mureka) or server routes like /api/mix/suno-mureka/render with uploaded stems.');
             el.disabled = false;
         }, 200);
+    };
+
+    /** Tone.js 14.8.49 — load from unpkg, Pattern + Reverb + Transport (routing fixed vs raw snippet). */
+    var __toneDemo = { running: false, pattern: null, synth: null, reverb: null };
+
+    function loadTone148() {
+        return new Promise(function (resolve, reject) {
+            if (typeof window.Tone !== 'undefined') return resolve();
+            var s = document.createElement('script');
+            s.src = 'https://unpkg.com/tone@14.8.49/build/Tone.js';
+            s.async = true;
+            s.onload = function () { resolve(); };
+            s.onerror = function () { reject(new Error('Failed to load Tone.js from unpkg')); };
+            document.head.appendChild(s);
+        });
+    }
+
+    function stopToneDemo() {
+        var d = __toneDemo;
+        if (d.pattern) {
+            try { d.pattern.stop(); d.pattern.dispose(); } catch (e) { /* ignore */ }
+            d.pattern = null;
+        }
+        if (d.synth) {
+            try { d.synth.dispose(); } catch (e) { /* ignore */ }
+            d.synth = null;
+        }
+        if (d.reverb) {
+            try { d.reverb.dispose(); } catch (e) { /* ignore */ }
+            d.reverb = null;
+        }
+        try {
+            if (window.Tone) {
+                window.Tone.Transport.stop();
+                window.Tone.Transport.cancel(0);
+                window.Tone.Transport.position = 0;
+            }
+        } catch (e) { /* ignore */ }
+        d.running = false;
+    }
+
+    window.toggleTonePattern = function (btn) {
+        var el = btn || document.getElementById('btnTonePattern');
+        if (__toneDemo.running) {
+            stopToneDemo();
+            el.textContent = 'Tone.js arp + reverb';
+            return;
+        }
+        el.disabled = true;
+        el.textContent = 'Loading Tone…';
+        loadTone148()
+            .then(function () { return window.Tone.start(); })
+            .then(function () {
+                var Tone = window.Tone;
+                var reverb = new Tone.Reverb({ decay: 2, wet: 0.35 });
+                return reverb.generate().then(function () { return reverb; });
+            })
+            .then(function (reverb) {
+                var Tone = window.Tone;
+                reverb.toDestination();
+                var synth = new Tone.Synth({
+                    oscillator: { type: 'triangle' },
+                    envelope: { attack: 0.01, decay: 0.08, sustain: 0.25, release: 0.35 },
+                }).connect(reverb);
+
+                var bpm = parseInt(document.getElementById('bpmSlider').value, 10) || 128;
+                Tone.Transport.bpm.value = bpm;
+
+                var pattern = new Tone.Pattern(
+                    function (time, note) {
+                        synth.triggerAttackRelease(note, '8n', time);
+                    },
+                    ['C4', 'E4', 'G4', 'B4'],
+                    'up'
+                );
+                pattern.interval = '4n';
+                pattern.start(0);
+                Tone.Transport.start();
+
+                __toneDemo.reverb = reverb;
+                __toneDemo.synth = synth;
+                __toneDemo.pattern = pattern;
+                __toneDemo.running = true;
+                el.textContent = 'Stop Tone pattern';
+                el.disabled = false;
+            })
+            .catch(function (e) {
+                alert('Tone.js: ' + (e && e.message ? e.message : e));
+                el.textContent = 'Tone.js arp + reverb';
+                el.disabled = false;
+            });
     };
 
     function renderMarketplace() {
