@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ED-GEERDES — Swipe discovery (demo)</title>
+    <script src="https://unpkg.com/hammerjs@2.0.8/hammer.min.js"></script>
+    <!-- Spotify Web Playback SDK: only loads after you add a real token exchange on your backend -->
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #ec4899 100%);
+            --neon-cyan: #00f5ff;
+            --glass: rgba(255,255,255,0.08);
+            --glow: 0 25px 50px rgba(0,245,255,0.25);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0c0c1a 0%, #1a1a2e 50%, #16213e 100%);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .top-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 30;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 18px;
+            background: rgba(6, 8, 18, 0.88);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            backdrop-filter: blur(12px);
+        }
+        .top-nav a {
+            color: var(--neon-cyan);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+        .top-nav a:hover { text-decoration: underline; }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+            padding-top: 52px;
+        }
+
+        .swipe-area {
+            flex: 1;
+            position: relative;
+            min-height: calc(100vh - 52px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            perspective: 1000px;
+            padding: 20px 16px 140px;
+        }
+
+        .track-card {
+            width: min(350px, 92vw);
+            height: min(550px, 72vh);
+            background: var(--glass);
+            backdrop-filter: blur(25px);
+            border-radius: 25px;
+            padding: 28px;
+            box-shadow: var(--glow);
+            position: absolute;
+            transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s;
+            cursor: grab;
+            touch-action: pan-y;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+        .track-card:active { cursor: grabbing; }
+        .track-card.swiping { transition: none; }
+
+        .track-card.like {
+            transform: translateX(min(120vw, 520px)) rotate(24deg) scale(1.05);
+            opacity: 0;
+        }
+        .track-card.dislike {
+            transform: translateX(max(-120vw, -520px)) rotate(-24deg) scale(1.05);
+            opacity: 0;
+        }
+
+        .track-art {
+            width: 100%;
+            height: min(250px, 28vh);
+            background: var(--primary-gradient);
+            border-radius: 20px;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(2.5rem, 12vw, 4rem);
+        }
+
+        .track-info h3 { font-size: 1.35rem; margin-bottom: 6px; }
+        .track-info p { opacity: 0.85; font-size: 0.88rem; line-height: 1.45; }
+
+        .track-preview-hint {
+            text-align: center;
+            margin-top: 14px;
+            font-size: 0.78rem;
+            opacity: 0.65;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 28px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 24px;
+            z-index: 20;
+        }
+
+        .control-btn {
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            border: none;
+            font-size: 1.45rem;
+            cursor: pointer;
+            transition: transform 0.2s, filter 0.2s;
+            box-shadow: var(--glow);
+        }
+        .control-btn:hover { transform: scale(1.06); filter: brightness(1.08); }
+
+        .dislike-btn { background: rgba(239,68,68,0.35); color: #fecaca; }
+        .like-btn { background: rgba(34,197,94,0.35); color: #bbf7d0; }
+
+        .sidebar {
+            width: 300px;
+            max-width: 100%;
+            flex-shrink: 0;
+            background: var(--glass);
+            backdrop-filter: blur(25px);
+            border-left: 1px solid rgba(255,255,255,0.12);
+            padding: 22px;
+            overflow-y: auto;
+            max-height: calc(100vh - 52px);
+        }
+
+        .sidebar h2 { font-size: 1.15rem; margin-bottom: 6px; }
+        .sidebar .sub { font-size: 0.78rem; opacity: 0.75; line-height: 1.4; margin-bottom: 18px; }
+
+        .sync-section { margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sync-section h3 { font-size: 0.95rem; margin-bottom: 10px; }
+        .sync-btn {
+            width: 100%;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            border-radius: 16px;
+            border: none;
+            background: var(--primary-gradient);
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.88rem;
+        }
+        .sync-btn.secondary {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .filters { margin-top: 18px; }
+        .filters h3 { font-size: 0.95rem; margin-bottom: 10px; }
+        .filter-group { margin-bottom: 14px; }
+        .filter-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.82rem; }
+
+        select, input[type="checkbox"], input[type="range"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 10px;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+        }
+        input[type="range"] { padding: 0; height: 32px; }
+        #bpmVal { font-size: 0.8rem; opacity: 0.85; margin-top: 4px; }
+
+        .liked-list { margin-top: 20px; }
+        .liked-list h3 { font-size: 0.95rem; margin-bottom: 10px; }
+        .liked-track {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 14px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .liked-track:hover { background: rgba(255,255,255,0.1); }
+
+        .toast {
+            position: fixed;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: 90vw;
+            padding: 12px 18px;
+            background: rgba(15,23,42,0.95);
+            border: 1px solid rgba(0,245,255,0.35);
+            border-radius: 14px;
+            font-size: 0.82rem;
+            z-index: 40;
+            display: none;
+        }
+        .toast.visible { display: block; }
+
+        .rec-panel {
+            background: linear-gradient(145deg, rgba(124,58,237,0.15), rgba(236,72,153,0.08));
+            border: 1px solid rgba(167,139,250,0.3);
+            border-radius: 18px;
+            padding: 16px 18px;
+            margin-bottom: 20px;
+        }
+        .rec-panel h3 { font-size: 0.95rem; margin-bottom: 10px; }
+        .rec-panel .rec-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            background: var(--primary-gradient);
+            color: white;
+            margin-top: 8px;
+        }
+        #recInsight {
+            font-size: 0.78rem;
+            line-height: 1.55;
+            opacity: 0.92;
+            margin-top: 12px;
+            max-height: 140px;
+            overflow-y: auto;
+        }
+
+        @media (max-width: 900px) {
+            .layout { flex-direction: column-reverse; }
+            .sidebar {
+                width: 100%;
+                max-height: none;
+                border-left: none;
+                border-top: 1px solid rgba(255,255,255,0.1);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="top-nav">
+        <strong style="background: var(--primary-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;">Swipe · ED-GEERDES</strong>
+        <nav style="display:flex;gap:14px;flex-wrap:wrap;">
+            <a href="/">Studio</a>
+            <a href="/ed-geerdes-platform.html#discovery">Home base</a>
+            <a href="/#portal">Help &amp; health</a>
+        </nav>
+    </header>
+
+    <div class="layout">
+        <div class="swipe-area" id="swipeContainer"></div>
+
+        <aside class="sidebar" aria-label="Sync and filters">
+            <h2>Find your next obsession</h2>
+            <p class="sub">This deck is a playful demo. Hook up Spotify or Apple when you’re ready — your account, your taste, no rush.</p>
+
+            <div class="rec-panel">
+                <h3>Your next five</h3>
+                <p class="sub" style="margin:0 0 6px;">We read likes &amp; skips, borrow taste from similar listeners (demo), dream up five tracks, respect your filters, and drop them into the stack.</p>
+                <button type="button" class="rec-btn" id="btnRecPipeline">Build 5 for my stack</button>
+                <div id="recInsight" aria-live="polite"></div>
+            </div>
+
+            <div class="sync-section">
+                <h3>Connect (when you build it)</h3>
+                <button type="button" class="sync-btn" onclick="syncSpotifyInfo()">Love Spotify? Start here</button>
+                <button type="button" class="sync-btn secondary" onclick="syncAppleInfo()">Apple Music vibes</button>
+                <button type="button" class="sync-btn secondary" onclick="loadSpotifySdkIfToken()">Play in browser (token)</button>
+                <p class="sub" style="margin-top:10px;margin-bottom:0;">Curious how playlists plug in? A short, human read lives in <code>docs/SPOTIFY_PLAYLIST_NOTES.md</code> in the repo.</p>
+            </div>
+
+            <div class="filters">
+                <h3>Tune the deck</h3>
+                <div class="filter-group">
+                    <label for="genreFilter">Genres</label>
+                    <select id="genreFilter" multiple size="6">
+                        <option>EDM</option>
+                        <option>Pop</option>
+                        <option>Hip-Hop</option>
+                        <option>Rock</option>
+                        <option>Classical</option>
+                        <option>Jazz</option>
+                        <option>Synthwave</option>
+                        <option>Chill</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label><input type="checkbox" id="remixFilter"> Remixes only (coming soon)</label>
+                </div>
+                <div class="filter-group">
+                    <label for="bpmFilter">BPM center <span id="bpmVal">120</span></label>
+                    <input type="range" id="bpmFilter" min="60" max="180" value="120">
+                </div>
+            </div>
+
+            <div class="liked-list">
+                <h3>👍 Liked (<span id="likedCount">0</span>)</h3>
+                <div id="likedTracks"></div>
+            </div>
+        </aside>
+    </div>
+
+    <div class="controls">
+        <button type="button" class="control-btn dislike-btn" id="btnDislike" aria-label="Dislike">👎</button>
+        <button type="button" class="control-btn like-btn" id="btnLike" aria-label="Like">👍</button>
+    </div>
+
+    <div class="toast" id="toast" role="status"></div>
+
+    <script>
+        (function () {
+            var currentCardIndex = 0;
+            var likedTracks = [];
+            var dislikedTracks = [];
+            var userPreferences = { genres: [], bpm: 120, likes: 0, dislikes: 0, mood: 'Groovy' };
+            var swipeBusy = false;
+            var hammerInstance = null;
+            var nextTrackId = 10000;
+
+            /** Mood by genre — demo mapping for step 2 (avg BPM + vibe). */
+            var GENRE_MOOD = {
+                EDM: 'Electric',
+                Pop: 'Bright',
+                'Hip-Hop': 'Grounded',
+                Rock: 'Bold',
+                Classical: 'Still',
+                Jazz: 'Warm',
+                Synthwave: 'Nostalgic',
+                Chill: 'Soft',
+                Chillwave: 'Soft',
+            };
+
+            /** Fake listeners — collaborative filtering stand-in until a backend stores real co-listeners. */
+            var neighborPersonas = [
+                { name: 'DJ Lin', weights: { EDM: 4, Pop: 2, 'Hip-Hop': 2 }, bpm: 126 },
+                { name: 'Nova', weights: { Synthwave: 4, Chill: 3 }, bpm: 96 },
+                { name: 'Rico', weights: { 'Hip-Hop': 5, Pop: 1 }, bpm: 92 },
+                { name: 'Mira', weights: { Jazz: 3, Classical: 2, Chill: 2 }, bpm: 78 },
+                { name: 'Kai', weights: { Rock: 4, EDM: 1 }, bpm: 132 },
+            ];
+
+            var trackDatabase = [
+                { id: 0, title: 'Electric Dreams', artist: 'Neon Pulse', genre: 'EDM', bpm: 128, cover: '🎵' },
+                { id: 1, title: 'Midnight City', artist: 'Synthwave', genre: 'Synthwave', bpm: 105, cover: '🌃' },
+                { id: 2, title: 'Ocean Drive', artist: 'Chillwave', genre: 'Chill', bpm: 90, cover: '🌊' },
+                { id: 3, title: 'Firestarter', artist: 'Rock Rebels', genre: 'Rock', bpm: 145, cover: '🔥' },
+                { id: 4, title: 'Jazz Nights', artist: 'Smooth Quartet', genre: 'Jazz', bpm: 85, cover: '🎷' },
+            ];
+
+            function showToast(msg) {
+                var el = document.getElementById('toast');
+                el.textContent = msg;
+                el.classList.add('visible');
+                clearTimeout(showToast._t);
+                showToast._t = setTimeout(function () { el.classList.remove('visible'); }, 4200);
+            }
+
+            function escapeHtml(s) {
+                return String(s).replace(/[&<>"']/g, function (c) {
+                    return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+                });
+            }
+
+            function swipe(direction) {
+                if (swipeBusy) return;
+                var card = document.querySelector('.track-card');
+                if (!card) return;
+                swipeBusy = true;
+                card.classList.remove('swiping');
+                card.classList.add(direction);
+
+                setTimeout(function () {
+                    var t = trackDatabase[currentCardIndex];
+                    if (direction === 'like') {
+                        if (t) likedTracks.push(t);
+                        userPreferences.likes++;
+                    } else {
+                        if (t) dislikedTracks.push(t);
+                        userPreferences.dislikes++;
+                    }
+                    currentCardIndex++;
+                    updateRecommendations();
+                    renderNextCard();
+                    updateSidebar();
+                    swipeBusy = false;
+                }, 420);
+            }
+
+            function ensureMoreTracks() {
+                if (currentCardIndex < trackDatabase.length) return;
+                generateMLTracks();
+            }
+
+            function renderNextCard() {
+                var container = document.getElementById('swipeContainer');
+                container.innerHTML = '';
+                ensureMoreTracks();
+
+                if (currentCardIndex >= trackDatabase.length) {
+                    container.innerHTML = '<p style="text-align:center;padding:2rem;max-width:320px;opacity:0.85">No tracks in deck. Try filters or reload.</p>';
+                    return;
+                }
+
+                var track = trackDatabase[currentCardIndex];
+                var card = document.createElement('div');
+                card.className = 'track-card';
+                card.innerHTML =
+                    '<div class="track-art" aria-hidden="true">' + escapeHtml(track.cover) + '</div>' +
+                    '<div class="track-info">' +
+                    '<h3>' + escapeHtml(track.title) + '</h3>' +
+                    '<p>' +
+                    escapeHtml(track.artist) +
+                    ' • ' +
+                    escapeHtml(track.genre) +
+                    ' • ' +
+                    escapeHtml(String(track.bpm)) +
+                    ' BPM' +
+                    (track.mood ? ' · ' + escapeHtml(track.mood) : '') +
+                    '</p>' +
+                    '</div>' +
+                    '<p class="track-preview-hint">Swipe the card or tap the hearts — that’s the vibe. Real audio comes when you wire Spotify in.</p>';
+                container.appendChild(card);
+                initHammerGestures(card);
+            }
+
+            function initHammerGestures(card) {
+                if (typeof Hammer === 'undefined') return;
+                if (hammerInstance && hammerInstance.destroy) {
+                    try { hammerInstance.destroy(); } catch (e) { /* ignore */ }
+                }
+                hammerInstance = new Hammer(card);
+                hammerInstance.get('pan').set({ direction: Hammer.DIRECTION_HORIZONTAL, threshold: 12 });
+                card.classList.add('swiping');
+                hammerInstance.on('panmove', function (ev) {
+                    card.style.transform = 'translateX(' + ev.deltaX + 'px) rotate(' + (ev.deltaX * 0.04) + 'deg)';
+                });
+                hammerInstance.on('panend', function (ev) {
+                    card.style.transform = '';
+                    card.classList.remove('swiping');
+                    if (ev.deltaX < -70) swipe('dislike');
+                    else if (ev.deltaX > 70) swipe('like');
+                });
+            }
+
+            window.syncSpotifyInfo = function () {
+                showToast('Spotify works best with a quick login flow on your server — we’ll open the friendly docs for you.');
+                window.open('https://developer.spotify.com/documentation/web-playback-sdk', '_blank', 'noopener,noreferrer');
+            };
+
+            window.syncAppleInfo = function () {
+                showToast('Apple Music loves a tiny backend token + MusicKit — peek the overview here.');
+                window.open('https://developer.apple.com/musickit/', '_blank', 'noopener,noreferrer');
+            };
+
+            window.loadSpotifySdkIfToken = function () {
+                var token = window.__spotifyAccessToken;
+                if (!token) {
+                    showToast('Almost there — add a token from your backend, then tap again. You’ve got this.');
+                    return;
+                }
+                if (document.getElementById('spotify-player-sdk')) {
+                    initSpotifyPlayer(token);
+                    return;
+                }
+                var s = document.createElement('script');
+                s.id = 'spotify-player-sdk';
+                s.src = 'https://sdk.scdn.co/spotify-player.js';
+                s.onload = function () { initSpotifyPlayer(token); };
+                document.head.appendChild(s);
+            };
+
+            function initSpotifyPlayer(token) {
+                if (!window.Spotify) {
+                    showToast('Spotify SDK not loaded.');
+                    return;
+                }
+                window.onSpotifyWebPlaybackSDKReady = function () {
+                    var player = new Spotify.Player({
+                        name: 'ED-GEERDES Swipe',
+                        getOAuthToken: function (cb) { cb(token); },
+                    });
+                    player.addListener('ready', function () { showToast('Spotify Web Playback ready (Premium required).'); });
+                    player.addListener('initialization_error', function (e) { showToast('Spotify init: ' + (e && e.message ? e.message : 'error')); });
+                    player.connect();
+                };
+                if (window.Spotify && window.Spotify.Player) window.onSpotifyWebPlaybackSDKReady();
+            }
+
+            function updateRecommendations() {
+                var likedGenres = likedTracks.map(function (t) { return t.genre; }).filter(Boolean);
+                userPreferences.genres = likedGenres.filter(function (g, i, a) { return a.indexOf(g) === i; });
+                if (likedTracks.length) {
+                    var sum = likedTracks.reduce(function (s, t) { return s + t.bpm; }, 0);
+                    userPreferences.bpm = Math.round(sum / likedTracks.length);
+                }
+                updateFiltersUi();
+            }
+
+            /** Fallback when deck runs out (no pipeline run). */
+            function generateMLTracks() {
+                var baseGenre = userPreferences.genres[0] || 'EDM';
+                var baseBpm = userPreferences.bpm || 120;
+                for (var i = 0; i < 5; i++) {
+                    trackDatabase.push({
+                        id: nextTrackId++,
+                        title: 'Suggested #' + i,
+                        artist: 'Deck engine',
+                        genre: baseGenre,
+                        bpm: Math.max(60, Math.min(180, Math.round(baseBpm + (Math.random() - 0.5) * 24))),
+                        cover: '🤖',
+                    });
+                }
+            }
+
+            function buildUserGenreVector() {
+                var vec = {};
+                likedTracks.forEach(function (t) {
+                    var g = t.genre;
+                    if (!g) return;
+                    vec[g] = (vec[g] || 0) + 1;
+                });
+                dislikedTracks.forEach(function (t) {
+                    var g = t.genre;
+                    if (!g) return;
+                    vec[g] = (vec[g] || 0) - 0.7;
+                });
+                return vec;
+            }
+
+            function neighborSimilarity(userVec, neighbor) {
+                var s = 0;
+                Object.keys(neighbor.weights).forEach(function (g) {
+                    s += neighbor.weights[g] * Math.max(0, userVec[g] || 0);
+                });
+                return s;
+            }
+
+            function pickTopGenre(likeCounts, avoid) {
+                var best = null;
+                var bestN = -1;
+                Object.keys(likeCounts).forEach(function (g) {
+                    if (avoid[g]) return;
+                    if (likeCounts[g] > bestN) {
+                        bestN = likeCounts[g];
+                        best = g;
+                    }
+                });
+                return best || 'EDM';
+            }
+
+            function genreMatchesFilter(genre, selected) {
+                if (!selected.length) return true;
+                var g = String(genre);
+                for (var i = 0; i < selected.length; i++) {
+                    var s = selected[i];
+                    if (g === s || g.indexOf(s) >= 0 || s.indexOf(g) >= 0) return true;
+                }
+                return false;
+            }
+
+            function getSelectedFilterGenres() {
+                var sel = document.getElementById('genreFilter');
+                if (!sel) return [];
+                return Array.prototype.filter
+                    .call(sel.options, function (o) {
+                        return o.selected;
+                    })
+                    .map(function (o) {
+                        return o.text;
+                    });
+            }
+
+            /**
+             * 1) Liked / disliked genres → 2) avg BPM + mood → 3) collaborative neighbor →
+             * 4) five AI-style rows → 5) filter by UI → 6) splice into swipe stack.
+             */
+            function runRecommendationPipeline() {
+                var insight = document.getElementById('recInsight');
+                var lines = [];
+
+                var likeCounts = {};
+                likedTracks.forEach(function (t) {
+                    var g = t.genre;
+                    if (!g) return;
+                    likeCounts[g] = (likeCounts[g] || 0) + 1;
+                });
+                var avoid = {};
+                dislikedTracks.forEach(function (t) {
+                    if (t.genre) avoid[t.genre] = true;
+                });
+                lines.push('① Genres you vibed with: ' + (Object.keys(likeCounts).join(', ') || '(still discovering)') + '. Skipped vibes noted.');
+
+                var avgBpm = userPreferences.bpm || 120;
+                if (likedTracks.length) {
+                    avgBpm = Math.round(
+                        likedTracks.reduce(function (s, t) {
+                            return s + t.bpm;
+                        }, 0) / likedTracks.length,
+                    );
+                }
+                var topGenre = pickTopGenre(likeCounts, avoid);
+                var mood = GENRE_MOOD[topGenre] || 'Groovy';
+                userPreferences.mood = mood;
+                lines.push('② Heart BPM ~' + avgBpm + ' · mood leaning ' + mood + '.');
+
+                var userVec = buildUserGenreVector();
+                var bestN = neighborPersonas[0];
+                var bestS = -1;
+                neighborPersonas.forEach(function (n) {
+                    var sc = neighborSimilarity(userVec, n);
+                    if (sc > bestS) {
+                        bestS = sc;
+                        bestN = n;
+                    }
+                });
+                lines.push('③ Closest taste twin (demo): ' + bestN.name + ' · blend their world with yours.');
+
+                var blendGenres = [topGenre].concat(Object.keys(bestN.weights)).filter(function (g, i, a) {
+                    return !avoid[g] && a.indexOf(g) === i;
+                });
+                if (!blendGenres.length) blendGenres = ['EDM'];
+                var mergedBpm = Math.round((avgBpm + bestN.bpm) / 2);
+                var batch = [];
+                for (var i = 0; i < 5; i++) {
+                    var g = blendGenres[i % blendGenres.length];
+                    batch.push({
+                        id: nextTrackId++,
+                        title: 'For you · ' + (i + 1),
+                        artist: 'Blend · ' + bestN.name,
+                        genre: g,
+                        bpm: Math.max(60, Math.min(180, Math.round(mergedBpm + (Math.random() - 0.5) * 18))),
+                        mood: GENRE_MOOD[g] || mood,
+                        cover: '🎧',
+                        aiGenerated: true,
+                    });
+                }
+                lines.push('④ Drafted five new cards from that blend.');
+
+                var bpmCenter = parseInt(document.getElementById('bpmFilter').value, 10) || 120;
+                var bpmTol = 40;
+                var selected = getSelectedFilterGenres();
+                var remixOnly = document.getElementById('remixFilter') && document.getElementById('remixFilter').checked;
+                if (remixOnly) {
+                    batch = batch.map(function (t) {
+                        return Object.assign({}, t, {
+                            title: t.title + ' (remix lane)',
+                            genre: t.genre + ' remix',
+                        });
+                    });
+                }
+                batch = batch.filter(function (t) {
+                    if (!genreMatchesFilter(t.genre, selected)) return false;
+                    if (Math.abs(t.bpm - bpmCenter) > bpmTol) return false;
+                    return true;
+                });
+                while (batch.length < 5) {
+                    var g =
+                        selected.length && selected[batch.length % selected.length]
+                            ? selected[batch.length % selected.length]
+                            : blendGenres[batch.length % blendGenres.length];
+                    batch.push({
+                        id: nextTrackId++,
+                        title: 'Fill · ' + (batch.length + 1),
+                        artist: 'Deck',
+                        genre: g,
+                        bpm: Math.max(60, Math.min(180, bpmCenter + Math.round((Math.random() - 0.5) * 12))),
+                        mood: GENRE_MOOD[g] || mood,
+                        cover: '✨',
+                        aiGenerated: true,
+                    });
+                }
+                batch = batch.slice(0, 5);
+                lines.push('⑤ Matched your filters (genres + BPM ±' + bpmTol + ').' + (remixOnly ? ' Remix flavour on.' : ''));
+
+                var insertAt = Math.min(currentCardIndex + 1, trackDatabase.length);
+                Array.prototype.splice.apply(trackDatabase, [insertAt, 0].concat(batch));
+                lines.push('⑥ Next swipes: fresh stack at position ' + (insertAt + 1) + '.');
+
+                if (insight) insight.innerHTML = lines.map(escapeHtml).join('<br>');
+                showToast('Five new cards slid into your stack.');
+                renderNextCard();
+            }
+
+            function updateFiltersUi() {
+                var genreFilter = document.getElementById('genreFilter');
+                if (!genreFilter) return;
+                userPreferences.genres.forEach(function (genre) {
+                    Array.from(genreFilter.options).forEach(function (opt) {
+                        if (opt.text === genre) opt.selected = true;
+                    });
+                });
+            }
+
+            function updateSidebar() {
+                var countEl = document.getElementById('likedCount');
+                if (countEl) countEl.textContent = String(likedTracks.length);
+                var container = document.getElementById('likedTracks');
+                if (!container) return;
+                container.innerHTML = '';
+                likedTracks.slice(-8).forEach(function (track) {
+                    var div = document.createElement('div');
+                    div.className = 'liked-track';
+                    div.innerHTML = '<span aria-hidden="true">' + escapeHtml(track.cover) + '</span><span>' + escapeHtml(track.title) + '</span>';
+                    div.onclick = function () {
+                        if (navigator.share) {
+                            navigator.share({ title: track.title, text: track.title + ' — ' + track.artist, url: window.location.href }).catch(function () {});
+                        } else {
+                            showToast(track.title + ' — use Share API on mobile or copy URL.');
+                        }
+                    };
+                    container.appendChild(div);
+                });
+            }
+
+            document.getElementById('btnLike').onclick = function () { swipe('like'); };
+            document.getElementById('btnDislike').onclick = function () { swipe('dislike'); };
+
+            document.getElementById('bpmFilter').addEventListener('input', function () {
+                document.getElementById('bpmVal').textContent = this.value;
+            });
+
+            document.addEventListener('DOMContentLoaded', function () {
+                var btnRec = document.getElementById('btnRecPipeline');
+                if (btnRec) btnRec.addEventListener('click', runRecommendationPipeline);
+                renderNextCard();
+                updateSidebar();
+                document.getElementById('bpmVal').textContent = document.getElementById('bpmFilter').value;
+            });
+        })();
+    </script>
+</body>
+</html>

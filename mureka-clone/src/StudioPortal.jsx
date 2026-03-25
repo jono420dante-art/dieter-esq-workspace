@@ -58,20 +58,22 @@ export default function StudioPortal({ apiBase, onOpenKeys, onNavigateMode }) {
   return (
     <main className="main main-portal">
       <div className="portal-hero">
-        <h1 className="portal-title">Portal &amp; guide</h1>
+        <h1 className="portal-title">Welcome in</h1>
         <p className="portal-lead">
-          <strong>{STUDIO_NAME}</strong> ties together this React studio (mureka-clone), your{' '}
-          <strong>FastAPI</strong> at <code>{apiBase}</code>, and <strong>Mureka</strong> cloud when you use Create /
-          Cloud / Voice. Use the <strong>left sidebar</strong> to switch modes. Everything talks to the same API base
-          once you hit <button type="button" className="portal-inline-btn" onClick={onOpenKeys}>API keys</button>.
+          <strong>{STUDIO_NAME}</strong> is your lane from idea to sound — this page is the front door: check that your
+          studio is awake, nudge Mureka when you’re ready, jump to the showroom. Sidebar picks the room;{' '}
+          <button type="button" className="portal-inline-btn" onClick={onOpenKeys}>
+            API keys
+          </button>{' '}
+          is where the pipes connect.
         </p>
       </div>
 
       <section className="portal-card">
-        <h2>API &amp; pipeline health</h2>
+        <h2>Is everything humming?</h2>
         <p className="hint">
-          Pings <code>GET {apiBase}/health</code> and <code>GET {apiBase}/local/capabilities</code>. If you only deployed
-          static HTML, these fail until the Docker / Railway API is reachable and <code>VITE_API_BASE</code> points to it.
+          A quick pulse on your backend. Green means you’re good to create; if it’s quiet, point{' '}
+          <code>VITE_API_BASE</code> at your live API and try again.
         </p>
         <div className="portal-health-row">
           {health.phase === 'loading' && <span className="portal-badge portal-badge-warn">Checking…</span>}
@@ -90,7 +92,7 @@ export default function StudioPortal({ apiBase, onOpenKeys, onNavigateMode }) {
           )}
           {caps.phase === 'done' && !caps.ok && (
             <span className="portal-badge portal-badge-warn" title={caps.error || ''}>
-              Local caps: skip or fix API
+              Local lab: API path optional
             </span>
           )}
         </div>
@@ -102,11 +104,10 @@ export default function StudioPortal({ apiBase, onOpenKeys, onNavigateMode }) {
       </section>
 
       <section className="portal-card">
-        <h2>Mureka handoff (same browser)</h2>
+        <h2>Send ideas to Mureka</h2>
         <p className="hint">
-          Saves a small draft to <code>sessionStorage</code> (<code>dp-mureka-draft</code>) then opens{' '}
-          <strong>mureka.ai</strong> create. Use your Mureka session there; keys can also live on the server as{' '}
-          <code>MUREKA_API_KEY</code>.
+          Jot title, style, lyrics — we stash it in this browser and open <strong>mureka.ai</strong> so you can keep
+          flowing. Your key can live on the server too (<code>MUREKA_API_KEY</code>).
         </p>
         <label htmlFor="ph-title">Title</label>
         <input
@@ -180,25 +181,45 @@ export default function StudioPortal({ apiBase, onOpenKeys, onNavigateMode }) {
       </section>
 
       <section className="portal-card">
-        <h2>Where everything lives</h2>
+        <h2>Your music out in the world</h2>
+        <p className="hint">
+          The showroom&apos;s <strong>Distribution</strong> tab is your couch-to-chart pit stop — demo stats, real links
+          to Spotify, Apple, YouTube, tips to learn with your crew. Sign in there is just a taste; plug your real data
+          when you ship.
+        </p>
+        <div className="row">
+          <a
+            className="btn-secondary"
+            href={`${staticShowroomHref}#distribution`}
+            style={{ display: 'inline-block', textDecoration: 'none' }}
+          >
+            Open Distribution hub ↗
+          </a>
+        </div>
+      </section>
+
+      <section className="portal-card">
+        <h2>Hop somewhere fun</h2>
         <ul className="portal-links">
           <li>
-            <a href={staticShowroomHref}>Static ED-GEERDES showroom</a> — marketplace demo, Web Audio toys, Discovery copy (
-            <code>ed-geerdes-platform.html</code>).
+            <a href={staticShowroomHref}>Showroom</a> — marketplace, discovery story, toys.
           </li>
           <li>
-            <strong>This app</strong> — full studio: Create (Mureka gateway), Local, Beat lab, Voice, etc.
+            <a href="/dieter-swipe-discovery.html">Swipe deck</a> — gesture demo; wire Spotify when you’re ready.
+          </li>
+          <li>
+            <strong>This app</strong> — Create, Local, beats, voice — the works.
           </li>
           {site ? (
             <li>
-              Public site:{' '}
+              Live site:{' '}
               <a href={site} target="_blank" rel="noreferrer">
                 {site}
               </a>
             </li>
           ) : null}
           <li>
-            Bookmark this guide: same-origin URL with <code>#portal</code>.
+            Save <code>#portal</code> — it’s your bookmark home.
           </li>
         </ul>
         <div className="row">

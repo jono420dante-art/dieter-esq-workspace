@@ -442,6 +442,97 @@
             }
             .eg-side-tab { width: auto; flex: 1 1 120px; }
         }
+
+        .dist-hub { max-width: 1100px; }
+        .dist-login-box {
+            background: var(--glass);
+            border-radius: 22px;
+            padding: 28px;
+            border: 1px solid rgba(255,255,255,0.12);
+            max-width: 420px;
+        }
+        .dist-login-box input {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.35);
+            color: #fff;
+            margin-top: 8px;
+            box-sizing: border-box;
+        }
+        .dist-dsp-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+            margin: 20px 0;
+        }
+        .dist-dsp-card {
+            background: var(--glass);
+            border-radius: 18px;
+            padding: 18px 20px;
+            border: 1px solid rgba(255,255,255,0.12);
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .dist-dsp-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--glow);
+            border-color: var(--neon-cyan);
+        }
+        .dist-dsp-card strong { display: block; font-size: 1rem; margin-bottom: 6px; color: var(--neon-cyan); }
+        .dist-dsp-card span { font-size: 0.82rem; opacity: 0.88; line-height: 1.45; }
+        .dist-events-wrap { overflow-x: auto; margin: 18px 0; }
+        .dist-events {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        .dist-events th, .dist-events td {
+            padding: 12px 14px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .dist-events th {
+            color: var(--neon-cyan);
+            font-weight: 700;
+            background: rgba(0,0,0,0.25);
+        }
+        .dist-events tr:hover td { background: rgba(255,255,255,0.04); }
+        .dist-badge-ok { color: #4ade80; font-weight: 600; }
+        .dist-badge-warn { color: #fbbf24; font-weight: 600; }
+        .dist-learn {
+            background: linear-gradient(135deg, rgba(124,58,237,0.2), rgba(236,72,153,0.12));
+            border: 1px solid rgba(167,139,250,0.35);
+            border-radius: 22px;
+            padding: 24px 26px;
+            margin-top: 24px;
+        }
+        .dist-learn h3 { margin: 0 0 12px; font-size: 1.05rem; }
+        .dist-learn ul { margin: 0; padding-left: 1.2rem; line-height: 1.7; font-size: 0.9rem; }
+        .dist-learn a { color: var(--neon-cyan); font-weight: 600; }
+        .dist-tip {
+            margin-top: 16px;
+            padding: 14px 16px;
+            border-radius: 14px;
+            background: rgba(0,0,0,0.35);
+            border: 1px solid rgba(0,245,255,0.2);
+            font-size: 0.84rem;
+            line-height: 1.55;
+        }
+        .account-chip {
+            font-size: 0.78rem;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            max-width: 220px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
     </style>
 </head>
 <!-- Build replaces data-stripe-pk via STRIPE_PUBLISHABLE_KEY (Vercel / Netlify). Default: pk_live_… placeholder. -->
@@ -458,6 +549,7 @@
             <button type="button" class="tab eg-side-tab" onclick="showTab('mytracks', this)">My tracks</button>
             <button type="button" class="tab eg-side-tab" onclick="showTab('discovery', this)">Discovery</button>
             <button type="button" class="tab eg-side-tab" onclick="showTab('promo', this)">Promo</button>
+            <button type="button" class="tab eg-side-tab" id="nav-dist" onclick="showTab('distribution', this)">Distribution</button>
         </nav>
         <div class="eg-health">
             <span class="eg-health-status" id="egHealthStatus" role="status">API: not checked yet</span>
@@ -466,6 +558,9 @@
         <div class="eg-sidebar-links">
             <a class="eg-link-main" href="/">→ Full React studio (Mureka + labs)</a>
             <a class="eg-link-main" href="/#portal">→ Portal, API health &amp; handoff</a>
+            <a class="eg-link-main" href="#distribution">→ Distribution &amp; DSP hub</a>
+            <a class="eg-link-main" href="/dieter-swipe-discovery.html">→ Swipe discovery demo</a>
+            <a class="eg-link-main" href="/dieter-v3-passion.html">→ Dieter V3.1 passion flow (Tone.js demo)</a>
         </div>
     </aside>
     <div class="eg-main">
@@ -473,9 +568,10 @@
     <header class="header">
         <h1 class="logo">ED-GEERDES</h1>
         <div class="user-menu">
+            <div class="account-chip" id="accountBadge" title="Account">— Sign in for distribution hub —</div>
             <div class="balance" id="balanceDisplay">— Demo wallet —</div>
             <button type="button" class="control-btn" onclick="showModal('walletModal')">Wallet</button>
-            <button type="button" class="control-btn" onclick="showModal('profileModal')">Profile</button>
+            <button type="button" class="control-btn" onclick="showModal('profileModal')">Profile / Sign in</button>
             <a class="control-btn" href="/" style="text-decoration:none;display:inline-block;">Main studio</a>
         </div>
     </header>
@@ -536,6 +632,7 @@
         <div class="discovery-hero">
             <h2>Swipe-first discovery</h2>
             <p class="hint" style="margin-top: 0; max-width: 52rem;">Product vision for ED-GEERDES: connect streaming libraries, learn taste from gestures, and surface tracks people actually want — without killing the vibe with paywalls on every swipe.</p>
+            <p class="hint" style="margin-bottom: 14px;"><a class="api-link" href="/dieter-swipe-discovery.html"><strong>Try the swipe deck</strong></a> — feel the flow; plug Spotify or Apple when you build the hookup.</p>
             <p class="hint" style="margin-bottom: 0;"><strong>Implementation:</strong> Spotify and Apple Music require OAuth, approved developer programs, and server-side token handling — wire this tab’s flows to your FastAPI or edge functions when you are ready.</p>
         </div>
         <div class="discovery-grid">
@@ -575,6 +672,85 @@
         </div>
     </div>
 
+    <div id="distribution" class="tab-content">
+        <div class="dist-hub">
+            <h2>Distribution &amp; live events</h2>
+            <p class="hint" style="max-width: 52rem;">Real Apple, Spotify, YouTube, and Napster figures require your distributor, label, or each platform’s official artist tooling. Below is a <strong>structured demo</strong> you can replace with API-fed data after login. Use <strong>Profile / Sign in</strong> (demo session) to unlock the full hub.</p>
+
+            <div id="dist-guest" class="dist-login-box" style="margin-top: 20px;">
+                <h3 style="margin-top: 0;">Sign in (demo)</h3>
+                <p class="hint">Production: OAuth or magic link via your API. For now, store a browser session only.</p>
+                <label for="dist-email">Email</label>
+                <input type="email" id="dist-email" placeholder="you@artist.studio" autocomplete="username">
+                <label for="dist-password" style="margin-top: 12px; display: block;">Password</label>
+                <input type="password" id="dist-password" placeholder="••••••••" autocomplete="current-password">
+                <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px;">
+                    <button type="button" class="generate-btn" onclick="egSignInFromDist()">Sign in</button>
+                    <button type="button" class="control-btn" onclick="egDemoSignIn()">Continue as demo artist</button>
+                </div>
+            </div>
+
+            <div id="dist-authed" style="display: none;">
+                <p class="hint">Signed in as <strong id="dist-email-display">—</strong>. <button type="button" class="control-btn" style="margin-left:8px; padding:6px 12px;" onclick="egSignOut()">Sign out</button></p>
+
+                <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 16px 0;">
+                    <button type="button" class="generate-btn" onclick="refreshDistroReport()">Refresh live-style report</button>
+                    <span class="hint" style="margin:0;">Rows re-sample realistic ranges (demo only).</span>
+                </div>
+
+                <h3 style="margin-top: 8px;">Recent events (sell / promo / rent)</h3>
+                <div class="dist-events-wrap">
+                    <table class="dist-events" id="distro-events-table">
+                        <thead>
+                            <tr>
+                                <th>Time (local)</th>
+                                <th>Channel</th>
+                                <th>Event</th>
+                                <th>Region / detail</th>
+                                <th>Amount (USD est.)</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="distro-events-body"></tbody>
+                    </table>
+                </div>
+
+                <h3>Open your dashboards (official)</h3>
+                <p class="hint">Direct links — sign in on each site with your artist account.</p>
+                <div class="dist-dsp-grid">
+                    <a class="dist-dsp-card" href="https://artists.spotify.com/" target="_blank" rel="noopener noreferrer">
+                        <strong>Spotify for Artists</strong>
+                        <span>Streams, playlists, promo tools, Canvas. Learning built into the help center.</span>
+                    </a>
+                    <a class="dist-dsp-card" href="https://artists.apple.com/" target="_blank" rel="noopener noreferrer">
+                        <strong>Apple Music for Artists</strong>
+                        <span>Shazam, spatial, milestones. Apple’s guides for insights &amp; best practices.</span>
+                    </a>
+                    <a class="dist-dsp-card" href="https://studio.youtube.com/" target="_blank" rel="noopener noreferrer">
+                        <strong>YouTube Studio</strong>
+                        <span>Content ID, Shorts, analytics, rental &amp; purchase where enabled.</span>
+                    </a>
+                    <a class="dist-dsp-card" href="https://www.napster.com/" target="_blank" rel="noopener noreferrer">
+                        <strong>Napster / live ecosystem</strong>
+                        <span>Many releases reach Napster via your <strong>distributor</strong>; confirm ingestion in distributor + royalty statements.</span>
+                    </a>
+                </div>
+
+                <div class="dist-learn">
+                    <h3>Learn together (curated)</h3>
+                    <p class="hint" style="margin-top: 0;">Built-in starting points — share these with your team and iterate from real campaign data.</p>
+                    <ul>
+                        <li><a href="https://artists.spotify.com/help" target="_blank" rel="noopener noreferrer">Spotify for Artists — Help &amp; learning</a></li>
+                        <li><a href="https://artists.apple.com/support" target="_blank" rel="noopener noreferrer">Apple Music for Artists — Support &amp; how-tos</a></li>
+                        <li><a href="https://creatoracademy.youtube.com/" target="_blank" rel="noopener noreferrer">YouTube Creator Academy</a> · <a href="https://support.google.com/youtube/topic/9257498" target="_blank" rel="noopener noreferrer">Official audio &amp; music policies</a></li>
+                        <li>Napster ingestion: track through your <strong>distributor dashboard</strong> (DistroKid, TuneCore, etc.) and monthly royalty CSVs — not all stores expose a single “Napster login” like Spotify.</li>
+                    </ul>
+                    <div class="dist-tip" id="dist-learn-tip" role="status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="walletModal" class="modal" role="dialog" aria-modal="true">
         <div class="modal-content">
             <h3>Wallet</h3>
@@ -586,10 +762,19 @@
     </div>
 
     <div id="profileModal" class="modal" role="dialog" aria-modal="true">
-        <div class="modal-content">
-            <h3>Profile</h3>
-            <p class="hint">Hook to your auth provider (Clerk, Auth0, etc.) or session cookies from the same origin as <code>/api</code>.</p>
-            <button type="button" class="control-btn" onclick="hideModal('profileModal')">Close</button>
+        <div class="modal-content" style="max-width: 480px;">
+            <h3>Profile / Sign in</h3>
+            <p class="hint">After sign-in, jump straight to <strong>Distribution</strong> for DSP links, learning hub, and the live-style events table (demo data until your API is wired).</p>
+            <label for="prof-email">Email</label>
+            <input type="email" id="prof-email" placeholder="you@artist.studio" style="width:100%; padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.35); color:#fff; box-sizing:border-box;">
+            <label for="prof-password" style="margin-top:10px; display:block;">Password</label>
+            <input type="password" id="prof-password" placeholder="••••••••" style="width:100%; padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.35); color:#fff; box-sizing:border-box;">
+            <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; justify-content:center;">
+                <button type="button" class="generate-btn" onclick="egSignInFromProfile()">Sign in</button>
+                <button type="button" class="control-btn" onclick="egDemoSignIn(); hideModal('profileModal');">Demo artist</button>
+                <button type="button" class="control-btn" onclick="egGoDistributionAfterLogin()">Sign in &amp; open Distribution</button>
+            </div>
+            <button type="button" class="control-btn" onclick="hideModal('profileModal')" style="margin-top:14px;">Close</button>
         </div>
     </div>
 
@@ -1087,6 +1272,147 @@
         return escapeHtml(s).replace(/"/g, '&quot;');
     }
 
+    var EG_LEARN_TIPS = [
+        'Compare Spotify “Active audience” week-over-week before scaling paid social.',
+        'Apple Music milestones can lag ~48h — line up posts after the badge appears in the app.',
+        'YouTube Shorts can funnel to long-form; pin a comment with your smart-link.',
+        'Rent and license: keep ISRC + contract ID on the same row as payouts in your spreadsheet.',
+        'Napster and smaller DSPs: trace plays via distributor analytics exports, not only one store UI.',
+    ];
+
+    function updateAccountUI() {
+        var badge = document.getElementById('accountBadge');
+        var emailDisp = document.getElementById('dist-email-display');
+        var signed = false;
+        var email = '';
+        try {
+            signed = sessionStorage.getItem('eg_artist_session') === '1';
+            email = sessionStorage.getItem('eg_artist_email') || '';
+        } catch (e) { /* private mode */ }
+
+        if (badge) {
+            badge.textContent = signed ? (email || 'Signed in') : '— Sign in for distribution hub —';
+            badge.title = signed ? email : 'Account';
+        }
+        if (emailDisp) emailDisp.textContent = email || 'Demo artist';
+
+        var g = document.getElementById('dist-guest');
+        var a = document.getElementById('dist-authed');
+        if (g && a) {
+            if (signed) {
+                g.style.display = 'none';
+                a.style.display = 'block';
+                window.refreshDistroReport();
+                window.rotateLearnTip();
+            } else {
+                g.style.display = 'block';
+                a.style.display = 'none';
+            }
+        }
+    }
+
+    window.refreshDistroReport = function () {
+        var tbody = document.getElementById('distro-events-body');
+        if (!tbody) return;
+        var platforms = ['Spotify', 'Apple Music', 'YouTube', 'Napster'];
+        var types = [
+            'Stream payout (est.)',
+            'Promo ad spend (allocated)',
+            'Rent / license royalty',
+            'Shorts / clip revenue share',
+            'Playlist adds — velocity window',
+            'Content ID claim — resolved',
+            'Pre-save / link-in-bio conversion',
+            'Distributor delivery ACK',
+            'Synch quote — follow-up',
+            'Meta ads — attribution (assist)',
+        ];
+        var regions = ['North America', 'EU / UK', 'LATAM', 'APAC', 'Global', 'US + CA'];
+        var rows = [];
+        var i;
+        for (i = 0; i < 10; i++) {
+            var d = new Date(Date.now() - i * 38 * 60000 * (0.4 + Math.random()));
+            var amt = (Math.pow(Math.random(), 1.35) * 1240 + 3.5).toFixed(2);
+            var pend = Math.random() < 0.14;
+            rows.push({
+                when: d.toLocaleString(),
+                platform: platforms[i % platforms.length],
+                type: types[i % types.length],
+                region: regions[i % regions.length],
+                amount: amt,
+                status: pend ? 'Pending' : 'Settled',
+                pend: pend,
+            });
+        }
+        tbody.innerHTML = rows
+            .map(function (r) {
+                var stClass = r.pend ? 'dist-badge-warn' : 'dist-badge-ok';
+                return (
+                    '<tr><td>' +
+                    escapeHtml(r.when) +
+                    '</td><td>' +
+                    escapeHtml(r.platform) +
+                    '</td><td>' +
+                    escapeHtml(r.type) +
+                    '</td><td>' +
+                    escapeHtml(r.region) +
+                    '</td><td>$' +
+                    escapeHtml(r.amount) +
+                    '</td><td class="' +
+                    stClass +
+                    '">' +
+                    escapeHtml(r.status) +
+                    '</td></tr>'
+                );
+            })
+            .join('');
+    };
+
+    window.rotateLearnTip = function () {
+        var el = document.getElementById('dist-learn-tip');
+        if (!el || !EG_LEARN_TIPS.length) return;
+        el.textContent = 'Tip of the session: ' + EG_LEARN_TIPS[Math.floor(Math.random() * EG_LEARN_TIPS.length)];
+    };
+
+    function egSetSignedIn(email) {
+        try {
+            sessionStorage.setItem('eg_artist_session', '1');
+            sessionStorage.setItem('eg_artist_email', email || 'artist@ed-geerdes.local');
+        } catch (e) { /* ignore */ }
+        updateAccountUI();
+    }
+
+    window.egSignOut = function () {
+        try {
+            sessionStorage.removeItem('eg_artist_session');
+            sessionStorage.removeItem('eg_artist_email');
+        } catch (e) { /* ignore */ }
+        updateAccountUI();
+    };
+
+    window.egDemoSignIn = function () {
+        egSetSignedIn('demo.artist@ed-geerdes.local');
+    };
+
+    window.egSignInFromDist = function () {
+        var em = (document.getElementById('dist-email') || {}).value || '';
+        egSetSignedIn(em.trim() || 'artist@ed-geerdes.local');
+    };
+
+    window.egSignInFromProfile = function () {
+        var em = (document.getElementById('prof-email') || {}).value || '';
+        egSetSignedIn(em.trim() || 'artist@ed-geerdes.local');
+        if (typeof window.hideModal === 'function') window.hideModal('profileModal');
+    };
+
+    window.egGoDistributionAfterLogin = function () {
+        var em = (document.getElementById('prof-email') || {}).value || '';
+        egSetSignedIn(em.trim() || 'artist@ed-geerdes.local');
+        if (typeof window.hideModal === 'function') window.hideModal('profileModal');
+        var btn = document.getElementById('nav-dist');
+        if (btn && typeof window.showTab === 'function') window.showTab('distribution', btn);
+    };
+
     window.buyTrack = function (track) {
         if (!stripe) {
             document.getElementById('purchaseDetails').textContent =
@@ -1176,6 +1502,7 @@
         if (btn) btn.classList.add('active');
         if (tabName === 'marketplace') renderMarketplace();
         if (tabName === 'mytracks') renderMyTracks();
+        if (tabName === 'distribution') updateAccountUI();
     };
 
     window.showModal = function (id) {
@@ -1197,6 +1524,16 @@
     renderMarketplace();
     renderMyTracks();
     window.refreshEgHealth();
+    updateAccountUI();
+    function tryHashDistTab() {
+        var h = (location.hash || '').replace(/^#/, '').toLowerCase();
+        if (h === 'distribution') {
+            var b = document.getElementById('nav-dist');
+            if (b) showTab('distribution', b);
+        }
+    }
+    tryHashDistTab();
+    window.addEventListener('hashchange', tryHashDistTab);
 })();
 </script>
 </body>

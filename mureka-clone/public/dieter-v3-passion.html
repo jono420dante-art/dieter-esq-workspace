@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ED-GEERDES · Pure Sound (V3.1 demo)</title>
+    <script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
+    <style>
+        :root {
+            --vinyl-warmth: linear-gradient(135deg, #2d1b69 0%, #1e0533 50%, #0f0f23 100%);
+            --tube: rgba(255, 183, 77, 0.35);
+            --shadow: 0 25px 80px rgba(0,0,0,0.55);
+            --pure: #f8f9fa;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            background: var(--vinyl-warmth);
+            color: var(--pure);
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-image:
+                radial-gradient(circle at 20% 80%, rgba(255,255,255,0.04) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.03) 0%, transparent 45%);
+        }
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: min(380px, 92vw);
+            height: 100vh;
+            background: rgba(15,15,35,0.96);
+            backdrop-filter: blur(40px);
+            border-right: 1px solid rgba(255,255,255,0.08);
+            transform: translateX(-102%);
+            transition: transform 0.45s cubic-bezier(0.23, 1, 0.32, 1);
+            z-index: 1000;
+            padding: 52px 28px 32px;
+            overflow-y: auto;
+            box-shadow: var(--shadow);
+        }
+        .sidebar.open { transform: translateX(0); }
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 999;
+        }
+        .sidebar.open ~ .sidebar-overlay,
+        body.sidebar-open .sidebar-overlay { display: block; }
+        .sidebar h2 {
+            font-size: 1.6rem;
+            font-weight: 400;
+            margin-bottom: 6px;
+            background: linear-gradient(135deg, var(--pure), rgba(255,183,77,0.85));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .sidebar h3 { font-weight: 400; margin: 28px 0 14px; font-size: 1.05rem; opacity: 0.92; }
+        .pure-input {
+            width: 100%;
+            min-height: 200px;
+            padding: 22px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(0,0,0,0.45);
+            color: var(--pure);
+            font-size: 1rem;
+            font-family: inherit;
+            line-height: 1.65;
+            resize: vertical;
+        }
+        .pure-input:focus {
+            outline: none;
+            border-color: rgba(255,183,77,0.55);
+            box-shadow: 0 0 28px rgba(255,183,77,0.15);
+        }
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 72px;
+            background: rgba(15,15,35,0.94);
+            backdrop-filter: blur(40px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 100;
+            gap: 14px;
+        }
+        .menu-toggle {
+            background: none;
+            border: none;
+            color: var(--pure);
+            font-size: 1.5rem;
+            cursor: pointer;
+            opacity: 0.85;
+        }
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 400;
+            background: linear-gradient(135deg, var(--pure), rgba(255,183,77,0.85));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .tagline { font-size: 0.82rem; opacity: 0.72; flex: 1; }
+        .workspace {
+            margin-top: 72px;
+            min-height: calc(100vh - 72px);
+            padding: 40px 24px 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .flow-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 28px; }
+        .flow-step {
+            padding: 10px 20px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.07);
+            font-size: 0.78rem;
+            opacity: 0.55;
+        }
+        .flow-step.active { opacity: 1; background: rgba(255,183,77,0.2); border: 1px solid var(--tube); }
+        #videoCanvas {
+            width: 100%;
+            max-width: 900px;
+            aspect-ratio: 16/9;
+            border-radius: 22px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: radial-gradient(circle, rgba(255,183,77,0.08), transparent);
+            box-shadow: var(--shadow);
+            display: block;
+        }
+        .vinyl-btn {
+            padding: 14px 22px;
+            margin: 6px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.07);
+            color: var(--pure);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.85rem;
+        }
+        .vinyl-btn:hover { border-color: rgba(255,183,77,0.55); background: rgba(255,183,77,0.1); }
+        .fab {
+            position: fixed;
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            border: 2px solid var(--tube);
+            background: rgba(255,183,77,0.12);
+            color: rgba(255,183,77,0.95);
+            font-size: 1.6rem;
+            cursor: pointer;
+            bottom: 28px;
+            right: 28px;
+            z-index: 50;
+            transition: transform 0.25s, box-shadow 0.25s;
+        }
+        .fab:hover { transform: scale(1.06); box-shadow: 0 0 32px rgba(255,183,77,0.35); }
+        .nav-links { margin-left: auto; display: flex; gap: 12px; flex-wrap: wrap; }
+        .nav-links a { color: rgba(255,183,77,0.95); font-size: 0.78rem; text-decoration: none; }
+        .nav-links a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="sidebar" id="sidebar" aria-label="Lyrics and links">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+            <h2>Pure Sound</h2>
+            <button type="button" class="menu-toggle" onclick="toggleSidebar()" aria-label="Close">×</button>
+        </div>
+        <h3>Lyrics</h3>
+        <textarea class="pure-input" id="lyricsInput" placeholder="Let the words land here…"></textarea>
+        <h3>Doorways</h3>
+        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+            <button type="button" class="vinyl-btn" onclick="openGateway('spotify')">Spotify</button>
+            <button type="button" class="vinyl-btn" onclick="openGateway('apple')">Apple Music</button>
+            <button type="button" class="vinyl-btn" onclick="openGateway('tiktok')">TikTok</button>
+            <button type="button" class="vinyl-btn" onclick="openGateway('insta')">Instagram</button>
+        </div>
+        <h3>Spirits (demo)</h3>
+        <button type="button" class="vinyl-btn" onclick="sidebarHint('melody')">Melody whisper</button>
+        <button type="button" class="vinyl-btn" onclick="sidebarHint('vocal')">Vocal warmth</button>
+        <button type="button" class="vinyl-btn" onclick="sidebarHint('vision')">Vision glow</button>
+    </div>
+    <div class="sidebar-overlay" onclick="toggleSidebar()" role="presentation"></div>
+
+    <header class="header">
+        <button type="button" class="menu-toggle" onclick="toggleSidebar()" aria-label="Open menu">☰</button>
+        <span class="logo">Dieter</span>
+        <span class="tagline">For anyone who hears the hum behind the noise</span>
+        <span id="flowStatus" style="font-size:0.78rem;opacity:0.75;">Ready</span>
+        <nav class="nav-links">
+            <a href="/">Studio</a>
+            <a href="/dieter-swipe-discovery.html">Swipe</a>
+            <a href="/ed-geerdes-platform.html">Showroom</a>
+        </nav>
+    </header>
+
+    <main class="workspace">
+        <div class="flow-row" id="flowSteps">
+            <span class="flow-step active">Lyrics</span>
+            <span class="flow-step">Melody</span>
+            <span class="flow-step">Voice</span>
+            <span class="flow-step">Mix</span>
+            <span class="flow-step">Vision</span>
+        </div>
+        <canvas id="videoCanvas" width="900" height="506"></canvas>
+        <p style="margin-top:16px;font-size:0.82rem;opacity:0.7;max-width:36rem;">Demo flow — no files are rendered. Wire your API for real audio &amp; video.</p>
+    </main>
+
+    <button type="button" class="fab" id="fabMain" title="Run creation demo">✨</button>
+
+    <script>
+        (function () {
+            var flow = ['lyrics', 'melody', 'voice', 'mix', 'vision'];
+            var toneSeq = null;
+            var toneSynth = null;
+            var visionAnim = null;
+
+            window.toggleSidebar = function () {
+                var s = document.getElementById('sidebar');
+                s.classList.toggle('open');
+                document.body.classList.toggle('sidebar-open', s.classList.contains('open'));
+            };
+
+            window.openGateway = function (platform) {
+                var u = {
+                    spotify: 'https://open.spotify.com',
+                    apple: 'https://music.apple.com',
+                    tiktok: 'https://www.tiktok.com',
+                    insta: 'https://www.instagram.com',
+                };
+                if (u[platform]) window.open(u[platform], '_blank', 'noopener,noreferrer');
+            };
+
+            window.sidebarHint = function (name) {
+                document.getElementById('flowStatus').textContent = name + ' — imagination only in this stub';
+            };
+
+            function stopTone() {
+                try {
+                    Tone.Transport.stop();
+                    Tone.Transport.cancel(0);
+                } catch (e) { /* ignore */ }
+                if (toneSeq) {
+                    try { toneSeq.dispose(); } catch (e) { /* ignore */ }
+                    toneSeq = null;
+                }
+                if (toneSynth) {
+                    try { toneSynth.dispose(); } catch (e) { /* ignore */ }
+                    toneSynth = null;
+                }
+            }
+
+            function birthMelody() {
+                stopTone();
+                if (typeof Tone === 'undefined') return;
+                toneSynth = new Tone.AMSynth({
+                    harmonicity: 2.8,
+                    oscillator: { type: 'sine' },
+                }).toDestination();
+                var notes = ['C4', 'E4', 'G4', 'B4', 'G4', 'E4'];
+                toneSeq = new Tone.Sequence(
+                    function (time, note) {
+                        toneSynth.triggerAttackRelease(note, '8n', time, 0.45);
+                    },
+                    notes,
+                    '8n',
+                );
+                Tone.Transport.bpm.value = 82;
+                toneSeq.start(0);
+                Tone.Transport.start();
+            }
+
+            function paintVisionCanvas() {
+                var c = document.getElementById('videoCanvas');
+                if (!c || !c.getContext) return;
+                var ctx = c.getContext('2d');
+                var t0 = performance.now();
+                if (visionAnim) cancelAnimationFrame(visionAnim);
+                function frame(now) {
+                    var t = (now - t0) / 1000;
+                    ctx.fillStyle = '#0f0f23';
+                    ctx.fillRect(0, 0, c.width, c.height);
+                    for (var i = 0; i < 5; i++) {
+                        var r = 40 + 20 * Math.sin(t * 1.2 + i);
+                        ctx.beginPath();
+                        ctx.arc(
+                            c.width * (0.2 + i * 0.15),
+                            c.height * 0.5 + 40 * Math.sin(t + i),
+                            r,
+                            0,
+                            Math.PI * 2,
+                        );
+                        ctx.fillStyle = 'rgba(255,183,77,' + (0.12 + 0.06 * i) + ')';
+                        ctx.fill();
+                    }
+                    visionAnim = requestAnimationFrame(frame);
+                }
+                visionAnim = requestAnimationFrame(frame);
+            }
+
+            function runFlowStep(spirit, lyrics) {
+                switch (spirit) {
+                    case 'lyrics':
+                        console.log('Lyrics length:', (lyrics || '').length);
+                        break;
+                    case 'melody':
+                        birthMelody();
+                        break;
+                    case 'voice':
+                        stopTone();
+                        console.log('Voice — plug your vocal chain here');
+                        break;
+                    case 'mix':
+                        stopTone();
+                        console.log('Mix — bus glue is backend work');
+                        break;
+                    case 'vision':
+                        paintVisionCanvas();
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            window.birthMasterpiece = async function () {
+                var lyrics = document.getElementById('lyricsInput').value.trim();
+                if (!lyrics) {
+                    var pi = document.querySelector('.pure-input');
+                    if (pi) {
+                        pi.style.borderColor = 'rgba(255,183,77,0.7)';
+                        setTimeout(function () {
+                            pi.style.borderColor = 'rgba(255,255,255,0.12)';
+                        }, 1600);
+                    }
+                    return;
+                }
+
+                var fab = document.getElementById('fabMain');
+                fab.textContent = '…';
+                var steps = document.querySelectorAll('.flow-step');
+                for (var i = 0; i < flow.length; i++) {
+                    document.getElementById('flowStatus').textContent = flow[i];
+                    steps.forEach(function (el, j) {
+                        el.classList.toggle('active', j === i);
+                    });
+                    runFlowStep(flow[i], lyrics);
+                    await new Promise(function (r) {
+                        return setTimeout(r, 900 + Math.random() * 400);
+                    });
+                }
+                fab.textContent = '✨';
+            };
+
+            document.getElementById('fabMain').addEventListener('click', function () {
+                birthMasterpiece();
+            });
+
+            window.addEventListener('beforeunload', function () {
+                stopTone();
+                if (visionAnim) cancelAnimationFrame(visionAnim);
+            });
+        })();
+    </script>
+</body>
+</html>
