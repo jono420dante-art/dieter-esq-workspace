@@ -1,5 +1,5 @@
 {
-  "name": "dieter-esq",
+  "name": "ed-geerdes-studio",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -11,7 +11,7 @@
     "lint": "eslint .",
     "preview": "npx vite preview",
     "deploy": "node scripts/deploy-cloudflare.mjs",
-    "deploy:raw": "npm run build && npx wrangler pages deploy dist --project-name=dieter-esq"
+    "deploy:raw": "npm run build && npx wrangler pages deploy dist --project-name=ed-geerdes"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^6.0.1",

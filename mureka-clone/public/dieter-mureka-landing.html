@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dieter Esq. · AI Music Generator</title>
+  <title>ED-GEERDES · AI Music Generator</title>
   <!-- Same-origin: /api. Override: ?api=https://YOUR_HOST/api -->
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -171,12 +171,12 @@
 <body>
   <section class="hero">
     <div class="hero-inner">
-      <div class="logo">Dieter Esq.</div>
+      <div class="logo">ED-GEERDES</div>
       <h1 class="tagline">Create unique melodies from one prompt. Studio-quality AI music in seconds—royalty-free for your tracks.</h1>
       <p class="api-line" id="apiLine"></p>
       <div class="prompt-container">
         <label class="field-label" for="murekaKey">Mureka API key (stored in this browser only)</label>
-        <input type="password" id="murekaKey" class="key-input" placeholder="Paste key — sent to your Dieter /api proxy, not to us" autocomplete="off">
+        <input type="password" id="murekaKey" class="key-input" placeholder="Paste key — sent to your ED-GEERDES /api proxy, not to us" autocomplete="off">
         <input type="text" id="promptInput" class="prompt-input" placeholder="e.g. upbeat electronic with synth leads, Daft Punk energy, 128 BPM" maxlength="500">
         <div class="controls">
           <select id="selGenre" aria-label="Genre">
@@ -218,7 +218,7 @@
     <div class="feature-card">
       <div class="feature-icon">GEN</div>
       <h3>Song generator</h3>
-      <p>Full tracks with vocals and arrangement from a text prompt, via Mureka through Dieter&rsquo;s API proxy.</p>
+      <p>Full tracks with vocals and arrangement from a text prompt, via Mureka through ED-GEERDES&rsquo;s API proxy.</p>
     </div>
     <div class="feature-card">
       <div class="feature-icon">INS</div>
@@ -272,7 +272,7 @@
         var m = document.getElementById('selMood').value;
         var t = document.getElementById('selTempo').value;
         var v = document.getElementById('selVocal').value;
-        var parts = ['Title: Dieter Esq. session', 'Style: ' + (g === 'all' ? 'modern pop/electronic' : g), 'Mood: ' + m, 'Target tempo: ~' + t + ' BPM'];
+        var parts = ['Title: ED-GEERDES session', 'Style: ' + (g === 'all' ? 'modern pop/electronic' : g), 'Mood: ' + m, 'Target tempo: ~' + t + ' BPM'];
         if (v === 'none') {
           parts.push('Instrumental only — no lead vocal.');
         } else {

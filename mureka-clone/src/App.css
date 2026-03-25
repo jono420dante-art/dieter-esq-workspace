@@ -354,6 +354,17 @@ textarea {
   color: #f5f3ff;
   text-shadow: 0 2px 16px rgba(0, 0, 0, 0.85);
 }
+
+.local-mureka-hint {
+  margin: 0 0 1rem;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: #e0e7ff;
+  background: rgba(99, 102, 241, 0.18);
+  border: 1px solid rgba(129, 140, 248, 0.35);
+  border-radius: 10px;
+}
 .local-studio .field-hint {
   color: #cbd5e1;
   background: rgba(0, 0, 0, 0.4);

@@ -1,4 +1,6 @@
-# Dieter Esq. — Vercel (frontend) + Railway (backend)
+# ED-GEERDES — Vercel (frontend) + Railway (backend)
+
+Studio product name: **ED-GEERDES**. Vercel project: link this repo with **Root Directory** = repo root (root `vercel.json` builds `mureka-clone`). Rename or alias the Vercel project to **ed-geerdes** if you want `ed-geerdes.vercel.app`. CI: `.github/workflows/vercel-production.yml` (set `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`).
 
 One **GitHub** repository should contain both **`mureka-clone/`** (React) and **`dieter-backend/`** (FastAPI). That matches this workspace layout and the root **`railway.toml`** / **`Dockerfile`** (full stack on one host).
 

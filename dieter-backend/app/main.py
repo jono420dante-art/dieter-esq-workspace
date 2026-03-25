@@ -168,7 +168,7 @@ _STATIC_INDEX = BASE_DIR / "static" / "index.html"
 _SERVE_SPA = _STATIC_INDEX.is_file()
 
 app = FastAPI(
-    title="DIETER API",
+    title="ED-GEERDES API",
     version="0.1.0",
     docs_url=None if _SERVE_SPA else "/docs",
     redoc_url=None if _SERVE_SPA else "/redoc",

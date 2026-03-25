@@ -1,5 +1,5 @@
 /**
- * Resolve Dieter FastAPI URLs when the UI is on a different host than the API
+ * Resolve ED-GEERDES FastAPI URLs when the UI is on a different host than the API
  * (e.g. Cloudflare Pages + Railway).
  */
 
@@ -39,7 +39,7 @@ export async function parseFetchJson(response) {
   if (!response.ok) {
     const methodHint =
       response.status === 405
-        ? ' Wrong HTTP method for this path (many Dieter routes require POST, not GET).'
+        ? ' Wrong HTTP method for this path (many API routes require POST, not GET).'
         : ''
     let detail = trimmed || '(empty response body)'
     if (trimmed) {

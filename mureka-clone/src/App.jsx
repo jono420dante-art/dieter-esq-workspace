@@ -11,6 +11,7 @@ import { dieterInitialApiBase, dieterUseTrpc, audioCrossOriginForSrc } from './d
 import { extractAudioUrl } from './murekaHelpers.js'
 import { useBeatVisualizer } from './useBeatVisualizer.js'
 import { getStudioOutboundLinks } from './studioLinks.js'
+import { STUDIO_NAME, STUDIO_SLUG } from './studioBrand.js'
 
 const DEFAULT_BASE = import.meta.env.VITE_API_BASE || '/api'
 const USE_TRPC = dieterUseTrpc()
@@ -349,7 +350,7 @@ export default function App() {
       const u = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = u
-      a.download = 'dieter-esq-visual.webm'
+      a.download = `${STUDIO_SLUG}-visual.webm`
       a.click()
       URL.revokeObjectURL(u)
     }
@@ -371,14 +372,14 @@ export default function App() {
         <nav className="nav-main">
           <strong>
             {appMode === 'create'
-              ? 'Dieter Esq. · Create'
+              ? `${STUDIO_NAME} · Create`
               : appMode === 'local'
-                ? 'Dieter Esq. · Local'
+                ? `${STUDIO_NAME} · Local`
                 : appMode === 'beatlab'
-                  ? 'Dieter Esq. · Beat lab'
+                  ? `${STUDIO_NAME} · Beat lab`
                   : appMode === 'voicestudio'
-                    ? 'Dieter Esq. · Voice'
-                    : 'Dieter Esq. · Cloud'}
+                    ? `${STUDIO_NAME} · Voice`
+                    : `${STUDIO_NAME} · Cloud`}
           </strong>
         </nav>
         <div className="user-actions" style={{ flexWrap: 'wrap', gap: 8 }}>
@@ -449,9 +450,9 @@ export default function App() {
               <br />
               <strong>Production (full app)</strong>: deploy the <strong>single Docker image</strong> (
               <code>dieter-backend/Dockerfile</code> from repo root). Open your host URL — UI and <code>/api</code> are
-              the same origin (see <code>DIETER_ESQ_START.md</code> in the repo). Only if you host the UI separately
+              the same origin. Only if you host the UI separately
               (e.g. Vercel + Railway) set <code>VITE_API_BASE</code> and optional <code>DIETER_CORS_ORIGINS</code> on
-              the API — see <code>DEPLOY_VERCEL_RAILWAY.md</code> in the repo root.
+              the API — see <code>DEPLOY_VERCEL_RAILWAY.md</code> (ED-GEERDES / Vercel).
               <br />
               <strong>OpenAI</strong> (optional): set <code>OPENAI_API_KEY</code> on the FastAPI server for AI lyrics;
               or paste a key here to pass through to the backend. Generate/Optimize call FastAPI via tRPC (or{' '}

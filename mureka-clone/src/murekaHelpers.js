@@ -1,3 +1,5 @@
+import { STUDIO_NAME } from './studioBrand.js'
+
 /** Shared Mureka response parsing (matches App.jsx). */
 export function extractAudioUrl(obj, depth = 0) {
   if (!obj || depth > 12) return null
@@ -25,7 +27,7 @@ export function buildLandingMurekaPrompt({ genre, mood, tempoBpm, vocal, userPro
   const style =
     genre === 'all' ? 'Modern pop / electronic crossover' : `${genre} production`
   const chunks = []
-  chunks.push(`Title: Dieter Esq. session`)
+  chunks.push(`Title: ${STUDIO_NAME} session`)
   chunks.push(`Musical style / production: ${style}`)
   chunks.push(`Mood: ${mood}`)
   chunks.push(`Target tempo: ~${tempoBpm} BPM`)

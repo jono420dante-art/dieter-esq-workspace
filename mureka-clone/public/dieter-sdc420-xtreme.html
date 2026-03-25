@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Dieter Esq. · SDC420 XTREME</title>
+    <title>ED-GEERDES · SDC420 XTREME</title>
     <style>
         :root {
             --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
@@ -344,7 +344,7 @@
 
     <div class="app-container">
         <header class="header">
-            <div class="logo-main">Dieter Esq. · SDC420 XTREME</div>
+            <div class="logo-main">ED-GEERDES · SDC420 XTREME</div>
             <div class="status-bar">
                 <span id="bpmDisplay">120 BPM</span>
                 <span id="keyDisplay">Cm</span>
@@ -741,7 +741,7 @@
             const blob = await audioRes.blob();
             if (appState.masterBlobUrl) URL.revokeObjectURL(appState.masterBlobUrl);
             appState.masterBlobUrl = URL.createObjectURL(blob);
-            appState._masterDownloadName = 'dieter-esq-sdc420-xtreme-master.mp3';
+            appState._masterDownloadName = 'ed-geerdes-sdc420-xtreme-master.mp3';
             document.getElementById('masterPreview').src = appState.masterBlobUrl;
         }
 
@@ -795,12 +795,12 @@
             if (!appState.masterBlobUrl) return;
             const a = document.createElement('a');
             a.href = appState.masterBlobUrl;
-            a.download = appState._masterDownloadName || 'dieter-esq-master.mp3';
+            a.download = appState._masterDownloadName || 'ed-geerdes-master.mp3';
             a.click();
         }
 
         function shareStub() {
-            const t = `Dieter Esq. · ${appState.bpm} BPM · ${appState.tracks.length} tracks`;
+            const t = `ED-GEERDES · ${appState.bpm} BPM · ${appState.tracks.length} tracks`;
             navigator.clipboard.writeText(t).then(
                 () => alert('Copied: ' + t),
                 () => prompt('Copy:', t),
@@ -846,7 +846,7 @@
         }
 
         function exportVideo() {
-            alert('Use MediaRecorder + canvas.captureStream() in your app to export WebM, or the Dieter Esq. React visual export.');
+            alert('Use MediaRecorder + canvas.captureStream() in your app to export WebM, or the ED-GEERDES React visual export.');
         }
 
         function renderVideoFrame() {

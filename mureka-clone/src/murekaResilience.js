@@ -1,5 +1,5 @@
 /**
- * Retries and backoff for Dieter → FastAPI → Mureka (gateway path).
+ * Retries and backoff for ED-GEERDES FastAPI → Mureka (gateway path).
  * Never put API keys in source — use Connections, .env.local, or server MUREKA_API_KEY.
  */
 

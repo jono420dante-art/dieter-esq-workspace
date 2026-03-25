@@ -7,11 +7,12 @@ import { BUILT_IN_PRESETS } from './offlinePresets.js'
 import { useBeatVisualizer } from './useBeatVisualizer.js'
 import { isTransientMurekaError, sleep, withMurekaRetries } from './murekaResilience.js'
 import './MurekaPromptStudio.css'
+import { STUDIO_NAME } from './studioBrand.js'
 
 const USE_TRPC = dieterUseTrpc()
 
 /**
- * Mureka-style hero: one prompt + controls → same Dieter pipeline as Cloud tab (tRPC or REST).
+ * Mureka-style hero: one prompt + controls → same pipeline as Cloud tab (tRPC or REST).
  */
 export default function MurekaPromptStudio({ apiBase, apiKey, onOpenKeys, onStudioPulse, onGoLocalWithLyrics }) {
   const [userPrompt, setUserPrompt] = useState('')
@@ -186,11 +187,10 @@ export default function MurekaPromptStudio({ apiBase, apiKey, onOpenKeys, onStud
     <div className="mps-page">
       <div className="mps-noise" aria-hidden />
       <div className="mps-hero">
-        <div className="mps-logo">Dieter Esq.</div>
+        <div className="mps-logo">{STUDIO_NAME}</div>
         <p className="mps-tagline">
-          Create from a prompt: <strong>browser previews</strong> need no account; <strong>your lyrics + a beat</strong>{' '}
-          use the Local lab (Dieter API, no Mureka key). Optional <strong>Mureka</strong> cloud runs when you add a key
-          in Connections.
+          <strong>Mureka cloud</strong> gives you real AI vocals and full tracks when you add a key in Connections. The{' '}
+          <strong>Local</strong> tab is an offline beat + placeholder-vocal lab (no Mureka account on that path).
         </p>
         <div className="mps-api-pill" title="REST base; tRPC uses /trpc when enabled">
           API {USE_TRPC ? '· tRPC + ' : '· '}
@@ -199,9 +199,10 @@ export default function MurekaPromptStudio({ apiBase, apiKey, onOpenKeys, onStud
 
         {apiHealth === false && (
           <p className="mps-status mps-banner mps-banner--warn" role="status">
-            API offline — <strong>built-in studio below</strong> still works (synthesized, royalty-free previews). To use
-            Mureka cloud, set <strong>VITE_API_BASE</strong> on Vercel or open <strong>Connections</strong> / deploy the
-            Docker app (see <code>DIETER_ESQ_START.md</code>).
+            API offline — connect your <strong>{STUDIO_NAME}</strong> API (<strong>VITE_API_BASE</strong> or same-origin
+            Docker) for{' '}
+            <strong>Mureka</strong> proxy and Voice studio. Until then, use <strong>Local</strong> only for offline
+            previews.
           </p>
         )}
 
@@ -210,7 +211,7 @@ export default function MurekaPromptStudio({ apiBase, apiKey, onOpenKeys, onStud
           <p className="mps-local-bridge-hint">
             Paste your lines in the <strong>Prompt</strong> field below (or describe the vibe — your words still seed the
             Local mix). Then open the <strong>Local</strong> tab: drop a beat, press <strong>Make Song</strong> — vocal +
-            mix run on your Dieter backend (<code>/api</code>), not Mureka.
+            mix run on your API host (<code>/api</code>), not Mureka.
           </p>
           <button
             type="button"
@@ -289,7 +290,7 @@ export default function MurekaPromptStudio({ apiBase, apiKey, onOpenKeys, onStud
                   mood,
                   tempoBpm: tempo,
                   vocal,
-                  userPrompt: userPrompt.trim() || 'Dieter session',
+                  userPrompt: userPrompt.trim() || `${STUDIO_NAME} session`,
                 })
                 setPlayerUrl(url)
                 setStatus('Ready — press play.')
@@ -399,7 +400,10 @@ export default function MurekaPromptStudio({ apiBase, apiKey, onOpenKeys, onStud
         <div className="mps-fcard">
           <div className="mps-ficon">SONG</div>
           <h3>Full tracks</h3>
-          <p>Mureka generates arrangement and vocals (unless instrumental) — routed through Dieter so your key never hits a random domain.</p>
+          <p>
+            Mureka generates arrangement and vocals (unless instrumental) — routed through {STUDIO_NAME} so your key
+            never hits a random domain.
+          </p>
         </div>
         <div className="mps-fcard">
           <div className="mps-ficon">BEAT</div>

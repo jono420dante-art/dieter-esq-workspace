@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { absoluteFromApiPath, normalizeApiRoot, storageUrlFromKey } from './apiResolve.js'
 import { audioCrossOriginForSrc } from './dieterClientConfig.js'
+import { STUDIO_NAME } from './studioBrand.js'
 
 /** Voice presets for local procedural layer (swap for RVC profile later). */
 const VOICE_CHOICES = [
@@ -28,7 +29,7 @@ async function parseApiError(res) {
   return t || res.statusText || `HTTP ${res.status}`
 }
 
-/** Offline: librosa (+ optional madmom) beat detect, FFmpeg mix/tempo, procedural vocal stem. No Mureka/OpenAI. */
+/** Offline: librosa beat detect, FFmpeg mix, procedural placeholder vocal. For real AI vocals use Create / Voice tabs + Mureka. */
 export default function LocalStudio({ apiBase }) {
   const base = normalizeApiRoot(apiBase || '/api')
   const [busy, setBusy] = useState(false)
@@ -345,11 +346,15 @@ export default function LocalStudio({ apiBase }) {
 
   return (
     <section className="local-studio">
-      <h2 className="local-studio-title">Dieter Esq. · Local lab</h2>
+      <h2 className="local-studio-title">{STUDIO_NAME} · Local lab</h2>
+      <p className="local-mureka-hint" role="note">
+        Want <strong>real AI vocals</strong>? Use the <strong>Create</strong> or <strong>Voice studio</strong> tab with{' '}
+        <strong>Mureka</strong> (API key in Connections or <code>MUREKA_API_KEY</code> on the server).
+      </p>
       {apiHealth === 'fail' && (
         <div className="local-api-banner local-api-banner--bad" role="status">
           <p className="local-api-banner-text">
-            <strong>Cannot reach the Dieter API.</strong> The UI talks to your machine through the Vite proxy (
+            <strong>Cannot reach the {STUDIO_NAME} API.</strong> The UI talks to your machine through the Vite proxy (
             <code>/api</code> → port <strong>8787</strong> by default). Start the backend from{' '}
             <code>dieter-backend</code>:{' '}
             <code className="local-api-cmd">uvicorn app.main:app --reload --host 127.0.0.1 --port 8787</code>

@@ -57,6 +57,6 @@ function run(cmd, args) {
 }
 
 run('npm', ['run', 'build'])
-run('npx', ['wrangler', 'pages', 'deploy', 'dist', '--project-name=dieter-esq'])
+run('npx', ['wrangler', 'pages', 'deploy', 'dist', '--project-name=ed-geerdes'])
 
 console.log('\nDeploy finished. Check Cloudflare Pages for the project URL.\n')

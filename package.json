@@ -1,10 +1,11 @@
 {
-  "name": "dieter-repo",
+  "name": "ed-geerdes-workspace",
   "private": true,
-  "description": "Root scripts only (no deps). Frontend lives in mureka-clone/.",
+  "description": "ED-GEERDES studio — monorepo: mureka-clone (Vite) + dieter-backend (FastAPI).",
   "scripts": {
+    "build": "node scripts/build-frontend-to-backend.mjs",
     "build:backend": "node scripts/build-frontend-to-backend.mjs",
-    "deploy:vercel": "npx vercel deploy --prod",
-    "deploy:vercel:preview": "npx vercel deploy"
+    "deploy:vercel": "npx vercel deploy --prod --yes",
+    "deploy:vercel:preview": "npx vercel deploy --yes"
   }
 }

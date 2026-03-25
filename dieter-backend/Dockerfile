@@ -35,6 +35,8 @@ RUN pip install -r /app/requirements.txt
 
 COPY dieter-backend/app /app/app
 COPY dieter-backend/beat_analysis.py /app/beat_analysis.py
+COPY dieter-backend/audio_pro.py /app/audio_pro.py
+COPY dieter-backend/mureka_sync.py /app/mureka_sync.py
 COPY dieter-backend/voice_clone_pipeline.py /app/voice_clone_pipeline.py
 COPY dieter-backend/scripts /app/scripts
 
