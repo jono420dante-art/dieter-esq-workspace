@@ -362,7 +362,7 @@
         <div class="hero">
             <h1 class="logo-sdc420" role="banner">Dieter Esq. · SDC420</h1>
             <p class="subtitle">
-                AI music production · Voice presets · Beat upload · Browser BPM estimate · Demo master chain
+                AI music production · Voice presets · Beat upload · Browser BPM estimate · Full master via gateway (?api=…)
             </p>
             <p class="api-hint" style="margin-top:10px;font-size:0.8rem;opacity:0.65;max-width:40rem;margin-left:auto;margin-right:auto;">
                 Connect the stack: <code style="font-size:0.85em;">?api=http://127.0.0.1:8000/api</code> (or your FastAPI port; Vite dev proxies <code style="font-size:0.85em;">/api</code> → 8000).
@@ -780,7 +780,7 @@
                 if (!state.masterBlobUrl) return;
                 const a = document.createElement('a');
                 a.href = state.masterBlobUrl;
-                a.download = state._masterDownloadName || 'dieter-esq-sdc420-demo.wav';
+                a.download = state._masterDownloadName || 'dieter-esq-sdc420-preview.wav';
                 a.click();
             });
             document.getElementById('shareBtn').addEventListener('click', async () => {
@@ -840,14 +840,14 @@
                     return;
                 } catch (err) {
                     const msg = err && err.message ? err.message : String(err);
-                    statusEl.textContent = 'API error: ' + msg + ' · Check server or remove ?api= for local demo.';
+                    statusEl.textContent = 'API error: ' + msg + ' · Check gateway URL or run without ?api= for offline preview only.';
                     btn.textContent = 'Create master';
                     btn.disabled = false;
                     return;
                 }
             }
 
-            state._masterDownloadName = 'dieter-esq-sdc420-demo.wav';
+            state._masterDownloadName = 'dieter-esq-sdc420-preview.wav';
             await new Promise((r) => setTimeout(r, 2500));
 
             const ctx = new AudioContext();
@@ -876,7 +876,7 @@
             state.masterBlobUrl = URL.createObjectURL(blob);
             document.getElementById('previewPlayer').src = state.masterBlobUrl;
 
-            statusEl.textContent = 'Master preview ready (demo tone). Add ?api=… for the Dieter pipeline (see hint above).';
+            statusEl.textContent = 'Offline browser preview only. Add ?api=https://your-host/api for Mureka + FFmpeg mastering.';
             btn.textContent = 'New master';
             btn.disabled = false;
             document.getElementById('downloadBtn').disabled = false;

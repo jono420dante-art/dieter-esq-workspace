@@ -1,12 +1,18 @@
-# DIETER Backend (real)
+# Mureka Clone V2 (Vite + React)
 
-This is the real backend API for DIETER (jobs, storage, WAV generation).
+Standalone **frontend** for the Dieter / Mureka studio: Create, Local pipeline, Beat lab, Voice, V5, Cover. Point it at any deployed FastAPI with **`VITE_API_BASE`**.
+
+## Own GitHub repository (this folder alone)
+
+You can host **only** this project in a separate repo — see **`STANDALONE_GITHUB.md`** (`git init`, Vercel root = `.`, optional sibling `dieter-backend` for `npm run build:backend`).
+
+**Alternative:** keep **`mureka-clone`** inside the monorepo with **`dieter-backend`** (see **`DIETER_ESQ_START.md`** and **`DEPLOY_VERCEL_RAILWAY.md`** at the parent repository root).
 
 ## Lyrics and poems without a Mureka key
 
-Use the **Local** tab in the Vite app: paste lines, drop a beat file, **Make Song** (Dieter API only). On **Create**, use **Open Local lab with my lyrics** to send your prompt text to Local. Mureka is optional for cloud tracks.
+Use the **Local** tab: paste lines, drop a beat file, **Make Song** (Dieter API only). On **Create**, use **Open Local lab with my lyrics** to send your prompt text to Local. Mureka is optional for cloud tracks.
 
-**GitHub + Vercel + Railway:** keep **`mureka-clone`** and **`dieter-backend`** in one repo (see **`DIETER_ESQ_START.md`** and **`DEPLOY_VERCEL_RAILWAY.md`** at the repository root).
+**Deploy UI:** Vercel / Cloudflare Pages — set **`VITE_API_BASE=https://YOUR_API_HOST/api`**. **Deploy API:** Railway / Render / Docker using the **`dieter-backend`** project (separate repo or same monorepo).
 
 ## Production (Gunicorn + static UI)
 

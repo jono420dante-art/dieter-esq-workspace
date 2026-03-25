@@ -21,6 +21,11 @@ function looksLikeLocalDevApi(s) {
  * If the user saved another real https API in Connections, that still wins over env when sensible.
  */
 export function dieterInitialApiBase() {
+  if (typeof window !== 'undefined' && localStorage.getItem('dieter_prioritize_my_gateway') === '1') {
+    const mine = localStorage.getItem('dieter_my_gateway_url')?.trim()
+    if (mine) return normalizeApiRoot(mine)
+  }
+
   const envRaw = (import.meta.env.VITE_API_BASE || '').trim()
   const envNorm = envRaw ? normalizeApiRoot(envRaw) : ''
   const isProd = import.meta.env.PROD
@@ -41,6 +46,10 @@ export function dieterInitialApiBase() {
   }
   if (envNorm) {
     return envNorm
+  }
+  const bakedGateway = (import.meta.env.VITE_MY_GATEWAY_URL || '').trim()
+  if (bakedGateway) {
+    return normalizeApiRoot(bakedGateway)
   }
   return normalizeApiRoot('/api')
 }

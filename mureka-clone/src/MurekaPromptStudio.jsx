@@ -6,7 +6,7 @@ import { dieterUseTrpc, audioCrossOriginForSrc } from './dieterClientConfig.js'
 import { useBeatVisualizer } from './useBeatVisualizer.js'
 import { isTransientMurekaError, sleep, withMurekaRetries } from './murekaResilience.js'
 import './MurekaPromptStudio.css'
-import { STUDIO_NAME } from './studioBrand.js'
+import { STUDIO_NAME, MUREKA_CLONE_LABEL } from './studioBrand.js'
 
 const USE_TRPC = dieterUseTrpc()
 
@@ -14,7 +14,7 @@ const USE_TRPC = dieterUseTrpc()
  * Create tab: ordered gateway — Connections → prompt/controls → Mureka (cloud AI).
  * Audio is produced by Mureka via {STUDIO_NAME} FastAPI proxy, not in-browser synthesis.
  */
-export default function MurekaPromptStudio({ apiBase, apiKey, onOpenKeys, onStudioPulse, onGoLocalWithLyrics }) {
+export default function MurekaPromptStudio({ apiBase, apiKey, onOpenKeys, onStudioPulse, onGoLocalWithLyrics, onSongReady }) {
   const [userPrompt, setUserPrompt] = useState('')
   const [genre, setGenre] = useState('all')
   const [mood, setMood] = useState('happy')
@@ -137,6 +137,7 @@ export default function MurekaPromptStudio({ apiBase, apiKey, onOpenKeys, onStud
         const url = extractAudioUrl(qj)
         if (url) {
           setAudioUrl(url)
+          onSongReady?.({ url, lyrics: lyricPayload, title: 'Mureka create' })
           void postStudioGrowth(apiBase, 'mureka_song_ready', taskId)
           const g = await fetchStudioGrowth(apiBase)
           if (g && onStudioPulse) onStudioPulse(g)
@@ -161,6 +162,9 @@ export default function MurekaPromptStudio({ apiBase, apiKey, onOpenKeys, onStud
       <div className="mps-noise" aria-hidden />
       <div className="mps-hero">
         <div className="mps-logo">{STUDIO_NAME}</div>
+        <div className="mps-build-pill" title="This Vite bundle / product line">
+          {MUREKA_CLONE_LABEL}
+        </div>
         <p className="mps-tagline">
           <strong>AI music gateway</strong> — this app routes your prompts to <strong>Mureka</strong> through the{' '}
           {STUDIO_NAME} API (<code>/api/mureka/*</code>): one portal for authentication, retries, and same-origin speed

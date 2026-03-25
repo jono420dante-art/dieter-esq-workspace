@@ -48,6 +48,7 @@ from .local_pipeline import (
 )
 from .cover_pipeline import decode_to_wav, mix_parallel, render_cover_two_takes
 from .suno_mureka_mix import build_suno_mureka_mix, preset_summary
+from .vocal_analysis import analyze_vocal_audio_bytes
 
 import librosa
 
@@ -201,6 +202,38 @@ app.include_router(beat_lab_router, prefix="/api")
 @app.get("/api/health")
 def health() -> dict[str, Any]:
     return {"ok": True, "time": time.time()}
+
+
+_VOCAL_ANALYZE_MAX_BYTES = int(os.environ.get("DIETER_VOCAL_ANALYZE_MAX_MB", "32")) * 1024 * 1024
+
+
+@app.post("/api/vocal/analyze")
+async def api_vocal_analyze(file: UploadFile = File(...)) -> dict[str, Any]:
+    """Extract spectral, MFCC, RMS, and F0 stats from a vocal clip (wav/mp3/etc. via librosa).
+
+    Use the JSON for **dataset labels** or conditioning; generation quality for end users still comes from
+    cloud models (e.g. Mureka) wired through this gateway. See ``docs/VOCAL_ENGINE_AND_TRAINING.md``.
+    """
+    raw = await file.read()
+    if len(raw) > _VOCAL_ANALYZE_MAX_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"file too large (max {_VOCAL_ANALYZE_MAX_BYTES // (1024 * 1024]} MiB)",
+        )
+    if len(raw) < 64:
+        raise HTTPException(status_code=400, detail="empty upload")
+    try:
+        features = analyze_vocal_audio_bytes(raw)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.exception("vocal analyze failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    return {
+        "engine": "dieter_librosa_vocal_stats_v1",
+        "filename": file.filename,
+        "features": features,
+    }
 
 
 def _default_studio_growth() -> dict[str, Any]:

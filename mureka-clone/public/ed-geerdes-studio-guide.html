@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ED-GEERDES Studio guide (ships with this build)</title>
+  <style>
+    :root {
+      --bg: #0c0c14;
+      --card: #14141f;
+      --text: #e8e6f0;
+      --muted: #9b95b0;
+      --accent: #c4b5fd;
+      --line: rgba(196, 181, 253, 0.25);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 28px 20px 60px;
+      max-width: 46rem;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    h1 { font-size: 1.45rem; margin: 0 0 12px; letter-spacing: -0.02em; }
+    .meta { color: var(--muted); font-size: 0.9rem; margin-bottom: 28px; }
+    h2 { font-size: 1.08rem; margin: 28px 0 10px; color: var(--accent); }
+    p, li { color: var(--muted); font-size: 0.95rem; }
+    a { color: #a78bfa; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin: 16px 0;
+    }
+    code, pre {
+      font-family: ui-monospace, monospace;
+      font-size: 0.82rem;
+      background: rgba(0,0,0,0.35);
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+    pre {
+      padding: 12px 14px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+    ul { padding-left: 1.2rem; }
+    .download-hint {
+      border-left: 3px solid #a78bfa;
+      padding-left: 14px;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>ED-GEERDES — Studio guide</h1>
+  <p class="meta">This file lives in <code>public/</code> and is copied into production builds (Vercel, Docker static, etc.). No network required to read it after deploy.</p>
+
+  <div class="download-hint">
+    <strong>Keep a copy:</strong> use your browser’s <em>File → Save Page As…</em> (or Print → Save as PDF). Same content ships at <code>/ed-geerdes-studio-guide.html</code> on your host.
+  </div>
+
+  <div class="card">
+    <h2>Time &amp; session</h2>
+    <p>The React app header shows <strong>local wall clock</strong> and a <strong>session timer</strong> (time since this browser tab loaded). Refresh resets the session — use it as a light sense of how long you’ve been working. Audio players show <strong>elapsed · duration</strong> under Play / Pause / Stop.</p>
+  </div>
+
+  <div class="card">
+    <h2>Playback — Play, Pause, Stop</h2>
+    <p><strong>Play</strong> starts or resumes. <strong>Pause</strong> freezes at the current position. <strong>Stop</strong> pauses and jumps back to the start (0:00). The browser’s native audio bar is still there for scrubbing and volume on most screens.</p>
+  </div>
+
+  <div class="card">
+    <h2>Your own gateway (auto-connect)</h2>
+    <p>Open <strong>API keys &amp; sync</strong> in the sidebar (Connections modal). Use <strong>My gateway URL</strong> with your full API base, e.g.:</p>
+    <pre>https://your-service.up.railway.app/api</pre>
+    <p>Check <strong>Always connect with this gateway in this browser</strong> and Save. On the next full page load, that URL wins before other saved bases — no rebuild needed.</p>
+    <p>Optional build-time default (one URL baked into the bundle for teams): set <code>VITE_MY_GATEWAY_URL</code> in <code>.env</code> / hosting env, then rebuild. Priority order is documented in <code>src/dieterClientConfig.js</code>.</p>
+  </div>
+
+  <div class="card">
+    <h2>Split deploy (Vercel + Railway)</h2>
+    <p>If <code>/api/health</code> returns HTML or errors, see the repo file <code>DEPLOY_VERCEL_RAILWAY.md</code>: <code>DIETER_API_ORIGIN</code>, <code>VITE_API_BASE</code>, and CORS on the API.</p>
+  </div>
+
+  <div class="card">
+    <h2>Voice studio · saves</h2>
+    <p>Successful Mureka renders are listed under <strong>Your library · this browser</strong> (localStorage). Use <strong>Full song on Mureka</strong> with lyrics + API key to test without uploading a beat; use <strong>Mix: Mureka vocals + your beat</strong> when the backend exposes <code>/api/pure-song-mureka</code>.</p>
+  </div>
+
+  <div class="card">
+    <h2>Cover lab</h2>
+    <p>Instrument cover keeps timing from your stem. Defaults: cover layer about <strong>−6 dB</strong>, blend <strong>30%</strong> with the original — adjust before generating. Generation uses <code>POST /api/cover/generate</code> (multipart file).</p>
+  </div>
+
+  <p style="margin-top:32px;font-size:0.85rem;color:var(--muted);">ED-GEERDES / mureka-clone · static reference only — behavior matches the app version you built.</p>
+</body>
+</html>

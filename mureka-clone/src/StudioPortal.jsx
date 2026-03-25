@@ -58,16 +58,33 @@ export default function StudioPortal({ apiBase, onOpenKeys, onNavigateMode }) {
   return (
     <main className="main main-portal">
       <div className="portal-hero">
-        <h1 className="portal-title">Welcome in</h1>
+        <h1 className="portal-title">Showroom</h1>
         <p className="portal-lead">
-          <strong>{STUDIO_NAME}</strong> is your lane from idea to sound — this page is the front door: check that your
-          studio is awake, nudge Mureka when you’re ready, jump to the showroom. Sidebar picks the room;{' '}
+          <strong>{STUDIO_NAME}</strong> quick-launch room: less reading, more doing. Pick a lane below and start.
           <button type="button" className="portal-inline-btn" onClick={onOpenKeys}>
             API keys
-          </button>{' '}
-          is where the pipes connect.
+          </button>
+          .
         </p>
       </div>
+
+      <section className="portal-card">
+        <h2>Do it now</h2>
+        <div className="row">
+          <button type="button" className="primary" onClick={() => onNavigateMode('create')}>
+            Create song
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => onNavigateMode('v5')}>
+            V5 long track
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => onNavigateMode('cover')}>
+            Cover a stem
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => onNavigateMode('voicestudio')}>
+            Voice studio
+          </button>
+        </div>
+      </section>
 
       <section className="portal-card">
         <h2>Is everything humming?</h2>
@@ -199,16 +216,19 @@ export default function StudioPortal({ apiBase, onOpenKeys, onNavigateMode }) {
       </section>
 
       <section className="portal-card">
-        <h2>Hop somewhere fun</h2>
+        <h2>Mini tutorial</h2>
         <ul className="portal-links">
           <li>
-            <a href={staticShowroomHref}>Showroom</a> — marketplace, discovery story, toys.
+            <strong>Create:</strong> write prompt → pick mood/tempo → Generate.
           </li>
           <li>
-            <a href="/dieter-swipe-discovery.html">Swipe deck</a> — gesture demo; wire Spotify when you’re ready.
+            <strong>V5:</strong> long-form prompts for extended arrangements.
           </li>
           <li>
-            <strong>This app</strong> — Create, Local, beats, voice — the works.
+            <strong>Cover:</strong> upload clip → choose instrument style → A/B takes.
+          </li>
+          <li>
+            <strong>Voice:</strong> lyrics + beat guided cloud flow.
           </li>
           {site ? (
             <li>
@@ -218,17 +238,15 @@ export default function StudioPortal({ apiBase, onOpenKeys, onNavigateMode }) {
               </a>
             </li>
           ) : null}
-          <li>
-            Save <code>#portal</code> — it’s your bookmark home.
-          </li>
+          <li>Save <code>#portal</code> as your home shortcut.</li>
         </ul>
         <div className="row">
-          <button type="button" className="btn-secondary" onClick={() => onNavigateMode('create')}>
-            Go to Create
-          </button>
-          <button type="button" className="btn-secondary" onClick={() => onNavigateMode('local')}>
-            Go to Local lab
-          </button>
+          <a className="btn-secondary" href={staticShowroomHref} style={{ display: 'inline-block', textDecoration: 'none' }}>
+            Open static showroom ↗
+          </a>
+          <a className="btn-secondary" href="/ed-geerdes-studio-guide.html" target="_blank" rel="noreferrer" style={{ display: 'inline-block', textDecoration: 'none' }}>
+            Open quick guide ↗
+          </a>
         </div>
       </section>
     </main>

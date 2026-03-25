@@ -24,7 +24,7 @@ function parseV5Prompt(prompt) {
   return { bpm, vocals: instrumental ? 'none' : vocals }
 }
 
-export default function StudioV5({ apiBase }) {
+export default function StudioV5({ apiBase, onSongReady }) {
   const apiRoot = useMemo(() => normalizeApiRoot(apiBase || '/api'), [apiBase])
   const [prompt, setPrompt] = useState('')
   const [lengthMin, setLengthMin] = useState('8')
@@ -111,6 +111,7 @@ export default function StudioV5({ apiBase }) {
         const url = extractAudioUrl(q)
         if (url) {
           setAudioUrl(url)
+          onSongReady?.({ url, lyrics: lyricPayload, title: `${STUDIO_NAME} V5` })
           setStatus('Ready — press play.')
           void postStudioGrowth(apiRoot, 'mureka_song_ready', `v5:${taskId}`.slice(0, 80))
           return

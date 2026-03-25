@@ -9,6 +9,8 @@ import MurekaPromptStudio from './MurekaPromptStudio.jsx'
 import StudioV5 from './StudioV5.jsx'
 import CoverStudio from './CoverStudio.jsx'
 import StudioPortal from './StudioPortal.jsx'
+import AudioTransport from './AudioTransport.jsx'
+import SongPlaybackPage from './SongPlaybackPage.jsx'
 import {
   fetchStudioGrowth,
   normalizeApiRoot,
@@ -21,10 +23,18 @@ import { dieterInitialApiBase, dieterUseTrpc, audioCrossOriginForSrc } from './d
 import { extractAudioUrl } from './murekaHelpers.js'
 import { useBeatVisualizer } from './useBeatVisualizer.js'
 import { getStudioOutboundLinks } from './studioLinks.js'
-import { STUDIO_NAME, STUDIO_SLUG } from './studioBrand.js'
+import { STUDIO_NAME, STUDIO_SLUG, MUREKA_CLONE_LABEL } from './studioBrand.js'
 
 const DEFAULT_BASE = import.meta.env.VITE_API_BASE || '/api'
 const USE_TRPC = dieterUseTrpc()
+
+function formatSessionSeconds(totalSec) {
+  const s = Math.max(0, Math.floor(totalSec))
+  const m = Math.floor(s / 60)
+  const sec = s % 60
+  if (m <= 0) return `${sec}s`
+  return `${m}m ${sec.toString().padStart(2, '0')}s`
+}
 
 /** Header subtitle per mode — keep in sync with mode button order (gateway / AI labs first). */
 const APP_MODE_HEADER = {
@@ -36,6 +46,7 @@ const APP_MODE_HEADER = {
   v5: 'V5',
   cover: 'Cover',
   local: 'Local',
+  player: 'Now playing',
 }
 
 const HASH_TO_MODE = {
@@ -48,6 +59,7 @@ const HASH_TO_MODE = {
   v5: 'v5',
   cover: 'cover',
   local: 'local',
+  player: 'player',
 }
 
 const SIDEBAR_GROUPS = [
@@ -139,10 +151,26 @@ export default function App() {
   const [lyricsReport, setLyricsReport] = useState(null)
   const [lyricsAnalyzeErr, setLyricsAnalyzeErr] = useState('')
   const [studioPulse, setStudioPulse] = useState(null)
+  const [playerTrack, setPlayerTrack] = useState(null)
   const canvasRef = useRef(null)
   const audioRef = useRef(null)
+  const sessionStartedAt = useRef(Date.now())
+  const [sessionTick, setSessionTick] = useState(0)
 
   useBeatVisualizer(audioRef, canvasRef, audioUrl)
+
+  useEffect(() => {
+    const id = window.setInterval(() => setSessionTick((n) => n + 1), 1000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  void sessionTick
+  const wallClock = new Date().toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+  })
+  const sessionElapsedSec = Math.floor((Date.now() - sessionStartedAt.current) / 1000)
 
   const saveAuth = () => {
     localStorage.setItem('mureka_api_key', apiKey.trim())
@@ -160,6 +188,19 @@ export default function App() {
       window.history.replaceState(null, '', `#${mode === 'portal' ? 'portal' : mode}`)
     }
   }, [])
+
+  const openPlayer = useCallback(
+    ({ url, lyrics: lyricsText = '', title: trackTitle = '' }) => {
+      if (!url) return
+      setPlayerTrack({
+        url,
+        lyrics: lyricsText || lyrics || '',
+        title: trackTitle || title || 'Generated track',
+      })
+      goMode('player')
+    },
+    [goMode, lyrics, title],
+  )
 
   useEffect(() => {
     const onHash = () => {
@@ -544,7 +585,7 @@ export default function App() {
         <aside className="app-sidebar" aria-label="Studio navigation">
           <div className="sidebar-brand">
             <span className="sidebar-brand-title">{STUDIO_NAME}</span>
-            <span className="sidebar-brand-sub">Mureka + API</span>
+            <span className="sidebar-brand-sub">{MUREKA_CLONE_LABEL}</span>
           </div>
           <nav className="sidebar-nav">
             {SIDEBAR_GROUPS.map((g) => (
@@ -569,6 +610,9 @@ export default function App() {
             <a className="sidebar-linkout" href="/ed-geerdes-platform.html">
               Static showroom ↗
             </a>
+            <a className="sidebar-linkout" href="/ed-geerdes-studio-guide.html" target="_blank" rel="noreferrer">
+              Studio guide (offline doc) ↗
+            </a>
             {showKeysFab && (
               <button type="button" className="sidebar-keys-btn" onClick={() => setShowAuth(true)}>
                 API keys &amp; sync
@@ -582,6 +626,14 @@ export default function App() {
             <nav className="nav-main">
               <strong>{APP_MODE_HEADER[appMode] ?? 'Studio'}</strong>
             </nav>
+            <div className="header-clocks" aria-live="polite">
+              <span className="header-clock" title="Your device local time">
+                {wallClock}
+              </span>
+              <span className="header-session" title="Time since this tab loaded (resets on refresh)">
+                Session {formatSessionSeconds(sessionElapsedSec)}
+              </span>
+            </div>
           </header>
 
           <div className="app-main-body">
@@ -591,29 +643,15 @@ export default function App() {
           <div className="modal-card">
             <h2>Connections</h2>
             <p className="hint">
-              <strong>Gateway:</strong> this panel is your <strong>sync portal</strong> for keys and API base.{' '}
-              <strong>Mureka</strong> powers cloud models on <strong>Create</strong>, <strong>Cloud</strong>, and{' '}
-              <strong>Voice studio</strong>. Get a key from{' '}
+              This is your <strong>connection panel</strong>. For the Vercel build, the app talks to Mureka through
+              same‑origin <code>/api/mureka/*</code> (serverless). Add a key from{' '}
               <a href="https://platform.mureka.ai" target="_blank" rel="noreferrer">
                 platform.mureka.ai
-              </a>
-              ; in Docker/Railway set <code>MUREKA_API_KEY</code> on the server so clients do not need to paste it. The{' '}
-              <strong>Local</strong> tab runs <strong>server-side DSP</strong> (ffmpeg / stems) through the same API — not
-              an in-browser demo synth.
+              </a>{' '}
+              and you’re ready to generate.
               <br />
-              Dev: Vite proxies <code>/trpc</code> → tRPC (8790) and <code>/api</code> → FastAPI (see{' '}
-              <code>vite.config.js</code>). <strong>tRPC</strong> is on by default in dev only; production builds use{' '}
-              <strong>REST</strong> unless you set <code>VITE_USE_TRPC=true</code>.
-              <br />
-              <strong>Production (full app)</strong>: deploy the <strong>single Docker image</strong> (
-              <code>dieter-backend/Dockerfile</code> from repo root). Open your host URL — UI and <code>/api</code> are
-              the same origin. Only if you host the UI separately
-              (e.g. Vercel + Railway) set <code>VITE_API_BASE</code> and optional <code>DIETER_CORS_ORIGINS</code> on
-              the API — see <code>DEPLOY_VERCEL_RAILWAY.md</code> (ED-GEERDES / Vercel).
-              <br />
-              <strong>OpenAI</strong> (optional): set <code>OPENAI_API_KEY</code> on the FastAPI server for AI lyrics;
-              or paste a key here to pass through to the backend. Generate/Optimize call FastAPI via tRPC (or{' '}
-              <code>/api/lyrics/*</code> when tRPC is off).
+              <strong>Tip:</strong> for best security, store <code>MUREKA_API_KEY</code> in Vercel Environment Variables
+              so you don’t need to paste it into the browser.
             </p>
             <label>Mureka API key</label>
             <input
@@ -630,13 +668,20 @@ export default function App() {
               autoComplete="off"
               placeholder="sk-… for Generate / Optimize lyrics"
             />
-            <label>API base (REST)</label>
-            <input
-              type="text"
-              value={apiBase}
-              onChange={(e) => setApiBase(e.target.value)}
-              placeholder="/api or https://your-api.com/api"
-            />
+            <details style={{ marginTop: 10 }}>
+              <summary style={{ cursor: 'pointer', fontWeight: 700 }}>Advanced (optional)</summary>
+              <p className="hint" style={{ marginTop: 8 }}>
+                Only use this if you run a private backend for DSP tools (covers, stem mixing, etc.). Most users can leave
+                it alone on Vercel.
+              </p>
+              <label>API base (advanced)</label>
+              <input
+                type="text"
+                value={apiBase}
+                onChange={(e) => setApiBase(e.target.value)}
+                placeholder="/api or https://your-api.com"
+              />
+            </details>
             <div className="row">
               <button type="button" className="primary" onClick={saveAuth}>
                 Save
@@ -655,6 +700,7 @@ export default function App() {
         <MurekaPromptStudio
           apiBase={base}
           apiKey={apiKey}
+          onSongReady={openPlayer}
           onOpenKeys={() => setShowAuth(true)}
           onStudioPulse={(g) => setStudioPulse(g)}
           onGoLocalWithLyrics={(text) => {
@@ -668,12 +714,14 @@ export default function App() {
         />
       ) : appMode === 'v5' ? (
         <main className="main main-local">
-          <StudioV5 apiBase={base} />
+          <StudioV5 apiBase={base} onSongReady={openPlayer} />
         </main>
       ) : appMode === 'cover' ? (
         <main className="main main-local">
           <CoverStudio apiBase={base} />
         </main>
+      ) : appMode === 'player' ? (
+        <SongPlaybackPage track={playerTrack} onBackToCreate={() => goMode('create')} />
       ) : appMode === 'local' ? (
         <main className="main main-local">
           <LocalStudio apiBase={base} />
@@ -684,7 +732,7 @@ export default function App() {
         </main>
       ) : appMode === 'voicestudio' ? (
         <main className="main main-local">
-          <VoiceCloneStudio apiBase={base} />
+          <VoiceCloneStudio apiBase={base} onSongReady={openPlayer} />
         </main>
       ) : (
         <>
@@ -880,10 +928,8 @@ export default function App() {
 
         {audioUrl && (
           <>
-            <audio
-              key={audioUrl}
-              ref={audioRef}
-              controls
+            <AudioTransport
+              audioRef={audioRef}
               src={audioUrl}
               crossOrigin={audioCrossOriginForSrc(audioUrl)}
               className="player"
@@ -942,8 +988,12 @@ export default function App() {
             Portal &amp; API health
           </a>
           {' · '}
-          <a className="footer-link" href="/ed-geerdes-platform.html">
+            <a className="footer-link" href="/ed-geerdes-platform.html">
             ED-GEERDES showroom
+          </a>
+          {' · '}
+          <a className="footer-link" href="/ed-geerdes-studio-guide.html" target="_blank" rel="noreferrer">
+            Studio guide
           </a>
         </div>
       </footer>

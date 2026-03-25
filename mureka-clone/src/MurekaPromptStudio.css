@@ -68,8 +68,22 @@
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.35rem;
   filter: drop-shadow(0 0 40px rgba(168, 85, 247, 0.35));
+}
+
+.mps-build-pill {
+  display: inline-block;
+  margin: 0 auto 0.85rem;
+  padding: 0.28rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(250, 245, 255, 0.95);
+  background: rgba(109, 40, 217, 0.35);
+  border: 1px solid rgba(196, 181, 253, 0.45);
+  border-radius: 999px;
 }
 
 .mps-tagline {

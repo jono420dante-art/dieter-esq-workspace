@@ -1,13 +1,14 @@
 {
-  "name": "ed-geerdes-studio",
+  "name": "mureka-clone-v2",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
+  "description": "Mureka Clone V2 — React studio (Create, Local, Beat lab, Voice, V5, Cover) wired to Dieter FastAPI.",
   "type": "module",
   "scripts": {
     "dev": "npx vite",
     "start": "npx vite",
     "build": "npx vite build",
-    "build:backend": "node ../scripts/build-frontend-to-backend.mjs",
+    "build:backend": "node scripts/build-and-sync-backend.mjs",
     "lint": "eslint .",
     "preview": "npx vite preview",
     "deploy": "node scripts/deploy-cloudflare.mjs",
