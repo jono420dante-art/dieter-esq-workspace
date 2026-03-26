@@ -560,7 +560,7 @@
             <a class="eg-link-main" href="/#portal">→ Portal, API health &amp; handoff</a>
             <a class="eg-link-main" href="#distribution">→ Distribution &amp; DSP hub</a>
             <a class="eg-link-main" href="/dieter-swipe-discovery.html">→ Swipe discovery demo</a>
-            <a class="eg-link-main" href="/dieter-v3-passion.html">→ Dieter V3.1 passion flow (Tone.js demo)</a>
+            <a class="eg-link-main" href="/dieter-v3-passion.html">→ Dieter V3.1 passion flow (Tone.js showroom)</a>
             <a class="eg-link-main" href="/dieter-v3-suite.html">→ Dieter V3 suite (Tone.js + Three.js)</a>
         </div>
     </aside>
@@ -585,13 +585,13 @@
                 <h2>Prompt</h2>
                 <textarea class="prompt-area" id="musicPrompt" placeholder="e.g. upbeat melodic trap, female vocal, 128 BPM, 2:30…"></textarea>
                 <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 16px;">
-                    <button type="button" class="generate-btn" id="btnGenerate" onclick="generateTrack(this)">Generate demo tone</button>
+                    <button type="button" class="generate-btn" id="btnGenerate" onclick="generateTrack(this)">Web Audio preview (showroom)</button>
                     <button type="button" class="generate-btn" id="btnTonePattern" onclick="toggleTonePattern(this)">Tone.js arp + reverb</button>
                     <button type="button" class="generate-btn" id="btnWebReverb" onclick="toggleWebReverbDemo(this)">Convolver reverb</button>
                     <button type="button" class="generate-btn" id="btnWebDelay" onclick="toggleWebDelayDemo(this)">Delay line</button>
                     <button type="button" class="generate-btn" id="btnStems" onclick="generateStems(this)">Stems (placeholder)</button>
                 </div>
-                <p class="hint">Web Audio demo (buffer) or <strong>Tone.js 14.8.49</strong> (<code>Pattern</code> + <code>Reverb</code> + <code>Transport</code>) loaded from unpkg on first play. <strong>Convolver reverb</strong> uses a short synthetic hall IR (no network; external IRs need CORS). <strong>Delay line</strong> is a feedback <code>DelayNode</code> (wet only); echo time follows half a beat from the BPM slider.</p>
+                <p class="hint"><strong>Real AI music + vocals:</strong> open <a class="api-link" href="/">Main studio</a> (Create → Mureka via <code>/api</code>). This block is a <strong>browser-only</strong> buffer check for Web Audio / <strong>Tone.js</strong> (<code>Pattern</code> + <code>Reverb</code> + <code>Transport</code>), not the production generator. Convolver uses a short synthetic IR; delay is a wet <code>DelayNode</code> tied to BPM.</p>
                 <div style="margin-top: 22px; padding: 22px; border-radius: 22px; border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.28);">
                     <h3 style="margin: 0 0 6px; font-size: 1.05rem; font-weight: 800;">Plugin rack (web demos)</h3>
                     <p class="hint" style="margin-top: 0; margin-bottom: 14px;">Web Audio API stubs only — not Surge XT / Dexed binaries. See <code>docs/DIETER_WEB_AUDIO_STACK.md</code> for real synths, WAM, and Faust.</p>
@@ -1449,7 +1449,7 @@
         var container = document.getElementById('myTracksList');
         container.innerHTML = '';
         if (!userTracks.length) {
-            container.innerHTML = '<p class="hint">Generate a demo or open the main app to attach real renders.</p>';
+            container.innerHTML = '<p class="hint">Render a showroom preview here or open <a class="api-link" href="/">Main studio</a> for Mureka / gateway audio.</p>';
             return;
         }
         userTracks.forEach(function (track) {

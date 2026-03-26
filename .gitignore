@@ -79,4 +79,7 @@ DIETER-AND-ED-AI/
 deploy/
 platform/
 
+# Shannon (https://github.com/KeygraphHQ/shannon) — cloned by npm run shannon:bootstrap
+third_party/shannon/
+
 .vercel

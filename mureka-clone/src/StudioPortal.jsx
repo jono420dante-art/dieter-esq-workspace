@@ -21,6 +21,14 @@ export default function StudioPortal({ apiBase, onOpenKeys, onNavigateMode }) {
   const [handoffVocal, setHandoffVocal] = useState('female')
   const [handoffInstrumental, setHandoffInstrumental] = useState(false)
   const [handoffMsg, setHandoffMsg] = useState('')
+  const [visualMode, setVisualMode] = useState(() => {
+    try {
+      return localStorage.getItem('showroom_visual_mode') || 'cinematic'
+    } catch {
+      return 'cinematic'
+    }
+  })
+  const [parallax, setParallax] = useState({ x: 50, y: 50 })
 
   const runChecks = useCallback(async () => {
     setHealth({ phase: 'loading' })
@@ -55,8 +63,27 @@ export default function StudioPortal({ apiBase, onOpenKeys, onNavigateMode }) {
     }
   }
 
+  const setMode = (mode) => {
+    setVisualMode(mode)
+    try {
+      localStorage.setItem('showroom_visual_mode', mode)
+    } catch {
+      /* ignore */
+    }
+  }
+
   return (
-    <main className="main main-portal">
+    <main
+      className={`main main-portal showroom-${visualMode}`}
+      style={{ '--show-x': `${parallax.x}%`, '--show-y': `${parallax.y}%` }}
+      onMouseMove={(e) => {
+        const r = e.currentTarget.getBoundingClientRect()
+        const x = ((e.clientX - r.left) / Math.max(1, r.width)) * 100
+        const y = ((e.clientY - r.top) / Math.max(1, r.height)) * 100
+        setParallax({ x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) })
+      }}
+      onMouseLeave={() => setParallax({ x: 50, y: 50 })}
+    >
       <div className="portal-hero">
         <h1 className="portal-title">Showroom</h1>
         <p className="portal-lead">
@@ -66,6 +93,22 @@ export default function StudioPortal({ apiBase, onOpenKeys, onNavigateMode }) {
           </button>
           .
         </p>
+        <div className="row" style={{ marginTop: '0.65rem' }}>
+          <button
+            type="button"
+            className={visualMode === 'cinematic' ? 'primary glow-red-soft' : 'btn-secondary glow-red-soft'}
+            onClick={() => setMode('cinematic')}
+          >
+            Cinematic
+          </button>
+          <button
+            type="button"
+            className={visualMode === 'bright' ? 'primary glow-red-soft' : 'btn-secondary glow-red-soft'}
+            onClick={() => setMode('bright')}
+          >
+            Bright studio
+          </button>
+        </div>
       </div>
 
       <section className="portal-card">
@@ -108,8 +151,11 @@ export default function StudioPortal({ apiBase, onOpenKeys, onNavigateMode }) {
             <span className="portal-badge portal-badge-ok">Local DSP: available</span>
           )}
           {caps.phase === 'done' && !caps.ok && (
-            <span className="portal-badge portal-badge-warn" title={caps.error || ''}>
-              Local lab: API path optional
+            <span
+              className="portal-badge portal-badge-warn"
+              title={caps.error || 'GET /api/local/capabilities must return JSON from FastAPI'}
+            >
+              Local DSP: API not wired (hover for detail)
             </span>
           )}
         </div>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Dieter V3 · AI Music Suite (demo)</title>
+    <title>Dieter V3 · AI Music Suite</title>
     <script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
     <style>
@@ -338,7 +338,7 @@
         </div>
 
         <div class="section">
-            <h3>Agents (demo)</h3>
+            <h3>Agents (prototype)</h3>
             <button type="button" class="sync-btn" onclick="runAICodingAgent()">Code agent</button>
             <button type="button" class="sync-btn" onclick="runMusicAgent()">Music agent</button>
             <button type="button" class="sync-btn" onclick="runVideoAgent()">Video agent</button>
@@ -361,7 +361,7 @@
         <div class="prompt-area">
             <h2 style="margin-bottom:12px;font-weight:300;opacity:0.92;">Lyrics → Song → Video</h2>
             <p style="opacity:0.65;max-width:580px;margin:0 auto 28px;line-height:1.55;font-size:0.92rem;">
-                Demo timeline: analysis → short Tone melody → placeholder vocals/mix → Three.js preview. No files are produced.
+                Prototype timeline: UI steps only until the gateway is wired. For real audio, use <a href="/">Main studio</a> → FastAPI <code>/api</code> (Mureka + FFmpeg pipelines). Tone/WebGL here are for layout — not the music engine.
             </p>
         </div>
 
@@ -374,15 +374,15 @@
         </div>
 
         <div class="download-area" id="downloadArea">
-            <h3 style="margin-bottom:20px;font-weight:600;">Pipeline finished (demo)</h3>
+            <h3 style="margin-bottom:20px;font-weight:600;">Pipeline finished (prototype)</h3>
             <button type="button" class="download-btn" onclick="downloadSong()">Song (WAV)</button>
             <button type="button" class="download-btn" onclick="downloadVideo()">Video (MP4)</button>
             <button type="button" class="download-btn" onclick="downloadStems()">Stems</button>
         </div>
-        <p id="demoNote">Downloads only confirm the click — connect your backend for real assets.</p>
+        <p id="demoNote">Connect your Dieter gateway for WAV/MP4/stems; production audio is rendered server-side and via Mureka, not in this page.</p>
     </main>
 
-    <button type="button" class="fab fab-main" id="fabMain" title="Run pipeline demo">🚀</button>
+    <button type="button" class="fab fab-main" id="fabMain" title="Run prototype pipeline">🚀</button>
     <button type="button" class="fab fab-social" id="fabSocial" title="Social shortcuts" onclick="toggleSocial()">🌐</button>
 
     <script>
@@ -453,7 +453,7 @@
             function analyzeLyrics(lyrics) {
                 console.log('Lyrics analyzed (stub):', {
                     chars: (lyrics || '').length,
-                    structure: 'Verse-Chorus (demo)',
+                    structure: 'Verse-Chorus (placeholder)',
                 });
             }
 

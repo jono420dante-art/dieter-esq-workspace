@@ -6,8 +6,12 @@
 #
 # Environment (Site settings → Environment variables):
 #   STRIPE_PUBLISHABLE_KEY = pk_live_…   (baked into ed-geerdes-platform.html at build time)
-#   VITE_API_BASE          = https://your-api.example.com/api
+#   VITE_API_BASE          = https://your-api.example.com/api   (browser → API; bypasses proxy)
+#   DIETER_API_ORIGIN      = https://your-api.example.com       (no /api suffix; Edge proxy target)
 #   VITE_SITE_URL          = https://dieter-music.app
+#
+# Same-origin /api/* is handled by mureka-clone/netlify/edge-functions/dieter-api-proxy.js
+# (avoids SPA /* → index.html swallowing /api and Cloudflare-style NOT_FOUND HTML).
 
 [build]
   base = "mureka-clone"

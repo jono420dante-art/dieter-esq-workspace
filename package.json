@@ -9,6 +9,7 @@
     "build": "node scripts/build-frontend-to-backend.mjs",
     "build:backend": "node scripts/build-frontend-to-backend.mjs",
     "deploy:vercel": "npx vercel deploy --prod --yes",
-    "deploy:vercel:preview": "npx vercel deploy --yes"
+    "deploy:vercel:preview": "npx vercel deploy --yes",
+    "shannon:bootstrap": "node scripts/shannon/bootstrap.mjs"
   }
 }

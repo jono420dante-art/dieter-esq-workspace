@@ -70,7 +70,23 @@ export async function parseFetchJson(response) {
         /* keep raw text */
       }
     }
-    throw new Error(`HTTP ${response.status}${methodHint} ${detail}`.trim())
+    const cf =
+      response.status === 404 &&
+      (/NOT_FOUND|cpt1::|cloudflare|pages\.dev/i.test(detail) || /"not_found"|not_found/i.test(trimmed))
+        ? ' Cloudflare Pages: deploy functions/api/[[path]].js is included — set DIETER_API_ORIGIN in Pages → Settings → Environment variables to your FastAPI origin (no /api suffix). Or use VITE_API_BASE at build time.'
+        : ''
+    const netlify =
+      response.status === 404 &&
+      !cf &&
+      typeof window !== 'undefined' &&
+      /\.netlify\.app$/i.test(window.location.hostname || '')
+        ? ' Netlify: set DIETER_API_ORIGIN (site env) so Edge can proxy /api/* to FastAPI, or set VITE_API_BASE to your API URL at build time.'
+        : ''
+    const nf =
+      response.status === 404 && !cf && !netlify
+        ? ' If this is a static host (Netlify/Vercel/Cloudflare), /api/* must proxy to FastAPI or the UI must use an absolute VITE_API_BASE.'
+        : ''
+    throw new Error(`HTTP ${response.status}${methodHint} ${detail}${cf}${netlify}${nf}`.trim())
   }
   if (!trimmed) return null
   try {

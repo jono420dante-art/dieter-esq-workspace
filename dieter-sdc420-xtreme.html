@@ -643,7 +643,7 @@
 
         function addVideo() {
             addTrack('Video lane', 'Vid');
-            document.getElementById('statusDisplay').textContent = 'Video track added (demo)';
+            document.getElementById('statusDisplay').textContent = 'Video track added';
             checkMasterReady();
         }
 
@@ -773,7 +773,7 @@
             generateMasterPreview();
 
             btn.textContent = 'Create master';
-            statusEl.textContent = 'Demo beep only. Add ?api=http://127.0.0.1:8890/api for a real master.';
+            statusEl.textContent = 'Offline test signal only. Add ?api=http://127.0.0.1:8890/api (or your gateway) for pipeline mastering.';
             document.getElementById('downloadBtn').disabled = true;
             document.getElementById('shareBtn').disabled = false;
             btn.disabled = false;
@@ -819,11 +819,11 @@
 
         function shortenSong() {
             appState.duration = Math.max(15, (appState.duration || 120) * 0.7);
-            alert('Demo: duration set to ' + formatTime(appState.duration));
+            alert('Duration set to ' + formatTime(appState.duration) + ' (editor; export uses gateway when connected).');
         }
 
         function addFade() {
-            alert('Demo: fade would run in your DAW / FFmpeg pipeline.');
+            alert('Fade/automation runs in your DAW or via FFmpeg when the Dieter pipeline is connected.');
         }
 
         function generateVideo() {

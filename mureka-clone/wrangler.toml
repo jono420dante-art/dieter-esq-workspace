@@ -2,3 +2,10 @@
 name = "ed-geerdes"
 compatibility_date = "2024-11-01"
 pages_build_output_dir = "dist"
+
+# Optional non-secret default (prefer Dashboard → Variables for Production / Preview):
+# [vars]
+# DIETER_API_ORIGIN = "https://your-api.up.railway.app"
+
+# Secrets: wrangler pages secret put DIETER_API_ORIGIN
+# Same variable name as Vercel middleware for one mental model.

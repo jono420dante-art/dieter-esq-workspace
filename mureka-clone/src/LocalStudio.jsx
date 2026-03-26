@@ -29,7 +29,7 @@ async function parseApiError(res) {
   return t || res.statusText || `HTTP ${res.status}`
 }
 
-/** Offline: librosa beat detect, FFmpeg mix, procedural placeholder vocal. For real AI vocals use Create / Voice tabs + Mureka. */
+/** Beat detect (Librosa), FFmpeg mix, optional procedural vocal layer. For cloud AI vocals use Create / Cloud / Voice + Mureka; label training data with POST /api/vocal/analyze. */
 export default function LocalStudio({ apiBase }) {
   const base = normalizeApiRoot(apiBase || '/api')
   const [busy, setBusy] = useState(false)

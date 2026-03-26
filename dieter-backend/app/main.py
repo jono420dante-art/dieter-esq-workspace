@@ -218,7 +218,7 @@ async def api_vocal_analyze(file: UploadFile = File(...)) -> dict[str, Any]:
     if len(raw) > _VOCAL_ANALYZE_MAX_BYTES:
         raise HTTPException(
             status_code=413,
-            detail=f"file too large (max {_VOCAL_ANALYZE_MAX_BYTES // (1024 * 1024]} MiB)",
+            detail=f"file too large (max {_VOCAL_ANALYZE_MAX_BYTES // (1024 * 1024)} MiB)",
         )
     if len(raw) < 64:
         raise HTTPException(status_code=400, detail="empty upload")

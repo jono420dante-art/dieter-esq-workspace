@@ -209,10 +209,69 @@
 
 .main-portal {
   max-width: 720px;
+  position: relative;
+  isolation: isolate;
+}
+
+.main-portal::before {
+  content: '';
+  position: absolute;
+  inset: -8px -10px -10px;
+  z-index: -2;
+  border-radius: 18px;
+  background-image:
+    linear-gradient(165deg, rgba(7, 10, 22, 0.86) 0%, rgba(9, 14, 30, 0.74) 40%, rgba(5, 7, 15, 0.88) 100%),
+    url('/showroom-hd-bg.png');
+  background-size: cover;
+  background-position: var(--show-x, 50%) var(--show-y, 50%);
+  background-repeat: no-repeat;
+  box-shadow:
+    0 24px 48px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  transform: translateZ(0);
+  animation: showroomFloat 22s ease-in-out infinite;
+}
+
+.main-portal::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 16px;
+  backdrop-filter: saturate(1.08);
+  -webkit-backdrop-filter: saturate(1.08);
+}
+
+.main-portal.showroom-bright::before {
+  background-image:
+    linear-gradient(165deg, rgba(8, 18, 36, 0.62) 0%, rgba(14, 24, 48, 0.5) 42%, rgba(8, 16, 34, 0.62) 100%),
+    url('/showroom-hd-bg.png');
+}
+
+.main-portal.showroom-cinematic::before {
+  background-image:
+    linear-gradient(165deg, rgba(7, 10, 22, 0.86) 0%, rgba(9, 14, 30, 0.74) 40%, rgba(5, 7, 15, 0.88) 100%),
+    url('/showroom-hd-bg.png');
+}
+
+@keyframes showroomFloat {
+  0%,
+  100% {
+    background-position: center 50%;
+    transform: scale(1);
+  }
+  50% {
+    background-position: center 46%;
+    transform: scale(1.02);
+  }
 }
 
 .portal-hero {
   margin-bottom: 1.25rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 14px;
+  background: rgba(8, 12, 26, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .portal-title {
@@ -239,11 +298,13 @@
 }
 
 .portal-card {
-  background: rgba(18, 18, 32, 0.75);
+  background: rgba(12, 18, 34, 0.68);
   border: 1px solid rgba(168, 85, 247, 0.22);
   border-radius: 14px;
   padding: 1.1rem 1.15rem 1.2rem;
   margin-bottom: 1rem;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .portal-card h2 {
