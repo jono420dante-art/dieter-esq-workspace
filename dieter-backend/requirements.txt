@@ -6,6 +6,9 @@ gunicorn
 pydantic
 python-multipart
 
+# Hugging Face (MusicGen / optional stacks)
+transformers>=4.33.0,<5
+
 # Numerics / audio analysis
 numpy
 librosa>=0.10.0
@@ -24,3 +27,8 @@ torchaudio>=2.0,<3
 
 # Optional: stronger beat / downbeat models (heavy install)
 # madmom
+
+# --- MusicGen (Audiocraft) — large deps & ~10GB+ weights; optional ---
+# Enable server-side: DIETER_ENABLE_MUSICGEN=1
+# Install may conflict with other torch stacks; use a dedicated venv if needed.
+audiocraft>=1.3.0

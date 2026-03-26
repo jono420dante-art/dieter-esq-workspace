@@ -25,6 +25,7 @@ from .lyrics_analyze import analyze_lyrics as analyze_lyrics_text
 from .agents import list_agents, run_agent as run_studio_agent
 from .audio_master import pro_master_audio
 from .beat_lab import router as beat_lab_router
+from .musicgen_router import router as musicgen_router
 from .pitch_presets import preset_semitones
 from .release_pipeline import generate_master_pipeline, save_distro_prep_upload
 from .music_video import generate_music_video
@@ -197,6 +198,7 @@ else:
     )
 
 app.include_router(beat_lab_router, prefix="/api")
+app.include_router(musicgen_router, prefix="/api")
 
 
 @app.get("/api/health")

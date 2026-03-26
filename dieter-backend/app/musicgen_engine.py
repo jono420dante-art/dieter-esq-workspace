@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 import os
 import uuid
+from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -52,7 +53,7 @@ class DieterMusicEngine:
         style: str = "pop",
         duration: int = 120,
         *,
-        storage_dir,
+        storage_dir: Path,
     ) -> tuple[str, str]:
         """
         Generate WAV under ``storage_dir / 'musicgen' / {job_id}.wav``.
@@ -119,3 +120,7 @@ def get_musicgen_engine():
 
 def get_musicgen_load_error() -> Optional[str]:
     return _load_error
+
+
+def is_musicgen_loaded() -> bool:
+    return _engine is not None

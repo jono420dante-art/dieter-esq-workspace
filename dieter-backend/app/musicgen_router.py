@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from .musicgen_engine import (
     get_musicgen_engine,
     get_musicgen_load_error,
+    is_musicgen_loaded,
     musicgen_enabled,
 )
 
@@ -36,12 +37,11 @@ def _absolute_url(path: str) -> str:
 
 @router.get("/status")
 def musicgen_status() -> dict[str, Any]:
-    eng = get_musicgen_engine()
-    err = get_musicgen_load_error()
+    """Does not load weights — safe to poll."""
     return {
         "enabled": musicgen_enabled(),
-        "loaded": eng is not None,
-        "error": err,
+        "loaded": is_musicgen_loaded(),
+        "error": get_musicgen_load_error(),
     }
 
 
