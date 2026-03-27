@@ -53,11 +53,18 @@ app.use((err, req, res, _next) => {
 
 app.listen(PORT, () => {
   const du = (process.env.DIETER_FASTAPI_URL || '').trim();
+  const rep = (process.env.REPLICATE_API_TOKEN || '').trim();
   console.log(`\n  ⚡ DIETER PRO API running on http://localhost:${PORT}`);
   console.log(`  📡 Health: http://localhost:${PORT}/api/health`);
   console.log(
     du
-      ? `  🔗 Dieter FastAPI proxy: ${du} → /api/dieter/*\n`
-      : '  ⚠️  DIETER_FASTAPI_URL not set — Video Suite “cover + song” proxy returns 503 until configured.\n',
+      ? `  🔗 Dieter FastAPI proxy: ${du} → /api/dieter/*`
+      : '  ⚠️  DIETER_FASTAPI_URL not set — Video Suite “cover + song” proxy returns 503 until configured.',
   );
+  console.log(
+    rep
+      ? '  🎵 Music Studio: Replicate MusicGen enabled (REPLICATE_API_TOKEN set).'
+      : '  ⚠️  REPLICATE_API_TOKEN not set — /api/music/* returns 503 until configured.',
+  );
+  console.log('');
 });

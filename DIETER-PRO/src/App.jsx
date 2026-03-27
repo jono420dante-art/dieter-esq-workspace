@@ -65,7 +65,9 @@ export default function App() {
       <main className="main-content">
         <header className="topbar">
           <div className="topbar-title">
-            {NAV.find((n) => n.to === location.pathname)?.label || 'DIETER PRO'}
+            {location.pathname === '/music-generator'
+              ? 'Music Generator'
+              : NAV.find((n) => n.to === location.pathname)?.label || 'DIETER PRO'}
           </div>
           <div className="topbar-actions">
             <div className="status-dot online" />
@@ -77,6 +79,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/studio" element={<MusicStudio />} />
+            <Route path="/music-generator" element={<MusicStudio />} />
             <Route path="/granular" element={<GranularEngine />} />
             <Route path="/mixer" element={<MixerPro />} />
             <Route path="/video" element={<VideoSuite />} />
