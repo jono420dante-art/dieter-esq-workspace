@@ -11,6 +11,7 @@ import directorRouter from './routes/director.js';
 import seoRouter from './routes/seo.js';
 import commerceRouter from './routes/commerce.js';
 import portalsRouter from './routes/portals.js';
+import dieterRouter from './routes/dieter.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -39,6 +40,7 @@ app.use('/api/director', directorRouter);
 app.use('/api/seo', seoRouter);
 app.use('/api/commerce', commerceRouter);
 app.use('/api/portals', portalsRouter);
+app.use('/api/dieter', dieterRouter);
 
 app.get('/{*splat}', (req, res) => {
   res.sendFile(join(__dirname, '..', 'dist', 'index.html'));
@@ -50,6 +52,12 @@ app.use((err, req, res, _next) => {
 });
 
 app.listen(PORT, () => {
+  const du = (process.env.DIETER_FASTAPI_URL || '').trim();
   console.log(`\n  ⚡ DIETER PRO API running on http://localhost:${PORT}`);
-  console.log(`  📡 Health: http://localhost:${PORT}/api/health\n`);
+  console.log(`  📡 Health: http://localhost:${PORT}/api/health`);
+  console.log(
+    du
+      ? `  🔗 Dieter FastAPI proxy: ${du} → /api/dieter/*\n`
+      : '  ⚠️  DIETER_FASTAPI_URL not set — Video Suite “cover + song” proxy returns 503 until configured.\n',
+  );
 });

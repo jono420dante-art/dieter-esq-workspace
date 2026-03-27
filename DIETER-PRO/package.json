@@ -3,6 +3,9 @@
   "version": "2.0.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "concurrently \"vite\" \"node server/server.js\"",
     "dev:client": "vite",
@@ -12,8 +15,8 @@
     "start": "node server/server.js"
   },
   "dependencies": {
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "react-router-dom": "^7.5.0",
     "express": "^5.1.0",
     "cors": "^2.8.5",

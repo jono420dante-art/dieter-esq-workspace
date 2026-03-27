@@ -10,5 +10,8 @@ services:
         value: production
       - key: PORT
         value: 3001
+      # Dieter FastAPI origin (no trailing slash), e.g. https://dieter-beat-lab.onrender.com
+      - key: DIETER_FASTAPI_URL
+        sync: false
     healthCheckPath: /api/health
     autoDeploy: true
