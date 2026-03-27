@@ -1,7 +1,8 @@
 # Dieter stack — repo root
 #
 # Default (API + static studio + tRPC):
-#   mkdir -p dieter-backend/voices/man dieter-backend/voices/woman dieter-backend/storage
+#   mkdir -p dieter-backend/voices/man dieter-backend/voices/woman
+#   (storage is created automatically; compose mounts dieter-backend/storage)
 #   docker compose build && docker compose up
 #   → Studio + API: http://localhost:8080  ·  GET /api/health  ·  tRPC: /trpc
 #
@@ -39,8 +40,8 @@ services:
     volumes:
       # Host WAV library → GET /api/voices/list (matches app/voices_router.py: dieter-backend/voices)
       - ./dieter-backend/voices:/app/voices
-      # Jobs, uploads, generated audio (persists across restarts)
-      - ./storage:/app/storage
+      # Jobs, uploads, generated audio (same path as local uvicorn: dieter-backend/storage)
+      - ./dieter-backend/storage:/app/storage
     healthcheck:
       test:
         [

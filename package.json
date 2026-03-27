@@ -8,6 +8,9 @@
   "scripts": {
     "build": "node scripts/build-frontend-to-backend.mjs",
     "build:backend": "node scripts/build-frontend-to-backend.mjs",
+    "platform:build": "node scripts/platform-build.mjs",
+    "platform:up": "docker compose up --build",
+    "platform:docker-build": "docker compose build",
     "deploy:vercel": "npx vercel deploy --prod --yes",
     "deploy:vercel:preview": "npx vercel deploy --yes",
     "shannon:bootstrap": "node scripts/shannon/bootstrap.mjs"
