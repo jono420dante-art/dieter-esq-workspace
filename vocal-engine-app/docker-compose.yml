@@ -1,0 +1,29 @@
+# From repo root (parent of vocal-engine-app):
+#   docker compose -f vocal-engine-app/docker-compose.yml up --build
+#
+# Mount a folder with .pth / .index into the API container, or copy models into
+# vocal-engine-app/backend/models/rvc_voices before build.
+
+services:
+  vocal-api:
+    build:
+      context: ..
+      dockerfile: vocal-engine-app/backend/Dockerfile
+      args:
+        INSTALL_RVC: "1"
+    ports:
+      - "${VOCAL_API_PORT:-8000}:8080"
+    environment:
+      PORT: "8080"
+      VOCAL_CORS_ORIGINS: "${VOCAL_CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}"
+      RVC_DEVICE: "${RVC_DEVICE:-cpu}"
+      BARK_MODEL_ID: "${BARK_MODEL_ID:-suno/bark}"
+    volumes:
+      - vocal_exports:/app/exports
+      - vocal_cache:/app/cache
+      - ./backend/models/rvc_voices:/app/models/rvc_voices
+      - ./backend/models/hubert:/app/models/hubert
+
+volumes:
+  vocal_exports:
+  vocal_cache:

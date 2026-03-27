@@ -2,6 +2,23 @@
 
 - Backend lives in `backend/`. Run FastAPI with cwd = `backend`: `uvicorn main:app --reload --host 0.0.0.0 --port 8000`. Install deps from `vocal-engine-app/`: `pip install -r requirements.txt`; add RVC on Linux/py3.11 with `pip install -r requirements-rvc.txt`.
 - Paths for audio: `backend/cache/` (raw Bark), `backend/exports/` (final WAV). RVC weights in `backend/models/rvc_voices/*.pth` (+ optional `.index`). Optional HuBERT weights in `backend/models/hubert/` per rvc-python docs.
-- Frontend in `frontend/` is a separate Vite app; set `VITE_API_URL` to the backend origin (e.g. http://127.0.0.1:8000).
+- Frontend in `frontend/` is a separate Vite app; set `VITE_API_URL` to the backend origin (e.g. http://127.0.0.1:8000). Dock player uses `/api/generate`, `/api/convert`, `/api/polish`, `/api/meta`, `/api/voices`.
+- Docker: from repo root, `docker compose -f vocal-engine-app/docker-compose.yml up --build`. Build arg `INSTALL_RVC=0` skips RVC layer if the image must build without fairseq.
 - Do not commit large `.pth`, `.index`, or HuBERT files; keep `models/` for local/dev only or document download URLs.
 - Prefer small, focused edits; match existing import style (stdlib → third-party → local).
+
+## Vocal–beat sync (build requirements)
+
+- **Vocal–beat sync:** Use `librosa.effects.hpss` then `librosa.beat.beat_track` on the **percussive** stem. Expose beat times as `beat_intervals` (seconds). Align the sung stem to the backing by prepending silence through the **first anchor beat** (`beat_intervals[0]`) and time-warping each Bark segment to its beat-window duration (see `pipeline.assemble_synced_vocal_lines`).
+- **Multilingual:** For **Afrikaans (`af`)**, use **Dutch (`nl`)** Bark voice presets / tokens for phonetics (`locales.DEFAULT_VOICE_BY_LANG`, `default_voice_for_lang`).
+- **RVC models:** Resolve only `*.pth` (and optional `*.index`) under **`backend/models/rvc_voices/`** (basename for API, no path segments).
+- **Hardware (Mac):** Bark uses MPS on Darwin when `BARK_DEVICE` is unset (`generator._bark_device`). RVC uses **`device="mps"`** on Apple Silicon when `RVC_DEVICE` is unset (`processor._device`).
+- **Verify beat detection locally:** From `backend/`, with a WAV path:  
+  `python -c "from beat_service import analyze_backing_track; import sys; print(analyze_backing_track(sys.argv[1]))" path/to/your_beat.wav`
+
+## Simple UI API (Vocal Box)
+
+- **POST** `/api/generate-singing` or `/generate-singing` with JSON: `lyrics`, `language` (`en` | `nl` | `af` or English/Dutch/Afrikaans), optional `model_name` (RVC `.pth` basename), optional `async_mode` (`true` → returns `job_id`, poll `GET /api/jobs/{id}` for stages).
+- **Sync success** response: `{ "status": "success", "url": "/media/final_….wav", … }`. Use ``<audio src={`${API}${url}`}>``.
+- **Static WAVs:** `app.mount("/media", StaticFiles(directory=exports))` serves the same files as `/download/{filename}`.
+- **Mixdown:** Final vocal+beat merge uses `soundfile` + numpy in `mixer.py`; `pydub` is in requirements for optional tooling — not required for the default mix path.

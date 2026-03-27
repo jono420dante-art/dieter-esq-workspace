@@ -27,17 +27,49 @@ _rvc_engine = None
 _rvc_lock = None
 
 
+def rvc_available() -> bool:
+    try:
+        import rvc_python.infer  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+def list_rvc_model_names() -> list[str]:
+    return sorted({p.stem for p in RVC_VOICES.glob("*.pth") if p.is_file()})
+
+
+def polish_only(raw_input_path: str | Path) -> Path:
+    """
+    Apply the studio Pedalboard chain only (no RVC). Use for Bark-only or uploaded dry stems.
+    """
+    raw_input_path = Path(raw_input_path).resolve()
+    if not raw_input_path.is_file():
+        raise FileNotFoundError(str(raw_input_path))
+    final_out = EXPORTS_DIR / f"final_{uuid.uuid4().hex}.wav"
+    _apply_studio_polish(raw_input_path, final_out)
+    return final_out
+
+
 def _device() -> str:
     d = (os.environ.get("RVC_DEVICE") or "").strip()
     if d:
         return d
+    import platform
+
     try:
         import torch
 
-        if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
-            return "mps"
+        # Apple Silicon: prefer MPS for RVC inference (explicit vs Linux CUDA-first).
+        if platform.system() == "Darwin":
+            if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+                return "mps"
+            return "cpu"
         if torch.cuda.is_available():
             return "cuda:0"
+        if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+            return "mps"
     except Exception:  # noqa: BLE001
         pass
     return "cpu"
@@ -74,7 +106,12 @@ def _get_rvc():
     with _rvc_lock:
         if _rvc_engine is not None:
             return _rvc_engine
-        from rvc_python.infer import RVCInference
+        try:
+            from rvc_python.infer import RVCInference
+        except ImportError as e:
+            raise RuntimeError(
+                "RVC is not installed. Use Bark + polish only, or install requirements-rvc.txt (Linux/py3.11)."
+            ) from e
 
         dev = _device()
         logger.info("RVCInference(device=%s)", dev)
@@ -104,6 +141,9 @@ def transform_to_real_vocal(
         raise ValueError("invalid model path")
     if not model_path.is_file():
         raise FileNotFoundError(f"RVC checkpoint missing: {model_path}")
+
+    if not rvc_available():
+        raise RuntimeError("RVC is not installed on this server.")
 
     index_path = (RVC_VOICES / f"{base}.index").resolve()
     has_index = index_path.is_file() and str(index_path).startswith(str(RVC_VOICES.resolve()))

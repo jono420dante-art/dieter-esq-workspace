@@ -15,5 +15,12 @@ torchaudio>=2.0,<3
 numpy
 scipy
 soundfile
+pydub>=0.25.0
+
+librosa>=0.10.0
+langdetect>=1.0.9
 
 pedalboard>=0.7.0
+
+# Tests (backend): pytest tests/ from vocal-engine-app/backend
+pytest>=8.0

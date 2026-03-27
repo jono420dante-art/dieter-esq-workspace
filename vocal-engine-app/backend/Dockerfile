@@ -14,10 +14,14 @@ RUN apt-get update \
 
 WORKDIR /app
 
+ARG INSTALL_RVC=1
+
 COPY vocal-engine-app/requirements.txt /tmp/requirements.txt
 COPY vocal-engine-app/requirements-rvc.txt /tmp/requirements-rvc.txt
 RUN pip install -r /tmp/requirements.txt \
-    && pip install -r /tmp/requirements-rvc.txt
+    && if [ "$INSTALL_RVC" = "1" ]; then \
+         pip install -r /tmp/requirements-rvc.txt || echo "RVC install failed — image will run Bark + polish only"; \
+       fi
 
 COPY vocal-engine-app/backend/ /app/
 
