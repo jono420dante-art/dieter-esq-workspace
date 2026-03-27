@@ -84,6 +84,26 @@ def _softclip(x: float) -> float:
     return math.tanh(2.0 * x) / math.tanh(2.0)
 
 
+@dataclass(frozen=True)
+class VoiceProfile:
+    f0_min: float
+    f0_max: float
+    formant_scale: float
+    breath: float
+    vib_depth: float
+    vib_rate: float
+    gain: float
+
+
+def _voice_profile(vocal_preset: str) -> VoiceProfile:
+    p = (vocal_preset or "").strip().lower()
+    if any(k in p for k in ("male", "man", "deep", "baritone", "bass")):
+        return VoiceProfile(95.0, 170.0, 0.84, 0.05, 0.012, 4.8, 0.05)
+    if any(k in p for k in ("female", "woman", "bright", "soprano", "alto")):
+        return VoiceProfile(185.0, 320.0, 1.12, 0.08, 0.02, 5.8, 0.045)
+    return VoiceProfile(140.0, 250.0, 1.0, 0.07, 0.016, 5.4, 0.043)
+
+
 def render_multitrack_wav(
     *,
     out_dir: Path,
@@ -157,16 +177,17 @@ def render_multitrack_wav(
         "u": (300.0, 870.0),
     }
 
-    # Convert chord root Hz -> a comfy vocal register note (around A3–E4)
+    profile = _voice_profile(vocal_preset)
+
+    # Convert chord root Hz -> target register from voice profile
     def vocal_f0_for_bar(bar_i: int) -> float:
         base_hz = prog[bar_i % len(prog)]
-        # push up 2–3 octaves depending on base
-        hz = base_hz * 8.0
-        while hz < 180.0:
+        hz = base_hz * 4.0
+        while hz < profile.f0_min:
             hz *= 2.0
-        while hz > 340.0:
+        while hz > profile.f0_max:
             hz *= 0.5
-        return hz
+        return _clamp(hz, profile.f0_min, profile.f0_max)
 
     # Build events: one word = one 8th note by default
     lyric_words = [w for w in (lyrics or "").replace("\n", " ").split(" ") if w.strip()]
@@ -198,19 +219,23 @@ def render_multitrack_wav(
             return
         cur_vowel = vowel
         f1, f2 = vowel_formants.get(vowel, vowel_formants["a"])
+        f1 *= profile.formant_scale
+        f2 *= profile.formant_scale
         f1_w = 2.0 * math.pi * (f1 / SR)
         f2_w = 2.0 * math.pi * (f2 / SR)
 
     # initialize formants
     f1, f2 = vowel_formants["a"]
+    f1 *= profile.formant_scale
+    f2 *= profile.formant_scale
     f1_w = 2.0 * math.pi * (f1 / SR)
     f2_w = 2.0 * math.pi * (f2 / SR)
 
-    # preset shaping
+    # preset shaping layered on top of male/female profile
     preset = (vocal_preset or "").lower()
-    breath = 0.06 if "radio" in preset else 0.10 if "trap" in preset else 0.14 if "alien" in preset else 0.08
-    vib_depth = 0.015 if "rock" in preset else 0.02 if "choir" in preset else 0.03 if "elf" in preset else 0.018
-    vib_rate = 5.2 if "choir" in preset else 6.0 if "trap" in preset else 5.5
+    breath = profile.breath + (0.02 if "trap" in preset else 0.0) + (0.03 if "alien" in preset else 0.0)
+    vib_depth = profile.vib_depth + (0.004 if "choir" in preset else 0.0) + (0.006 if "elf" in preset else 0.0)
+    vib_rate = profile.vib_rate + (0.5 if "trap" in preset else 0.0)
 
     mix_path = out_dir / "mix.wav"
     stems_out: Dict[str, Path] = {}
@@ -360,7 +385,7 @@ def render_multitrack_wav(
                         f2_y1 = y2
 
                         # conservative gain + softclip for stability
-                        vox = _softclip(0.035 * (0.65 * y1 + 0.55 * y2))
+                        vox = _softclip(profile.gain * (0.65 * y1 + 0.55 * y2))
 
             # clamp components before stats
             drum_c = _clamp(drum, -1.0, 1.0)

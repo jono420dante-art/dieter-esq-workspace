@@ -75,6 +75,8 @@ class DieterMusicEngine:
         wav = wav.detach().cpu()
         while wav.dim() > 2:
             wav = wav.squeeze(0)
+        if wav.dim() == 1:
+            wav = wav.unsqueeze(0)
 
         job_id = uuid.uuid4().hex[:16]
         out_dir = storage_dir / "musicgen"
@@ -90,10 +92,13 @@ class DieterMusicEngine:
                 self.model.sample_rate,
                 strategy="loudness",
             )
-        except Exception:
+        except Exception as e:
+            logger.warning("audiocraft audio_write failed (%s); using torchaudio.save", e)
             import torchaudio
 
             torchaudio.save(str(out_path), wav, self.model.sample_rate)
+        if not out_path.is_file():
+            raise RuntimeError(f"MusicGen output missing after write: {out_path}")
 
         rel = f"/api/storage/musicgen/{job_id}.wav"
         logger.info("MusicGen wrote %s", out_path)

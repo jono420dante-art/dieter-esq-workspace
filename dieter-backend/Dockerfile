@@ -47,6 +47,8 @@ COPY dieter-backend/scripts /app/scripts
 
 RUN mkdir -p /app/data /app/storage
 
+COPY dieter-backend/voices /app/voices
+
 COPY --from=frontend /src/mureka-clone/dist /app/static
 
 EXPOSE 8080

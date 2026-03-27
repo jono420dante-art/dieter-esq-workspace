@@ -116,6 +116,15 @@ vercel --prod
 - Redeploy after changing env vars.
 - Prefer **`MUREKA_API_KEY` only on the server**; avoid shipping keys in public clients for production.
 
+## Optional: MusicGen (Audiocraft)
+
+Local lyrics→instrumental generation (large install and GPU recommended):
+
+1. `pip install -r requirements.txt` (includes `audiocraft`, `transformers`; first run may download multi‑GB weights).
+2. Set **`DIETER_ENABLE_MUSICGEN=1`** (see `.env.example`). Without this, MusicGen routes return **503**.
+3. **Routes:** `GET /api/musicgen/status` · `POST /api/musicgen/generate` · production aliases `POST /api/music` and `POST /api/song` (when enabled).
+4. Output WAVs live under **`storage/musicgen/`** and are served at **`/api/storage/musicgen/{jobId}.wav`**.
+
 ## Stems
 
 When Mureka returns a ZIP or stem URLs, add download buttons in `App.jsx` and point users to Ableton / Logic import.

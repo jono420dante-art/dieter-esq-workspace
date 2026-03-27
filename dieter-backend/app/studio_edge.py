@@ -114,6 +114,7 @@ def dieter_edge_manifest() -> dict[str, Any]:
             "productionMusic": "POST /api/music (MusicGen when enabled)",
             "productionSong": "POST /api/song (vocals + optional MusicGen + optional Supabase)",
             "musicGen": "GET /api/musicgen/status · POST /api/musicgen/generate",
+            "voices": "GET /api/voices/list · POST /api/voices/upload · static /voices/man|woman/*.wav",
             "murekaSong": "POST /api/mureka/song/generate · POST /api/mureka (compat: lyrics + style)",
             "musicJob": "POST /api/music/generate",
         },

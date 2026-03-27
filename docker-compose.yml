@@ -1,7 +1,7 @@
 # Dieter stack — repo root
 #
 # Default (API + static studio + tRPC):
-#   mkdir -p voices/man voices/woman storage
+#   mkdir -p dieter-backend/voices/man dieter-backend/voices/woman dieter-backend/storage
 #   docker compose build && docker compose up
 #   → Studio + API: http://localhost:8080  ·  GET /api/health  ·  tRPC: /trpc
 #
@@ -37,8 +37,8 @@ services:
       DIETER_TRPC_UPSTREAM: http://trpc:8790
       MUREKA_API_KEY: ${MUREKA_API_KEY:-}
     volumes:
-      # Host WAV library → GET /api/voices/list, static /voices/...
-      - ./voices:/app/voices
+      # Host WAV library → GET /api/voices/list (matches app/voices_router.py: dieter-backend/voices)
+      - ./dieter-backend/voices:/app/voices
       # Jobs, uploads, generated audio (persists across restarts)
       - ./storage:/app/storage
     healthcheck:

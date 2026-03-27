@@ -246,6 +246,14 @@ const appRouter = t.router({
         body: JSON.stringify(input),
       }) as Promise<{ text: string; source: "openai" | "anthropic" | "local"; warnings?: string[] }>;
     }),
+
+  /** FastAPI `GET /api/voices/list` — sample WAVs under ``/voices/man`` and ``/voices/woman``. */
+  voicesList: t.procedure.query(async () => {
+    return fastapiJson("/api/voices/list") as Promise<{
+      man: { name: string; url: string }[];
+      woman: { name: string; url: string }[];
+    }>;
+  }),
 });
 
 export type AppRouter = typeof appRouter;
