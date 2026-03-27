@@ -10,7 +10,7 @@ Single **Docker** image: **React UI** + **FastAPI** on one URL.
 
 1. Read **[`DIETER_ESQ_START.md`](./DIETER_ESQ_START.md)** — Railway / Render / **Vercel** / local `docker compose`.
 2. Repo root **`railway.toml`** points at **`dieter-backend/Dockerfile`** (build context = this repo root).
-3. **Vercel / Netlify (free):** root **`vercel.json`** or **`netlify.toml`**. Custom domain (**`dieter-music.app`**), **Stripe `pk_live_…`** build injection, fork + deploy: **[`docs/DIETER_MUSIC_APP.md`](./docs/DIETER_MUSIC_APP.md)**. Set **`VITE_API_BASE`** to your live API. **After each push:** CI build + channel checklist — **[`docs/DEPLOY_CHANNELS_PERFORMANCE.md`](./docs/DEPLOY_CHANNELS_PERFORMANCE.md)** (Portal `/#portal`, static health, CORS). **Production UI:** [https://dieter-esq-workspace.vercel.app](https://dieter-esq-workspace.vercel.app) (add your domain in the hosting UI). **Redeploy:** `npm run deploy:vercel` from repo root, or push to GitHub.
+3. **Vercel / Netlify (free):** root **`vercel.json`** or **`netlify.toml`**. The main UI build copies **`mureka-clone/dist` → `./public`** so Vercel’s default **Output Directory** (`public`) matches the build. Custom domain (**`dieter-music.app`**), **Stripe `pk_live_…`** build injection, fork + deploy: **[`docs/DIETER_MUSIC_APP.md`](./docs/DIETER_MUSIC_APP.md)**. Set **`VITE_API_BASE`** to your live API. **After each push:** CI build + channel checklist — **[`docs/DEPLOY_CHANNELS_PERFORMANCE.md`](./docs/DEPLOY_CHANNELS_PERFORMANCE.md)** (Portal `/#portal`, static health, CORS). **Production UI:** [https://dieter-esq-workspace.vercel.app](https://dieter-esq-workspace.vercel.app) (add your domain in the hosting UI). **Redeploy:** `npm run deploy:vercel` from repo root, or push to GitHub.
 
 Main code:
 
