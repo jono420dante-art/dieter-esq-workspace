@@ -5,20 +5,36 @@ import App from './App.jsx'
 import { getSiteUrl } from './siteUrl.js'
 import { STUDIO_NAME } from './studioBrand.js'
 
-if (typeof document !== 'undefined') {
-  document.title = STUDIO_NAME
-  const meta = document.querySelector('meta[name="description"]')
-  if (meta) {
-    meta.setAttribute(
-      'content',
-      `${STUDIO_NAME} — AI music studio: beat lab, local pipeline, voice tools, cloud create.`,
-    )
+const desc = `${STUDIO_NAME} — Lyrics to music: Mureka vocals, Teal Voices, beat lab, stems, release SEO & social tools.`
+
+function ensureMeta(attr, key, val) {
+  if (!val || typeof document === 'undefined') return
+  let el = document.querySelector(`meta[${attr}="${key}"]`)
+  if (!el) {
+    el = document.createElement('meta')
+    el.setAttribute(attr, key)
+    document.head.appendChild(el)
   }
+  el.setAttribute('content', val)
+}
+
+if (typeof document !== 'undefined') {
+  document.title = `${STUDIO_NAME} · Music studio`
+  const meta = document.querySelector('meta[name="description"]')
+  if (meta) meta.setAttribute('content', desc)
+  ensureMeta('name', 'theme-color', '#0c0618')
+  ensureMeta('property', 'og:type', 'website')
+  ensureMeta('property', 'og:title', `${STUDIO_NAME} · AI music studio`)
+  ensureMeta('property', 'og:description', desc)
+  ensureMeta('name', 'twitter:card', 'summary_large_image')
+  ensureMeta('name', 'twitter:title', `${STUDIO_NAME} · Music studio`)
+  ensureMeta('name', 'twitter:description', desc)
 }
 
 const site = getSiteUrl()
 if (site && typeof document !== 'undefined') {
   const href = `${site}/`
+  const ogImage = `${site.replace(/\/$/, '')}/favicon.svg`
   let link = document.querySelector('link[rel="canonical"]')
   if (!link) {
     link = document.createElement('link')
@@ -26,13 +42,9 @@ if (site && typeof document !== 'undefined') {
     document.head.appendChild(link)
   }
   link.href = href
-  let og = document.querySelector('meta[property="og:url"]')
-  if (!og) {
-    og = document.createElement('meta')
-    og.setAttribute('property', 'og:url')
-    document.head.appendChild(og)
-  }
-  og.setAttribute('content', href)
+  ensureMeta('property', 'og:url', href)
+  ensureMeta('property', 'og:image', ogImage)
+  ensureMeta('name', 'twitter:image', ogImage)
 }
 
 createRoot(document.getElementById('root')).render(

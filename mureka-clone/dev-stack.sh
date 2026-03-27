@@ -71,7 +71,8 @@ for _ in {1..50}; do
   sleep 0.2
 done
 
-echo "==> 3/3 Vite (mureka-clone) :5173 — proxies /trpc and /api"
+echo "==> 3/3 Vite (mureka-clone) :5173 — proxies /trpc, /api, /voices"
+mkdir -p "$BACKEND/voices/man" "$BACKEND/voices/woman"
 cd "$APP"
 if [[ ! -d node_modules ]]; then
   npm install

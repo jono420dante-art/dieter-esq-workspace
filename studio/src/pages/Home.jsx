@@ -67,6 +67,12 @@ export default function Home() {
           Put this site on <strong style={{ color: 'var(--text)' }}>Vercel</strong> with root <code>studio</code>, and host the <code>engine</code> container on Railway, Fly.io, or any Docker host.
           Point the browser at your production engine URL so CORS allows your Vercel domain (set <code>CORS_ORIGINS</code> on the engine if needed).
         </p>
+        <p style={{ color: 'var(--muted)', lineHeight: 1.65, marginTop: '1rem' }}>
+          <Link to="/release" style={{ color: 'var(--accent)' }}>
+            Sell &amp; share →
+          </Link>{' '}
+          SEO pack (optional <code>VITE_DIETER_API_BASE</code>) and distributor links.
+        </p>
       </section>
     </main>
   )

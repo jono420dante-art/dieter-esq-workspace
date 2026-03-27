@@ -12,6 +12,7 @@ import StudioPortal from './StudioPortal.jsx'
 import AudioTransport from './AudioTransport.jsx'
 import SongPlaybackPage from './SongPlaybackPage.jsx'
 import TealVoicesStudio from './TealVoicesStudio.jsx'
+import ReleaseMarketing from './ReleaseMarketing.jsx'
 import {
   fetchStudioGrowth,
   normalizeApiRoot,
@@ -41,6 +42,7 @@ function formatSessionSeconds(totalSec) {
 /** Header title per mode — keep in sync with sidebar groups. */
 const APP_MODE_HEADER = {
   portal: 'Portal & guide',
+  release: 'Release & reach',
   create: 'Create',
   cloud: 'Cloud',
   voicestudio: 'Voice',
@@ -55,6 +57,7 @@ const APP_MODE_HEADER = {
 /** One-line UX intent under the header (driven / guided copy). */
 const APP_MODE_SUB = {
   portal: 'Check health, then go to Create for the full Mureka path.',
+  release: 'SEO pack, hashtags, and links to sell & post your finished tracks.',
   create: 'Keys → describe your track → Generate (Mureka renders real vocals).',
   cloud: 'Polish lyrics, pick style & vocal, then Create with Mureka.',
   voicestudio: 'Beat + lyrics → Mureka mix — optional sample for local tools.',
@@ -85,6 +88,24 @@ function StudioJourneyStrip({ mode, hasMurekaKey, onOpenKeys, onGoCreate }) {
             Create
           </button>{' '}
           for the main Mureka flow.
+        </p>
+      </div>
+    )
+  }
+
+  if (mode === 'release') {
+    return (
+      <div className="studio-journey studio-journey--lab" role="region" aria-label="Release path">
+        <div className="studio-journey-head">
+          <span className="studio-journey-eyebrow">After the song is ready</span>
+          <span className="studio-journey-lane">Distribute · SEO · social</span>
+        </div>
+        <p className="studio-journey-lab-copy">
+          Generate on{' '}
+          <button type="button" className="studio-journey-inline-btn" onClick={onGoCreate}>
+            Create
+          </button>
+          , then return here for titles, hashtags, and portal links.
         </p>
       </div>
     )
@@ -171,6 +192,9 @@ function StudioJourneyStrip({ mode, hasMurekaKey, onOpenKeys, onGoCreate }) {
 const HASH_TO_MODE = {
   portal: 'portal',
   guide: 'portal',
+  release: 'release',
+  sell: 'release',
+  marketing: 'release',
   create: 'create',
   cloud: 'cloud',
   voicestudio: 'voicestudio',
@@ -187,6 +211,10 @@ const SIDEBAR_GROUPS = [
   {
     title: 'Start',
     items: [{ id: 'portal', label: 'Portal & guide', hint: 'API health · quick links' }],
+  },
+  {
+    title: 'Release & reach',
+    items: [{ id: 'release', label: 'Sell & share', hint: 'SEO pack · DSPs · social' }],
   },
   {
     title: 'Make music (Mureka)',
@@ -732,7 +760,8 @@ export default function App() {
     appMode === 'beatlab' ||
     appMode === 'voicestudio' ||
     appMode === 'tealvoices' ||
-    appMode === 'portal'
+    appMode === 'portal' ||
+    appMode === 'release'
 
   const runtimeModeLabel =
     runtimeMode === 'external' ? 'External' : runtimeMode === 'fallback' ? 'Fallback' : 'Self-Run'
@@ -875,6 +904,8 @@ export default function App() {
 
       {appMode === 'portal' ? (
         <StudioPortal apiBase={base} onOpenKeys={() => setShowAuth(true)} onNavigateMode={goMode} />
+      ) : appMode === 'release' ? (
+        <ReleaseMarketing apiBase={base} />
       ) : appMode === 'create' ? (
         <MurekaPromptStudio
           apiBase={base}
@@ -1172,6 +1203,10 @@ export default function App() {
         <div style={{ marginTop: 10 }}>
           <a className="footer-link" href="#portal" onClick={(e) => { e.preventDefault(); goMode('portal') }}>
             Portal &amp; API health
+          </a>
+          {' · '}
+          <a className="footer-link" href="#release" onClick={(e) => { e.preventDefault(); goMode('release') }}>
+            Sell &amp; share
           </a>
           {' · '}
             <a className="footer-link" href="/ed-geerdes-platform.html">

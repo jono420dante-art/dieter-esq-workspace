@@ -5,6 +5,7 @@ import Footer from './components/Footer'
 
 const Home = lazy(() => import('./pages/Home'))
 const Generate = lazy(() => import('./pages/Generate'))
+const Release = lazy(() => import('./pages/Release'))
 const Status = lazy(() => import('./pages/Status'))
 
 function RouteFallback() {
@@ -29,6 +30,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/generate" element={<Generate />} />
+          <Route path="/release" element={<Release />} />
           <Route path="/status" element={<Status />} />
         </Routes>
       </Suspense>

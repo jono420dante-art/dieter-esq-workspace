@@ -57,6 +57,18 @@ def main() -> int:
         vl = c.get("/api/voices/list")
         print(f"  GET /api/voices/list -> {vl.status_code} man={len(vl.json().get('man', []))} woman={len(vl.json().get('woman', []))}")
 
+        seo = c.post(
+            "/api/seo/suggest",
+            json={"title": "Verify Platform Release", "genre": "pop", "lyrics": lyrics[:120]},
+        )
+        print(f"  POST /api/seo/suggest -> {seo.status_code}")
+        if seo.status_code != 200:
+            errors.append("seo_suggest")
+            print(f"       {seo.text[:400]}")
+        else:
+            sj = seo.json()
+            print(f"       packSource={sj.get('packSource')} hashtags={len(sj.get('hashtags') or [])}")
+
         has_mureka = bool(os.environ.get("MUREKA_API_KEY", "").strip())
         print(f"  MUREKA_API_KEY in env: {has_mureka}")
         if has_mureka:

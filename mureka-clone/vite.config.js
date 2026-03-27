@@ -62,7 +62,11 @@ export default defineConfig(({ mode }) => ({
         changeOrigin: true,
       },
       '/trpc': {
-        target: 'http://127.0.0.1:8790',
+        target: process.env.TRPC_PROXY_TARGET || 'http://127.0.0.1:8790',
+        changeOrigin: true,
+      },
+      '/voices': {
+        target: process.env.API_PROXY_TARGET || 'http://127.0.0.1:8787',
         changeOrigin: true,
       },
     },

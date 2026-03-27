@@ -54,6 +54,9 @@ export default function NavBar() {
         <NavLink to="/generate" style={linkStyle}>
           Generate
         </NavLink>
+        <NavLink to="/release" style={linkStyle}>
+          Sell &amp; share
+        </NavLink>
         <NavLink to="/status" style={linkStyle}>
           Engine
         </NavLink>

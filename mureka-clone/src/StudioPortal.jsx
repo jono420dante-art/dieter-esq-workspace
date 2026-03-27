@@ -46,6 +46,9 @@ export default function StudioPortal({ apiBase, onOpenKeys, onNavigateMode }) {
 
   const staticShowroomHref = '/ed-geerdes-platform.html'
   const site = getSiteUrl()
+  const capsError = String(caps?.error || '')
+  const capsLooksCloudOnly =
+    /404|not found|cloudflare|vercel|static host|not wired|cannot\s+run\s+from\s+this\s+page/i.test(capsError)
 
   const pushHandoffAndOpen = () => {
     setHandoffMsg('')
@@ -130,6 +133,9 @@ export default function StudioPortal({ apiBase, onOpenKeys, onNavigateMode }) {
           <button type="button" className="btn-secondary" onClick={() => onNavigateMode('tealvoices')}>
             Teal Voices
           </button>
+          <button type="button" className="btn-secondary" onClick={() => onNavigateMode('release')}>
+            Sell &amp; share
+          </button>
         </div>
       </section>
 
@@ -159,7 +165,7 @@ export default function StudioPortal({ apiBase, onOpenKeys, onNavigateMode }) {
               className="portal-badge portal-badge-warn"
               title={caps.error || 'GET /api/local/capabilities must return JSON from FastAPI'}
             >
-              Local DSP: API not wired (hover for detail)
+              {capsLooksCloudOnly ? 'Local DSP: cloud mode (expected)' : 'Local DSP: API not wired (hover for detail)'}
             </span>
           )}
         </div>
