@@ -28,6 +28,8 @@ dieter-backend/static/
 
 # Backend runtime data (regenerated on server)
 dieter-backend/storage/
+# docker-compose.yml dieter-music bind mount
+output/
 dieter-backend/data/*
 !dieter-backend/data/.gitkeep
 
@@ -83,3 +85,9 @@ platform/
 third_party/shannon/
 
 .vercel
+
+# Vocal engine runtime / weights (keep .gitkeep dirs)
+vocal-engine-app/backend/cache/*.wav
+vocal-engine-app/backend/exports/*.wav
+vocal-engine-app/backend/models/**/*.pth
+vocal-engine-app/backend/models/**/*.index

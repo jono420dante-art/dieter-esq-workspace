@@ -1,0 +1,7 @@
+# vocal-engine-app
+
+- Backend lives in `backend/`. Run FastAPI with cwd = `backend`: `uvicorn main:app --reload --host 0.0.0.0 --port 8000`. Install deps from `vocal-engine-app/`: `pip install -r requirements.txt`; add RVC on Linux/py3.11 with `pip install -r requirements-rvc.txt`.
+- Paths for audio: `backend/cache/` (raw Bark), `backend/exports/` (final WAV). RVC weights in `backend/models/rvc_voices/*.pth` (+ optional `.index`). Optional HuBERT weights in `backend/models/hubert/` per rvc-python docs.
+- Frontend in `frontend/` is a separate Vite app; set `VITE_API_URL` to the backend origin (e.g. http://127.0.0.1:8000).
+- Do not commit large `.pth`, `.index`, or HuBERT files; keep `models/` for local/dev only or document download URLs.
+- Prefer small, focused edits; match existing import style (stdlib → third-party → local).

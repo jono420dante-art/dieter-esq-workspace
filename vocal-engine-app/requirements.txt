@@ -1,0 +1,19 @@
+# Core stack (Windows + Python 3.12 safe). Backend cwd: vocal-engine-app/backend
+#   pip install -r ../requirements.txt
+#
+# Voice conversion (RVC) — often needs Python 3.11 + Linux; use requirements-rvc.txt in Docker or a 3.11 venv:
+#   pip install -r ../requirements-rvc.txt
+
+fastapi>=0.115.0,<0.120
+uvicorn[standard]>=0.24.0
+pydantic>=2.4,<3
+python-multipart>=0.0.6
+
+transformers>=4.38.0,<5
+torch>=2.0,<3
+torchaudio>=2.0,<3
+numpy
+scipy
+soundfile
+
+pedalboard>=0.7.0

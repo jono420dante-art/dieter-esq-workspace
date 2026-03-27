@@ -23,3 +23,20 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+
+  # Vocal Engine (Bark + RVC API) — optional second service; remove if you do not need it.
+  - type: web
+    name: vocal-engine-api
+    runtime: docker
+    region: oregon
+    plan: starter
+    dockerfilePath: ./vocal-engine-app/backend/Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: VOCAL_CORS_ORIGINS
+        value: "*"
+      - key: RVC_DEVICE
+        value: "cpu"
