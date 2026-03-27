@@ -5,11 +5,20 @@ import * as engine from '../engine.js';
 import * as voices from '../voices.js';
 import { navigate } from '../router.js';
 import { icon } from '../icons.js';
+import {
+  getBackendBase,
+  setBackendBase,
+  absoluteStorageUrl,
+  fetchDieterJson,
+  getOpenaiKey,
+  getAnthropicKey,
+} from '../apiConfig.js';
 
 let selectedVoice = null;
 let currentLangFilter = 'all';
 let vizRAF = null;
 let liveWindow = null;
+let tealObjectUrl = null;
 
 export function render() {
   return `
@@ -24,6 +33,11 @@ export function render() {
               <span id="lyrics-structure" style="font-size:.54rem;color:var(--purple)"></span>
               <button class="btn btn-ghost btn-sm" id="btn-clear-lyrics" title="Clear lyrics">${icon('x', 12)} Clear</button>
             </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center">
+            <button class="btn btn-primary btn-sm" type="button" id="btn-ai-generate-lyrics">${icon('zap', 12)} AI draft</button>
+            <button class="btn btn-ghost btn-sm" type="button" id="btn-ai-optimize-lyrics">${icon('star', 12)} Polish</button>
+            <span style="font-size:.5rem;color:var(--dim);flex:1;min-width:140px;line-height:1.35">Server env keys or <code style="font-size:.9em">dp-openai-key</code> / <code style="font-size:.9em">dp-anthropic-key</code> (see Mureka lab).</span>
           </div>
         </div>
 
@@ -74,6 +88,35 @@ export function render() {
             <input type="range" id="lyrics-rate" min="0.3" max="2" value="0.9" step="0.1"/>
             <span class="slider-val" id="lyrics-rate-val">0.9</span>
           </div>
+        </div>
+
+        <div class="panel" style="border-color:rgba(45,212,191,.25)">
+          <div class="panel-header">${icon('zap', 16)} Backend vocal WAV <span class="panel-header-right" style="font-size:.52rem;color:var(--dim)">FastAPI</span></div>
+          <p style="font-size:.58rem;color:var(--dim);line-height:1.45;margin-bottom:8px">
+            Renders lyrics to a real audio file on your <strong>Dieter</strong> server (<code>POST /api/tealvoices/sing</code>).
+            Coqui TTS when installed; otherwise a labeled procedural stem. For full AI sung productions, use <strong>Music Studio</strong> with Mureka + API keys.
+          </p>
+          <label>Backend URL (blank = same origin / Vercel proxy)</label>
+          <input
+            type="text"
+            id="lyrics-backend-base"
+            placeholder="https://your-api.up.railway.app"
+            value=""
+            style="margin-bottom:6px;font-size:.72rem"
+          />
+          <div id="tealvoices-api-status" style="font-size:.54rem;color:var(--dim);margin-bottom:8px;line-height:1.4">Checking API…</div>
+          <div class="grid-2" style="margin-top:4px">
+            <div><label>Clone voice id (optional)</label>
+              <input type="text" id="lyrics-teal-voice-id" placeholder="Registry id from Voice studio" style="font-size:.72rem"/>
+            </div>
+            <div><label>Pitch (semitones) <span class="slider-val" id="lyrics-teal-pitch-val">0</span></label>
+              <input type="range" id="lyrics-teal-pitch" min="-12" max="12" step="0.5" value="0" style="width:100%;accent-color:#2dd4bf"/>
+            </div>
+          </div>
+          <button class="action-btn" id="btn-teal-backend-render" type="button" style="margin-top:10px;background:linear-gradient(135deg,#0d9488,#14b8a6)">
+            ${icon('disc', 16)} Render vocal WAV (backend)
+          </button>
+          <audio id="teal-backend-audio" class="wave-canvas" controls style="width:100%;margin-top:10px;height:40px;display:none"></audio>
         </div>
 
         <div style="display:flex;gap:4px">
@@ -144,6 +187,9 @@ export function init() {
   setupSlider('lyrics-pitch', 'lyrics-pitch-val', v => parseFloat(v).toFixed(1));
   setupSlider('lyrics-rate', 'lyrics-rate-val', v => parseFloat(v).toFixed(1));
 
+  document.getElementById('btn-ai-generate-lyrics')?.addEventListener('click', handleAiDraftLyrics);
+  document.getElementById('btn-ai-optimize-lyrics')?.addEventListener('click', handleAiPolishLyrics);
+
   document.getElementById('btn-sing-lyrics')?.addEventListener('click', handleSing);
   document.getElementById('btn-speak-lyrics')?.addEventListener('click', handleSpeak);
   document.getElementById('btn-stop-voice')?.addEventListener('click', () => {
@@ -174,6 +220,8 @@ export function init() {
   loadRealVoices();
   renderSongs();
   tryApplyMurekaDraftToLyrics();
+  setupTealBackendPanel();
+  void loadTealApiStatus();
   startViz();
 }
 
@@ -200,6 +248,190 @@ export function destroy() {
   voices.setCallbacks({});
   if (liveWindow && !liveWindow.closed) liveWindow.close();
   liveWindow = null;
+  if (tealObjectUrl) {
+    try { URL.revokeObjectURL(tealObjectUrl); } catch { /* ignore */ }
+    tealObjectUrl = null;
+  }
+}
+
+function appendLyricsWarnings(statusMsg, warnings) {
+  if (!Array.isArray(warnings) || !warnings.length) return statusMsg;
+  const note = warnings.slice(0, 3).join(' · ');
+  return `${statusMsg}${note ? ` (${note})` : ''}`;
+}
+
+async function handleAiDraftLyrics() {
+  const base = (getBackendBase() || '').trim().replace(/\/+$/, '');
+  const ta = document.getElementById('lyrics-text');
+  const genre = document.getElementById('lyrics-genre')?.value || 'pop';
+  const raw = ta?.value?.trim() || '';
+  const titleHint =
+    raw.split('\n').find((l) => l.trim() && !l.trim().startsWith('['))?.slice(0, 80).trim() ||
+    'Untitled';
+  const btn = document.getElementById('btn-ai-generate-lyrics');
+  if (btn) btn.disabled = true;
+  setStatus('AI: drafting lyrics…');
+  try {
+    const body = {
+      style: genre,
+      title: titleHint,
+      vocal: 'female',
+    };
+    const oa = getOpenaiKey()?.trim();
+    const an = getAnthropicKey()?.trim();
+    if (oa) body.openaiApiKey = oa;
+    if (an) body.anthropicApiKey = an;
+    const data = await fetchDieterJson(`${base}/api/lyrics/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const text = data.text;
+    if (typeof text !== 'string' || !text.trim()) throw new Error('API returned no lyrics text');
+    if (ta) {
+      ta.value = text;
+      updateCounts();
+    }
+    const src = data.source || '';
+    setStatus(appendLyricsWarnings(`AI draft ready · source: ${src}`, data.warnings));
+  } catch (e) {
+    console.error(e);
+    setStatus('AI draft error: ' + (e?.message || e));
+  }
+  if (btn) btn.disabled = false;
+}
+
+async function handleAiPolishLyrics() {
+  const base = (getBackendBase() || '').trim().replace(/\/+$/, '');
+  const ta = document.getElementById('lyrics-text');
+  const text = ta?.value?.trim();
+  if (!text) {
+    setStatus('Write lyrics first, then Polish.');
+    return;
+  }
+  const btn = document.getElementById('btn-ai-optimize-lyrics');
+  if (btn) btn.disabled = true;
+  setStatus('AI: polishing lyrics…');
+  try {
+    const body = { lyrics: text };
+    const oa = getOpenaiKey()?.trim();
+    const an = getAnthropicKey()?.trim();
+    if (oa) body.openaiApiKey = oa;
+    if (an) body.anthropicApiKey = an;
+    const data = await fetchDieterJson(`${base}/api/lyrics/optimize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const out = data.text;
+    if (typeof out !== 'string' || !out.trim()) throw new Error('API returned empty text');
+    if (ta) {
+      ta.value = out;
+      updateCounts();
+    }
+    const src = data.source || '';
+    setStatus(appendLyricsWarnings(`Polished · source: ${src}`, data.warnings));
+  } catch (e) {
+    console.error(e);
+    setStatus('Polish error: ' + (e?.message || e));
+  }
+  if (btn) btn.disabled = false;
+}
+
+function setupTealBackendPanel() {
+  const baseInput = document.getElementById('lyrics-backend-base');
+  if (baseInput) {
+    baseInput.value = getBackendBase();
+    baseInput.addEventListener('change', () => setBackendBase(baseInput.value));
+    baseInput.addEventListener('blur', () => {
+      setBackendBase(baseInput.value);
+      void loadTealApiStatus();
+    });
+  }
+  const pitch = document.getElementById('lyrics-teal-pitch');
+  const pitchVal = document.getElementById('lyrics-teal-pitch-val');
+  if (pitch && pitchVal) {
+    pitch.addEventListener('input', () => { pitchVal.textContent = pitch.value; });
+  }
+  document.getElementById('btn-teal-backend-render')?.addEventListener('click', handleTealBackendRender);
+}
+
+async function loadTealApiStatus() {
+  const el = document.getElementById('tealvoices-api-status');
+  if (!el) return;
+  const base = (getBackendBase() || '').trim().replace(/\/+$/, '');
+  const url = `${base}/api/tealvoices/status`;
+  try {
+    const data = await fetchDieterJson(url);
+    const coqui = data.coquiAvailable;
+    const n = data.registeredCloneVoices;
+    el.style.color = coqui ? '#22c55e' : '';
+    el.textContent = coqui
+      ? `API OK · Coqui TTS ready${typeof n === 'number' ? ` · ${n} clone profile(s)` : ''}`
+      : `API OK · Coqui offline — fallback stems only${typeof n === 'number' ? ` · ${n} clone(s) registered` : ''}`;
+  } catch (e) {
+    el.style.color = '#f97316';
+    el.textContent =
+      'Cannot reach /api/tealvoices/status. Set Backend URL, run FastAPI, or set Vercel DIETER_API_ORIGIN. ' +
+      (e?.message || e);
+  }
+}
+
+async function handleTealBackendRender() {
+  const text = document.getElementById('lyrics-text')?.value?.trim();
+  if (!text) {
+    setStatus('Write lyrics first (backend uses the same text box).');
+    return;
+  }
+  const base = (getBackendBase() || '').trim().replace(/\/+$/, '');
+  const btn = document.getElementById('btn-teal-backend-render');
+  const voiceId = document.getElementById('lyrics-teal-voice-id')?.value?.trim() || '';
+  const pitch = parseFloat(document.getElementById('lyrics-teal-pitch')?.value || '0');
+  if (btn) btn.disabled = true;
+  setStatus('Backend: rendering vocal WAV…');
+  try {
+    const data = await fetchDieterJson(`${base}/api/tealvoices/sing`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        lyrics: text,
+        voiceId: voiceId || null,
+        pitchSemitones: Number.isFinite(pitch) ? pitch : 0,
+      }),
+    });
+    const rawUrl = data.url || data.URL;
+    if (!rawUrl) throw new Error('API returned no url field');
+    const abs = absoluteStorageUrl(base, rawUrl);
+    const audioResp = await fetch(abs);
+    if (!audioResp.ok) throw new Error(`Download vocal failed: HTTP ${audioResp.status}`);
+    const blob = await audioResp.blob();
+    if (tealObjectUrl) {
+      try { URL.revokeObjectURL(tealObjectUrl); } catch { /* ignore */ }
+      tealObjectUrl = null;
+    }
+    tealObjectUrl = URL.createObjectURL(blob);
+    const audioEl = document.getElementById('teal-backend-audio');
+    if (audioEl) {
+      audioEl.src = tealObjectUrl;
+      audioEl.style.display = 'block';
+    }
+    const file = new File([blob], 'teal-vocal.wav', { type: blob.type || 'audio/wav' });
+    await engine.decodeFile(file);
+    engine.setGenre(document.getElementById('lyrics-genre')?.value || 'pop');
+    const played = engine.play();
+    const mode = data.tealvoicesMode || data.engine || '';
+    const note = data.note ? ` · ${data.note}` : '';
+    setStatus(
+      (played ? 'Playing backend WAV in preview. ' : 'Decoded WAV — use Play. ')
+      + (mode ? `Mode: ${mode}` : '')
+      + note,
+    );
+    saveSong(text, 'api-wav');
+  } catch (e) {
+    console.error(e);
+    setStatus('Backend vocal error: ' + (e?.message || e));
+  }
+  if (btn) btn.disabled = false;
 }
 
 async function loadRealVoices() {
@@ -508,10 +740,13 @@ function saveSong(text, mode) {
   const title = text.split('\n').find(l => l.trim() && !l.startsWith('['))?.slice(0, 40) || 'Untitled';
   const genre = document.getElementById('lyrics-genre')?.value || 'Pop';
   const bpm = +(document.getElementById('lyrics-bpm')?.value || 120);
+  const voiceLabel =
+    mode === 'api-wav' ? 'Dieter API (Teal Voices)' : (selectedVoice?.name || 'Default');
+  const lang = mode === 'api-wav' ? 'wav' : (selectedVoice?.lang || 'en');
   const song = {
     id: crypto.randomUUID(), title,
-    voice: selectedVoice?.name || 'Default',
-    lang: selectedVoice?.lang || 'en',
+    voice: voiceLabel,
+    lang,
     genre, bpm, mode,
     ts: Date.now(),
   };
@@ -519,10 +754,12 @@ function saveSong(text, mode) {
   state.addToLibrary({
     id: song.id, title, genre, bpm, key: 'Am',
     duration: '3:' + String(Math.floor(Math.random() * 50 + 10)).padStart(2, '0'),
-    fav: false, ts: song.ts, source: 'lyrics',
+    fav: false, ts: song.ts, source: mode === 'api-wav' ? 'api' : 'lyrics',
   });
   renderSongs();
-  state.log('Lyrics Processor', `${mode === 'sung' ? 'Sang' : 'Spoke'} "${title}" with ${song.voice} (${song.lang})`);
+  const verb =
+    mode === 'sung' ? 'Sang' : mode === 'spoken' ? 'Spoke' : mode === 'api-wav' ? 'Rendered API vocal for' : 'Processed';
+  state.log('Lyrics Processor', `${verb} "${title}" · ${voiceLabel} (${lang})`);
 }
 
 function renderSongs() {

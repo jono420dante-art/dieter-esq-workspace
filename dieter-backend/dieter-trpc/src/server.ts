@@ -34,8 +34,17 @@ async function fastapiJson(path: string, init?: RequestInit): Promise<unknown> {
     } catch {
       /* keep raw text */
     }
+    let code: "INTERNAL_SERVER_ERROR" | "BAD_REQUEST" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "UNPROCESSABLE_CONTENT" | "TOO_MANY_REQUESTS" =
+      "BAD_REQUEST";
+    if (res.status === 401) code = "UNAUTHORIZED";
+    else if (res.status === 403) code = "FORBIDDEN";
+    else if (res.status === 404) code = "NOT_FOUND";
+    else if (res.status === 422) code = "UNPROCESSABLE_CONTENT";
+    else if (res.status === 429) code = "TOO_MANY_REQUESTS";
+    else if (res.status >= 500) code = "INTERNAL_SERVER_ERROR";
+
     throw new TRPCError({
-      code: res.status >= 500 ? "INTERNAL_SERVER_ERROR" : "BAD_REQUEST",
+      code,
       message: detail.slice(0, 2000),
     });
   }
@@ -202,7 +211,7 @@ const appRouter = t.router({
       });
     }),
 
-  /** FastAPI `POST /api/lyrics/generate` — OpenAI via server env or optional key. */
+  /** FastAPI `POST /api/lyrics/generate` — OpenAI / Anthropic via server env or optional keys. */
   lyricsGenerate: t.procedure
     .input(
       z.object({
@@ -210,6 +219,7 @@ const appRouter = t.router({
         title: z.string().default(""),
         vocal: z.enum(["female", "male"]),
         openaiApiKey: z.string().optional(),
+        anthropicApiKey: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -217,7 +227,7 @@ const appRouter = t.router({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
-      }) as Promise<{ text: string; source: "openai" | "local" }>;
+      }) as Promise<{ text: string; source: "openai" | "anthropic" | "local"; warnings?: string[] }>;
     }),
 
   /** FastAPI `POST /api/lyrics/optimize`. */
@@ -226,6 +236,7 @@ const appRouter = t.router({
       z.object({
         lyrics: z.string().min(1),
         openaiApiKey: z.string().optional(),
+        anthropicApiKey: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -233,7 +244,7 @@ const appRouter = t.router({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
-      }) as Promise<{ text: string; source: "openai" | "local" }>;
+      }) as Promise<{ text: string; source: "openai" | "anthropic" | "local"; warnings?: string[] }>;
     }),
 });
 

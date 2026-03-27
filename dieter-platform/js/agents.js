@@ -3,6 +3,7 @@
 import * as state from './state.js';
 import * as engine from './engine.js';
 import * as voiceEngine from './voices.js';
+import { getLastBackendProbe } from './studioConnectivity.js';
 
 const agents = {};
 let healthWorker = null;
@@ -80,6 +81,16 @@ export function createAgents() {
     if (navigator.onLine) return { status: 'ok', message: 'Connected to internet' };
     return { status: 'err', message: 'OFFLINE — features limited' };
   }, 5000);
+
+  agents.backend = new Agent('backend', 'Dieter FastAPI', '🔗', () => {
+    const p = getLastBackendProbe();
+    if (p.ok) {
+      const tail = p.tealOk ? ' · /api/tealvoices OK' : '';
+      return { status: 'ok', message: (p.message || 'API OK') + tail };
+    }
+    if (!p.time) return { status: 'warn', message: 'Checking API…' };
+    return { status: 'warn', message: p.message || 'Set backend in Settings' };
+  }, 12000);
 
   agents.library = new Agent('library', 'Library Sync', '🎵', () => {
     const lib = state.get('library');

@@ -2,7 +2,8 @@ import { useCallback, useState } from 'react'
 import { absoluteFromApiPath, normalizeApiRoot, postStudioGrowth } from './apiResolve.js'
 
 /**
- * Local release pipeline: beat + lyrics → procedural vocal → mix → master (`POST /api/pipeline/generate-master`).
+ * Local release pipeline: beat + lyrics → procedural vocal stem → mix → master (`POST /api/pipeline/generate-master`).
+ * For Mureka-trained singing (not procedural), use Create or Voice studio.
  * Optional: save DistroKid-prep package, FFmpeg waveform video (`/api/local/music-video`).
  */
 export default function BeatLabPro({ apiBase }) {
@@ -183,9 +184,10 @@ export default function BeatLabPro({ apiBase }) {
     <section className="beat-lab-pro suno-style">
       <h2 className="beat-lab-title">AI Music Studio — local pipeline</h2>
       <p className="field-hint">
-        Uses <code>POST {base}/pipeline/generate-master</code> on the DIETER FastAPI app (same as Local Studio — typically
-        Vite proxy <code>/api</code> → <code>8787</code>). Paste metadata into DistroKid manually; there is no upload
-        API.
+        Uses <code>POST {base}/pipeline/generate-master</code> (beat + lyrics → <strong>procedural</strong> vocal layer →
+        FFmpeg master). That vocal is a server-side placeholder timbre—not Mureka’s AI singers. For{' '}
+        <strong>real tone</strong> from your lyrics, use <strong>Create</strong> or <strong>Voice studio</strong> with
+        Mureka. Paste DistroKid metadata manually; there is no DistroKid upload API here.
       </p>
 
       <label htmlFor="beat-pro-lyrics">Lyrics</label>

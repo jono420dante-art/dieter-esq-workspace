@@ -23,7 +23,8 @@ Optional environment variables (in Railway → Variables):
 | Variable | Purpose |
 |----------|---------|
 | `MUREKA_API_KEY` | Cloud song generation (Mureka) |
-| `OPENAI_API_KEY` | AI lyrics on the server |
+| `OPENAI_API_KEY` | AI lyrics on the server (GPT) |
+| `ANTHROPIC_API_KEY` | AI lyrics on the server (Claude); order vs OpenAI: `DIETER_LYRICS_AI_ORDER` |
 | `WEB_CONCURRENCY` | Gunicorn workers (default `2`) |
 | `DIETER_AUDIO_ENGINE` | e.g. `procedural` |
 

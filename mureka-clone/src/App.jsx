@@ -11,6 +11,7 @@ import CoverStudio from './CoverStudio.jsx'
 import StudioPortal from './StudioPortal.jsx'
 import AudioTransport from './AudioTransport.jsx'
 import SongPlaybackPage from './SongPlaybackPage.jsx'
+import TealVoicesStudio from './TealVoicesStudio.jsx'
 import {
   fetchStudioGrowth,
   normalizeApiRoot,
@@ -21,6 +22,7 @@ import {
 } from './apiResolve.js'
 import { dieterInitialApiBase, dieterUseTrpc, audioCrossOriginForSrc } from './dieterClientConfig.js'
 import { extractAudioUrl } from './murekaHelpers.js'
+import { withMurekaRetries } from './murekaResilience.js'
 import { useBeatVisualizer } from './useBeatVisualizer.js'
 import { getStudioOutboundLinks } from './studioLinks.js'
 import { STUDIO_NAME, STUDIO_SLUG, MUREKA_CLONE_LABEL } from './studioBrand.js'
@@ -36,7 +38,7 @@ function formatSessionSeconds(totalSec) {
   return `${m}m ${sec.toString().padStart(2, '0')}s`
 }
 
-/** Header subtitle per mode — keep in sync with mode button order (gateway / AI labs first). */
+/** Header title per mode — keep in sync with sidebar groups. */
 const APP_MODE_HEADER = {
   portal: 'Portal & guide',
   create: 'Create',
@@ -47,6 +49,123 @@ const APP_MODE_HEADER = {
   cover: 'Cover',
   local: 'Local',
   player: 'Now playing',
+  tealvoices: 'Teal Voices',
+}
+
+/** One-line UX intent under the header (driven / guided copy). */
+const APP_MODE_SUB = {
+  portal: 'Check health, then go to Create for the full Mureka path.',
+  create: 'Keys → describe your track → Generate (Mureka renders real vocals).',
+  cloud: 'Polish lyrics, pick style & vocal, then Create with Mureka.',
+  voicestudio: 'Beat + lyrics → Mureka mix — optional sample for local tools.',
+  beatlab: 'Beat + lyrics → master pipeline (DSP). AI vocals: use Create.',
+  v5: 'Experimental V5 surface — Create stays the main Mureka entry.',
+  cover: 'Cover / stems tools — lead vocals from models: Create + Mureka.',
+  local: 'Local beat & draft stems — production vocals: Create.',
+  player: 'Playback and lyrics follow-along.',
+  tealvoices: 'Backend TTS acapella from lyrics (Coqui or fallback) — chart vocals: Create.',
+}
+
+/**
+ * Top “guided path” strip: drives users through Connect → Prompt → Generate for Mureka modes.
+ */
+function StudioJourneyStrip({ mode, hasMurekaKey, onOpenKeys, onGoCreate }) {
+  if (mode === 'player') return null
+
+  if (mode === 'portal') {
+    return (
+      <div className="studio-journey studio-journey--portal" role="region" aria-label="Suggested studio path">
+        <div className="studio-journey-head">
+          <span className="studio-journey-eyebrow">Start here</span>
+          <span className="studio-journey-lane">Orientation</span>
+        </div>
+        <p className="studio-journey-text">
+          Confirm API health below, open <strong>Connections</strong> if you deploy split UI, then go to{' '}
+          <button type="button" className="studio-journey-inline-btn" onClick={onGoCreate}>
+            Create
+          </button>{' '}
+          for the main Mureka flow.
+        </p>
+      </div>
+    )
+  }
+
+  if (mode === 'tealvoices') {
+    return (
+      <div className="studio-journey studio-journey--lab" role="region" aria-label="Teal Voices path">
+        <div className="studio-journey-head">
+          <span className="studio-journey-eyebrow">Teal Voices</span>
+          <span className="studio-journey-lane">FastAPI · lyrics → WAV</span>
+        </div>
+        <p className="studio-journey-lab-copy">
+          This tab calls <code>POST /api/tealvoices/sing</code> on your Dieter backend. For full sung productions with model
+          vocals, use{' '}
+          <button type="button" className="studio-journey-inline-btn" onClick={onGoCreate}>
+            Create
+          </button>{' '}
+          (Mureka).
+        </p>
+      </div>
+    )
+  }
+
+  if (mode === 'create' || mode === 'cloud' || mode === 'voicestudio') {
+    return (
+      <div className="studio-journey" role="region" aria-label="Mureka workflow steps">
+        <div className="studio-journey-head">
+          <span className="studio-journey-eyebrow">Guided path</span>
+          <span className="studio-journey-lane">Mureka · model vocals &amp; mix</span>
+        </div>
+        <ol className="studio-journey-steps">
+          <li
+            className={
+              'studio-journey-step' +
+              (hasMurekaKey ? ' studio-journey-step-done' : ' studio-journey-step-active')
+            }
+          >
+            <button type="button" className="studio-journey-step-btn" onClick={onOpenKeys}>
+              <span className="studio-journey-step-num">1</span>
+              <span>Connections</span>
+            </button>
+            {hasMurekaKey ? (
+              <span className="studio-journey-badge">Ready</span>
+            ) : (
+              <span className="studio-journey-badge studio-journey-badge-need">Set key</span>
+            )}
+          </li>
+          <li
+            className={
+              'studio-journey-step' +
+              (hasMurekaKey ? ' studio-journey-step-active' : ' studio-journey-step-muted')
+            }
+          >
+            <span className="studio-journey-step-num">2</span>
+            <span className="studio-journey-step-label">Lyrics &amp; prompt</span>
+          </li>
+          <li className={'studio-journey-step' + (hasMurekaKey ? '' : ' studio-journey-step-muted')}>
+            <span className="studio-journey-step-num">3</span>
+            <span className="studio-journey-step-label">Generate &amp; listen</span>
+          </li>
+        </ol>
+      </div>
+    )
+  }
+
+  return (
+    <div className="studio-journey studio-journey--lab" role="region" aria-label="Lab tools hint">
+      <div className="studio-journey-head">
+        <span className="studio-journey-eyebrow">Lab</span>
+        <span className="studio-journey-lane">DSP · draft stems · experiments</span>
+      </div>
+      <p className="studio-journey-lab-copy">
+        This area is for beats, FFmpeg, and tests. For <strong>Mureka-style AI lead vocals</strong>, use{' '}
+        <button type="button" className="studio-journey-inline-btn" onClick={onGoCreate}>
+          Create
+        </button>
+        .
+      </p>
+    </div>
+  )
 }
 
 const HASH_TO_MODE = {
@@ -60,28 +179,31 @@ const HASH_TO_MODE = {
   cover: 'cover',
   local: 'local',
   player: 'player',
+  tealvoices: 'tealvoices',
+  teal: 'tealvoices',
 }
 
 const SIDEBAR_GROUPS = [
   {
-    title: 'Start here',
-    items: [{ id: 'portal', label: 'Portal & guide', hint: 'Health, links, Mureka' }],
+    title: 'Start',
+    items: [{ id: 'portal', label: 'Portal & guide', hint: 'API health · quick links' }],
   },
   {
-    title: 'Mureka cloud',
+    title: 'Make music (Mureka)',
     items: [
-      { id: 'create', label: 'Create', hint: 'Mureka gateway' },
-      { id: 'cloud', label: 'Cloud', hint: 'Lyrics + cloud' },
-      { id: 'voicestudio', label: 'Voice studio', hint: 'Clone & cloud' },
+      { id: 'create', label: 'Create', hint: 'Step flow · main generator' },
+      { id: 'cloud', label: 'Cloud', hint: 'Lyrics panel · same engine' },
+      { id: 'voicestudio', label: 'Voice studio', hint: 'Beat + Mureka vocal' },
+      { id: 'tealvoices', label: 'Teal Voices', hint: 'Lyrics → backend WAV (Coqui / fallback)' },
     ],
   },
   {
-    title: 'Labs',
+    title: 'Labs & tools',
     items: [
-      { id: 'beatlab', label: 'Beat lab' },
-      { id: 'local', label: 'Local pipeline' },
-      { id: 'v5', label: 'V5' },
-      { id: 'cover', label: 'Cover' },
+      { id: 'beatlab', label: 'Beat lab', hint: 'Pipeline & master' },
+      { id: 'local', label: 'Local', hint: 'Beat + draft stems' },
+      { id: 'v5', label: 'V5', hint: 'Alt studio' },
+      { id: 'cover', label: 'Cover', hint: 'Stems & cover DSP' },
     ],
   },
 ]
@@ -141,6 +263,7 @@ export default function App() {
   const [instrumental, setInstrumental] = useState(false)
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('mureka_api_key') || '')
   const [openaiKey, setOpenaiKey] = useState(() => localStorage.getItem('openai_api_key') || '')
+  const [anthropicKey, setAnthropicKey] = useState(() => localStorage.getItem('anthropic_api_key') || '')
   const [apiBase, setApiBase] = useState(() => dieterInitialApiBase())
   const [showAuth, setShowAuth] = useState(false)
   const [status, setStatus] = useState('')
@@ -175,6 +298,7 @@ export default function App() {
   const saveAuth = () => {
     localStorage.setItem('mureka_api_key', apiKey.trim())
     localStorage.setItem('openai_api_key', openaiKey.trim())
+    localStorage.setItem('anthropic_api_key', anthropicKey.trim())
     localStorage.setItem('dieter_api_base', normalizeApiRoot(apiBase || DEFAULT_BASE))
     setShowAuth(false)
   }
@@ -243,14 +367,10 @@ export default function App() {
           const r = await fetch(`${base}/lyrics/analyze`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ lyrics: text, beatsPerBar: 4 }),
+            body: JSON.stringify({ lyrics: text, bpm: null, beatsPerBar: 4 }),
           })
-          if (!r.ok) {
-            const msg = await r.text()
-            throw new Error(msg || r.statusText)
-          }
-          const j = await r.json()
-          if (!cancelled) setLyricsReport(j)
+          const j = await parseFetchJson(r)
+          if (!cancelled && j) setLyricsReport(j)
         } catch (e) {
           if (!cancelled) {
             setLyricsReport(null)
@@ -271,6 +391,7 @@ export default function App() {
     setErr('')
     try {
       const keyOpt = openaiKey.trim() || undefined
+      const anthropicOpt = anthropicKey.trim() || undefined
       let text
       let source
       if (USE_TRPC) {
@@ -279,6 +400,7 @@ export default function App() {
           title,
           vocal,
           openaiApiKey: keyOpt,
+          anthropicApiKey: anthropicOpt,
         })
         text = r.text
         source = r.source
@@ -291,19 +413,21 @@ export default function App() {
             title,
             vocal,
             openaiApiKey: keyOpt,
+            anthropicApiKey: anthropicOpt,
           }),
         })
-        if (!r.ok) throw new Error(await r.text())
-        const j = await r.json()
-        text = j.text
-        source = j.source
+        const j = await parseFetchJson(r)
+        text = j?.text ?? ''
+        source = j?.source ?? 'local'
       }
       setLyrics(text)
       void postStudioGrowth(base, 'lyrics_generated', source || 'lyrics')
       setStatus(
         source === 'openai'
           ? 'Lyrics generated (OpenAI via backend). Edit, Optimize, then Create.'
-          : 'Lyrics generated (local template on server). Set OPENAI_API_KEY on FastAPI or add an optional OpenAI key below for AI.',
+          : source === 'anthropic'
+            ? 'Lyrics generated (Claude via backend). Edit, Optimize, then Create.'
+            : 'Lyrics generated (local template on server). Set OPENAI_API_KEY or ANTHROPIC_API_KEY on FastAPI, or add optional keys below.',
       )
     } catch (e) {
       const fallback = generateLyricsLocal(style, title, vocal)
@@ -313,7 +437,7 @@ export default function App() {
     } finally {
       setLyricsBusy(false)
     }
-  }, [instrumental, openaiKey, style, title, vocal, base])
+  }, [instrumental, openaiKey, anthropicKey, style, title, vocal, base])
 
   const handleOptimizeLyrics = useCallback(async () => {
     if (instrumental || !lyrics.trim()) {
@@ -324,12 +448,14 @@ export default function App() {
     setErr('')
     try {
       const keyOpt = openaiKey.trim() || undefined
+      const anthropicOpt = anthropicKey.trim() || undefined
       let text
       let source
       if (USE_TRPC) {
         const r = await trpc.lyricsOptimize.mutate({
           lyrics: lyrics.trim(),
           openaiApiKey: keyOpt,
+          anthropicApiKey: anthropicOpt,
         })
         text = r.text
         source = r.source
@@ -337,19 +463,24 @@ export default function App() {
         const r = await fetch(`${base}/lyrics/optimize`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ lyrics: lyrics.trim(), openaiApiKey: keyOpt }),
+          body: JSON.stringify({
+            lyrics: lyrics.trim(),
+            openaiApiKey: keyOpt,
+            anthropicApiKey: anthropicOpt,
+          }),
         })
-        if (!r.ok) throw new Error(await r.text())
-        const j = await r.json()
-        text = j.text
-        source = j.source
+        const j = await parseFetchJson(r)
+        text = j?.text ?? ''
+        source = j?.source ?? 'local'
       }
       setLyrics(text)
       void postStudioGrowth(base, 'lyrics_optimized', source || 'optimize')
       setStatus(
         source === 'openai'
           ? 'Lyrics optimized (OpenAI via backend). Review and Create when ready.'
-          : 'Lyrics optimized (local rules on server). Add OPENAI_API_KEY or optional key for AI polish.',
+          : source === 'anthropic'
+            ? 'Lyrics optimized (Claude via backend). Review and Create when ready.'
+            : 'Lyrics optimized (local rules on server). Add OPENAI_API_KEY or ANTHROPIC_API_KEY, or paste keys below.',
       )
     } catch (e) {
       setLyrics(optimizeLyricsLocal(lyrics))
@@ -358,13 +489,16 @@ export default function App() {
     } finally {
       setLyricsBusy(false)
     }
-  }, [instrumental, openaiKey, lyrics, base])
+  }, [instrumental, openaiKey, anthropicKey, lyrics, base])
 
   const submit = useCallback(async () => {
     setErr('')
     setStatus('')
     if (!apiKey.trim()) {
-      setShowAuth(true)
+      setErr(
+        'Add a Mureka API key (Connections → Save) or set MUREKA_API_KEY on the server for real AI vocals from your lyrics. Without it, Create cannot call Mureka—use the separate draft button below only if you accept a simple synthesized placeholder vocal.',
+      )
+      setStatus('')
       return
     }
     /** Blank lyrics ⇒ instrumental (product default); checkbox forces instrumental and ignores typed lyrics. */
@@ -389,17 +523,22 @@ export default function App() {
           murekaApiKey: key,
         })
       } else {
-        const r = await fetch(`${base}/mureka/song/generate`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${key}`,
+        j = await withMurekaRetries(
+          async () => {
+            const r = await fetch(`${base}/mureka/song/generate`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${key}`,
+              },
+              body: JSON.stringify({ lyrics: lyricPayload, model: 'auto', prompt }),
+            })
+            return parseFetchJson(r)
           },
-          body: JSON.stringify({ lyrics: lyricPayload, model: 'auto', prompt }),
-        })
-        if (!r.ok) throw new Error(await r.text())
-        j = await r.json()
+          { attempts: 4, baseMs: 800 },
+        )
       }
+      if (!j || typeof j !== 'object') throw new Error('Invalid or empty response from Mureka (generate). Check gateway logs.')
       const taskId = String(j.id || j.task_id || j.taskId || '')
       if (!taskId) throw new Error('No task id: ' + JSON.stringify(j))
       for (let i = 0; i < 90; i++) {
@@ -414,15 +553,18 @@ export default function App() {
           const q = await fetch(`${base}/mureka/song/query/${encodeURIComponent(taskId)}`, {
             headers: { Authorization: `Bearer ${key}` },
           })
-          if (!q.ok) throw new Error(await q.text())
-          qj = await q.json()
+          qj = await parseFetchJson(q)
+        }
+        if (!qj || typeof qj !== 'object') {
+          await new Promise((res) => setTimeout(res, 2000))
+          continue
         }
         const url = extractAudioUrl(qj)
         if (url) {
           setAudioUrl(url)
           void postStudioGrowth(base, 'mureka_song_ready', taskId)
           void fetchStudioGrowth(base).then((g) => g && setStudioPulse(g))
-          setStatus('Ready — press play to drive the visualizer.')
+          setStatus('Ready — Mureka render (real model vocals). Press play.')
           return
         }
         const st = (qj.status || qj.state || '').toString().toLowerCase()
@@ -432,7 +574,10 @@ export default function App() {
       }
       throw new Error('Timeout waiting for Mureka')
     } catch (e) {
-      setErr(String(e.message || e))
+      const why = String(e?.message || e)
+      setErr(
+        `${why} — no audio from Mureka. Check your key, network, and quota. For real tone from your lyrics you need a successful Mureka run; use “Generate draft WAV” below only for a non-vocal-AI test mix.`,
+      )
       setStatus('')
     }
   }, [apiKey, base, instrumental, lyrics, style, title, vocal])
@@ -466,7 +611,9 @@ export default function App() {
     }
     const origin = publicOriginForApiRoot(base)
     setStatus(
-      USE_TRPC ? 'Generating procedural WAV (tRPC → FastAPI job)…' : 'Generating procedural WAV (REST job)…',
+      USE_TRPC
+        ? 'Generating draft WAV (procedural vocal stem) via tRPC…'
+        : 'Generating draft WAV (procedural vocal stem) via REST…',
     )
     try {
       let jobId = ''
@@ -504,7 +651,9 @@ export default function App() {
           setAudioUrl(playUrl)
           void postStudioGrowth(base, 'procedural_wav_ready', jobId)
           void fetchStudioGrowth(base).then((g) => g && setStudioPulse(g))
-          setStatus('Procedural mix ready — lossless WAV from the backend engine.')
+          setStatus(
+            'Draft procedural mix ready (lossless WAV). Vocal stem uses a simple synthesized timbre—not Mureka’s trained singers. For real voice, use Create with Mureka.',
+          )
           return
         }
         if (st === 'failed') throw new Error(row?.error || 'Job failed')
@@ -577,6 +726,7 @@ export default function App() {
     appMode === 'local' ||
     appMode === 'beatlab' ||
     appMode === 'voicestudio' ||
+    appMode === 'tealvoices' ||
     appMode === 'portal'
 
   return (
@@ -598,6 +748,7 @@ export default function App() {
                     className={'sidebar-nav-btn' + (appMode === item.id ? ' sidebar-nav-btn-active' : '')}
                     onClick={() => goMode(item.id)}
                     title={item.hint || item.label}
+                    aria-current={appMode === item.id ? 'page' : undefined}
                   >
                     <span className="sidebar-nav-label">{item.label}</span>
                     {item.hint ? <span className="sidebar-nav-hint">{item.hint}</span> : null}
@@ -613,6 +764,9 @@ export default function App() {
             <a className="sidebar-linkout" href="/ed-geerdes-studio-guide.html" target="_blank" rel="noreferrer">
               Studio guide (offline doc) ↗
             </a>
+            <a className="sidebar-linkout" href="/dieter-app-map.html" target="_blank" rel="noreferrer">
+              App map &amp; performance ↗
+            </a>
             {showKeysFab && (
               <button type="button" className="sidebar-keys-btn" onClick={() => setShowAuth(true)}>
                 API keys &amp; sync
@@ -623,8 +777,9 @@ export default function App() {
 
         <div className="app-main">
           <header className="header header-compact">
-            <nav className="nav-main">
-              <strong>{APP_MODE_HEADER[appMode] ?? 'Studio'}</strong>
+            <nav className="nav-main nav-main--stack" aria-label="Current workspace">
+              <strong className="nav-main-title">{APP_MODE_HEADER[appMode] ?? 'Studio'}</strong>
+              <p className="header-driven-sub">{APP_MODE_SUB[appMode] ?? ''}</p>
             </nav>
             <div className="header-clocks" aria-live="polite">
               <span className="header-clock" title="Your device local time">
@@ -636,14 +791,22 @@ export default function App() {
             </div>
           </header>
 
+          <StudioJourneyStrip
+            mode={appMode}
+            hasMurekaKey={Boolean(apiKey?.trim())}
+            onOpenKeys={() => setShowAuth(true)}
+            onGoCreate={() => goMode('create')}
+          />
+
           <div className="app-main-body">
       {showAuth && (
         <div className="modal" role="dialog">
           <div className="modal-bg" onClick={() => setShowAuth(false)} aria-hidden />
           <div className="modal-card">
-            <h2>Connections</h2>
+            <h2>Connections — step 1</h2>
             <p className="hint">
-              This is your <strong>connection panel</strong>. For the Vercel build, the app talks to Mureka through
+              This is your <strong>connection panel</strong> (start every Mureka session here or via server env). For
+              split UI, the app talks to Mureka through
               same‑origin <code>/api/mureka/*</code> (serverless). Add a key from{' '}
               <a href="https://platform.mureka.ai" target="_blank" rel="noreferrer">
                 platform.mureka.ai
@@ -667,6 +830,14 @@ export default function App() {
               onChange={(e) => setOpenaiKey(e.target.value)}
               autoComplete="off"
               placeholder="sk-… for Generate / Optimize lyrics"
+            />
+            <label>Anthropic API key (optional — Claude)</label>
+            <input
+              type="password"
+              value={anthropicKey}
+              onChange={(e) => setAnthropicKey(e.target.value)}
+              autoComplete="off"
+              placeholder="sk-ant-… — same Cloud tab lyrics; server tries OpenAI first by default"
             />
             <details style={{ marginTop: 10 }}>
               <summary style={{ cursor: 'pointer', fontWeight: 700 }}>Advanced (optional)</summary>
@@ -734,15 +905,19 @@ export default function App() {
         <main className="main main-local">
           <VoiceCloneStudio apiBase={base} onSongReady={openPlayer} />
         </main>
+      ) : appMode === 'tealvoices' ? (
+        <main className="main main-local main-teal-voices">
+          <TealVoicesStudio apiBase={base} />
+        </main>
       ) : (
         <>
       <main className="main">
         <p className="workflow-intro">
           <strong>Workflow:</strong> write your own lyrics or use <strong>Generate Lyrics</strong>, refine with{' '}
-          <strong>Optimize</strong>, pick <strong>vocal gender</strong> and <strong>style</strong> (mood,
-          instruments, e.g. Grand Piano, Melodic Trap). <strong>Instrumental:</strong> leave lyrics blank, or turn
-          on <strong>Instrumental</strong> to ignore any pasted lyrics. Then <strong>Create</strong> for melody +
-          vocals (or instrumental).
+          <strong>Optimize</strong>, pick <strong>vocal gender</strong> and <strong>style</strong>.{' '}
+          <strong>Create</strong> calls <strong>Mureka</strong> so your words become a real model-generated vocal—not a
+          toy browser synth. <strong>Instrumental:</strong> leave lyrics blank or use the checkbox. (For beat tests on the
+          server without Mureka, use the labeled <strong>draft</strong> button—it uses a placeholder vocal stem.)
         </p>
 
         <div className="tabs">
@@ -914,12 +1089,12 @@ export default function App() {
           Create
         </button>
         <p className="field-hint" style={{ marginTop: 10 }}>
-          <strong>Local WAV engine:</strong> render a real multitrack <code>.wav</code> on the API (
-          {USE_TRPC ? 'via tRPC' : 'REST'}) — no Mureka key. Same lyrics/style as above; uses the procedural engine on the
-          server.
+          <strong>Draft only (no Mureka):</strong> multitrack <code>.wav</code> on the API (
+          {USE_TRPC ? 'tRPC' : 'REST'}) using a <strong>procedural</strong> vocal stem for timing checks—not the same as
+          Mureka’s trained singers. Use <strong>Create</strong> above for real vocals from your lyrics.
         </p>
         <button type="button" className="btn-secondary wide" disabled={procBusy} onClick={submitProceduralWav}>
-          {procBusy ? '…' : 'Generate procedural WAV (backend)'}
+          {procBusy ? '…' : 'Generate draft WAV (procedural vocal only)'}
         </button>
         {status && <p className="ok">{status}</p>}
         {err && <p className="bad">{err}</p>}

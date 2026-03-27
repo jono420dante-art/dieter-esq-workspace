@@ -1,6 +1,6 @@
 /**
  * Browser fallbacks when FastAPI `/api/lyrics/*` is unreachable.
- * Primary path: tRPC → FastAPI (OpenAI via server `OPENAI_API_KEY` or optional `openaiApiKey` in request).
+ * Primary path: tRPC → FastAPI (OpenAI / Anthropic Claude via server env or optional `openaiApiKey` / `anthropicApiKey`).
  */
 
 const VERSE_LINES = [

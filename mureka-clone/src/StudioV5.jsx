@@ -127,7 +127,7 @@ export default function StudioV5({ apiBase, onSongReady }) {
     } finally {
       setBusy(false)
     }
-  }, [apiRoot, lengthMin, prompt, quality])
+  }, [apiRoot, lengthMin, prompt, quality, onSongReady])
 
   const downloadName = `${STUDIO_SLUG}-v5-master.mp3`
 

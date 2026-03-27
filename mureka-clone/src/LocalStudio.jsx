@@ -348,8 +348,10 @@ export default function LocalStudio({ apiBase }) {
     <section className="local-studio">
       <h2 className="local-studio-title">{STUDIO_NAME} · Local lab</h2>
       <p className="local-mureka-hint" role="note">
-        Want <strong>real AI vocals</strong>? Use the <strong>Create</strong> or <strong>Voice studio</strong> tab with{' '}
-        <strong>Mureka</strong> (API key in Connections or <code>MUREKA_API_KEY</code> on the server).
+        For <strong>real sung vocals</strong> from your lyrics (trained models, not a placeholder stem), use{' '}
+        <strong>Create</strong> or <strong>Voice studio</strong> with <strong>Mureka</strong> (Connections key or{' '}
+        <code>MUREKA_API_KEY</code> on the server). This tab is for FFmpeg/librosa workflows and{' '}
+        <strong>draft</strong> stems only.
       </p>
       {apiHealth === 'fail' && (
         <div className="local-api-banner local-api-banner--bad" role="status">
@@ -379,9 +381,9 @@ export default function LocalStudio({ apiBase }) {
         </li>
       </ol>
       <p className="field-hint">
-        <strong>No cloud APIs.</strong> Beat analysis: <strong>librosa</strong> (+ <strong>madmom</strong> if installed).
-        Mix / tempo: <strong>FFmpeg</strong>. Vocal placeholder: built-in <strong>procedural</strong> stem — swap for{' '}
-        <strong>RVC + Tortoise</strong> on your GPU box (see <code>dieter-backend/LOCAL_PIPELINE.md</code>).
+        <strong>No Mureka here.</strong> Beat analysis: <strong>librosa</strong> (+ <strong>madmom</strong> if installed).
+        Mix / tempo: <strong>FFmpeg</strong>. “Vocal” in <strong>Make Song</strong> uses a <strong>procedural</strong> stem
+        (simple timbre for layout)—not the same as Mureka’s AI voice. For real singers, use <strong>Create</strong>.
       </p>
 
       <div className="make-song-card">
@@ -421,8 +423,8 @@ export default function LocalStudio({ apiBase }) {
 
         <label htmlFor="local-lyrics-quick">Lyrics</label>
         <p className="field-hint local-lyrics-hint">
-          One or more lines here feed the procedural vocal and <strong>Make Song</strong>. Start typing — nothing is
-          sent until you click a button.
+          Lines here feed the <strong>draft</strong> procedural vocal in <strong>Make Song</strong> (beat layout). For
+          lyrics performed by a real voice model, use <strong>Create</strong> with Mureka.
         </p>
         <textarea
           id="local-lyrics-quick"
@@ -561,10 +563,10 @@ export default function LocalStudio({ apiBase }) {
         </div>
       )}
 
-      <h3 className="local-sub">2 — Local vocal layer (procedural, offline)</h3>
+      <h3 className="local-sub">2 — Draft vocal stem (procedural, offline)</h3>
       <p className="field-hint">
-        Lyrics / voice are set in the <strong>Make Song</strong> card above. Below: tweak BPM, duration, or preset;
-        or generate a vocal stem without using <strong>Make Song</strong>.
+        <strong>Not Mureka AI.</strong> Use for timing tests or FFmpeg exercises. Lyrics above drive this stem; for
+        production vocals, stay on <strong>Create</strong>.
       </p>
       <div className="row gap" style={{ flexWrap: 'wrap', alignItems: 'center' }}>
         <label>
@@ -604,7 +606,7 @@ export default function LocalStudio({ apiBase }) {
         </label>
       </div>
       <button type="button" className="btn-secondary" disabled={busy} onClick={generateProceduralVocal}>
-        {busy ? '…' : 'Generate procedural vocal (WAV)'}
+        {busy ? '…' : 'Generate draft vocal stem (WAV, procedural)'}
       </button>
       {proceduralUrl && (
         <p className="ok">

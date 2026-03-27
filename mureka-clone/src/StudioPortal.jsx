@@ -40,7 +40,8 @@ export default function StudioPortal({ apiBase, onOpenKeys, onNavigateMode }) {
   }, [apiBase])
 
   useEffect(() => {
-    void runChecks()
+    const t = setTimeout(() => void runChecks(), 0)
+    return () => clearTimeout(t)
   }, [runChecks])
 
   const staticShowroomHref = '/ed-geerdes-platform.html'
@@ -125,6 +126,9 @@ export default function StudioPortal({ apiBase, onOpenKeys, onNavigateMode }) {
           </button>
           <button type="button" className="btn-secondary" onClick={() => onNavigateMode('voicestudio')}>
             Voice studio
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => onNavigateMode('tealvoices')}>
+            Teal Voices
           </button>
         </div>
       </section>

@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<!--
+  Static UX mockup: glass / neon tabs, studio + marketplace shell.
+  Not wired to Dieter FastAPI or Mureka — Stripe + TF.js calls are guarded placeholders.
+  Open from dev server: http://localhost:5173/dieter-music-platform-mockup.html
+-->
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dieter Music Platform - AI Studio + Marketplace</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <script src="https://unpkg.com/@tensorflow/tfjs"></script>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #ec4899 100%);
+            --neon-cyan: #00f5ff;
+            --glass: rgba(255,255,255,0.08);
+            --glow: 0 25px 50px rgba(0,245,255,0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0c0c1a 0%, #1a1a2e 50%, #16213e 100%);
+            color: white;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .logo {
+            font-size: clamp(1.35rem, 4vw, 2rem);
+            font-weight: 900;
+            line-height: 1.15;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .user-menu {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .balance {
+            background: var(--glass);
+            padding: 10px 18px;
+            border-radius: 25px;
+            font-weight: 600;
+            border: 1px solid rgba(255,255,255,0.12);
+        }
+
+        .control-btn {
+            padding: 10px 18px;
+            border-radius: 999px;
+            border: 1px solid rgba(0,245,255,0.35);
+            background: rgba(0,0,0,0.35);
+            color: #e5e7eb;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease, border-color 0.2s ease;
+        }
+        .control-btn:hover {
+            background: rgba(0,245,255,0.12);
+            border-color: var(--neon-cyan);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 28px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 14px 22px;
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.7);
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: color 0.2s ease, border-color 0.2s ease;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .tab:hover { color: #fff; }
+        .tab.active {
+            color: white;
+            border-bottom-color: var(--neon-cyan);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.25s ease;
+        }
+        .tab-content.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: none; }
+        }
+
+        .studio-grid {
+            display: grid;
+            grid-template-columns: 1fr minmax(260px, 350px);
+            gap: 28px;
+            margin-bottom: 40px;
+        }
+        @media (max-width: 900px) {
+            .studio-grid { grid-template-columns: 1fr; }
+        }
+
+        .ai-prompt {
+            background: var(--glass);
+            backdrop-filter: blur(25px);
+            border-radius: 25px;
+            padding: 28px;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+
+        .prompt-area {
+            width: 100%;
+            min-height: 180px;
+            padding: 18px;
+            border-radius: 20px;
+            border: 2px solid rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.4);
+            color: white;
+            resize: vertical;
+            font-family: inherit;
+            margin: 14px 0;
+        }
+
+        .studio-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background: var(--glass);
+            padding: 24px;
+            border-radius: 25px;
+            border: 1px solid rgba(255,255,255,0.12);
+        }
+
+        .studio-controls select {
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.45);
+            color: #fff;
+            font: inherit;
+        }
+
+        .studio-controls input[type="range"] {
+            width: 100%;
+        }
+
+        .generate-btn {
+            padding: 16px 28px;
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: var(--glow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+        }
+        .generate-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 35px 70px rgba(102,126,234,0.45);
+        }
+        .generate-btn:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
+
+        .hint {
+            font-size: 0.82rem;
+            color: rgba(255,255,255,0.55);
+            margin-top: 10px;
+            line-height: 1.4;
+        }
+
+        .marketplace {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 22px;
+        }
+
+        .track-card {
+            background: var(--glass);
+            backdrop-filter: blur(25px);
+            border-radius: 25px;
+            padding: 22px;
+            border: 1px solid rgba(255,255,255,0.15);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .track-card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--glow);
+        }
+
+        .track-player {
+            width: 100%;
+            height: 48px;
+            border-radius: 12px;
+            margin: 12px 0;
+        }
+
+        .price-tag {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 12px 16px;
+            background: rgba(16,185,129,0.15);
+            border-radius: 20px;
+            margin-top: 12px;
+            border: 1px solid rgba(16,185,129,0.25);
+        }
+
+        .buy-btn, .rent-btn {
+            flex: 1;
+            min-width: 100px;
+            padding: 11px 14px;
+            border: none;
+            border-radius: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+        .buy-btn { background: #10b981; color: white; }
+        .rent-btn { background: var(--neon-cyan); color: #0a0a12; }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.82);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        .modal.open { display: flex; }
+
+        .modal-content {
+            background: var(--glass);
+            backdrop-filter: blur(25px);
+            border-radius: 25px;
+            padding: 32px;
+            max-width: 480px;
+            width: 100%;
+            text-align: center;
+            border: 1px solid rgba(0,245,255,0.35);
+        }
+        .modal-content .control-btn { margin-top: 12px; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <h1 class="logo">Dieter Music</h1>
+            <div class="user-menu">
+                <div class="balance" id="balancePill">$24.50</div>
+                <button type="button" class="control-btn" onclick="openModal('walletModal')">Wallet</button>
+                <button type="button" class="control-btn" onclick="openModal('profileModal')">Profile</button>
+            </div>
+        </header>
+
+        <nav class="tabs" aria-label="Main sections">
+            <button type="button" class="tab active" data-tab="studio" onclick="showTab('studio', this)">AI Studio</button>
+            <button type="button" class="tab" data-tab="marketplace" onclick="showTab('marketplace', this)">Marketplace</button>
+            <button type="button" class="tab" data-tab="mytracks" onclick="showTab('mytracks', this)">My Tracks</button>
+            <button type="button" class="tab" data-tab="promo" onclick="showTab('promo', this)">Promo Tools</button>
+        </nav>
+
+        <section id="studio" class="tab-content active" aria-labelledby="tab-studio">
+            <div class="studio-grid">
+                <div class="ai-prompt">
+                    <h2>AI music prompt</h2>
+                    <p class="hint">Production vocals and cloud render would live in the real Dieter app (Mureka path). Here this page only runs a browser <strong>draft tone</strong> for layout demos.</p>
+                    <textarea class="prompt-area" id="musicPrompt" placeholder="e.g. upbeat EDM, female vocal, 128 BPM, ~3:30"></textarea>
+                    <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+                        <button type="button" class="generate-btn" onclick="generateTrack(this)">Generate track (draft)</button>
+                        <button type="button" class="generate-btn" onclick="generateStems(this)">Stems (placeholder)</button>
+                    </div>
+                </div>
+                <aside class="studio-controls">
+                    <h3>Engine controls</h3>
+                    <label for="voiceSelect">Voice preset</label>
+                    <select id="voiceSelect">
+                        <option>Male deep</option>
+                        <option>Female bright</option>
+                        <option>AI choir (mock)</option>
+                    </select>
+                    <label for="bpmSlider"><span id="bpmDisplay">128</span> BPM</label>
+                    <input type="range" id="bpmSlider" min="60" max="180" value="128">
+                    <button type="button" class="generate-btn" style="padding: 14px 20px;" onclick="uploadReference()">Upload reference</button>
+                </aside>
+            </div>
+        </section>
+
+        <section id="marketplace" class="tab-content" aria-labelledby="tab-marketplace">
+            <h2 style="margin-bottom: 18px;">Marketplace</h2>
+            <div class="marketplace" id="marketplaceTracks"></div>
+        </section>
+
+        <section id="mytracks" class="tab-content">
+            <h2 style="margin-bottom: 18px;">My tracks</h2>
+            <div id="myTracksList"></div>
+            <button type="button" class="generate-btn" onclick="uploadMyTrack()" style="margin-top: 20px;">Upload new track</button>
+        </section>
+
+        <section id="promo" class="tab-content">
+            <h2 style="margin-bottom: 18px;">Promo &amp; analytics</h2>
+            <div style="background: var(--glass); padding: 28px; border-radius: 25px; border: 1px solid rgba(255,255,255,0.12);">
+                <h3 style="margin-bottom: 14px;">Sales: $2,450 · Streams: 14.7k · Fans: 2.3k</h3>
+                <button type="button" class="generate-btn" onclick="alert('Hook to campaign API in a real build.')">Auto-promo campaign</button>
+            </div>
+        </section>
+
+        <div id="walletModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="walletTitle">
+            <div class="modal-content">
+                <h3 id="walletTitle">Wallet</h3>
+                <p style="margin: 14px 0;">Balance: <strong id="walletBalance">$24.50</strong></p>
+                <button type="button" class="generate-btn" onclick="addFunds()">Add $10 (demo)</button>
+                <button type="button" class="control-btn" onclick="closeModal('walletModal')">Close</button>
+            </div>
+        </div>
+
+        <div id="profileModal" class="modal" role="dialog" aria-modal="true">
+            <div class="modal-content">
+                <h3>Profile</h3>
+                <p style="margin: 14px 0; color: rgba(255,255,255,0.75);">Static mock — connect auth + settings in the React app.</p>
+                <button type="button" class="control-btn" onclick="closeModal('profileModal')">Close</button>
+            </div>
+        </div>
+
+        <div id="purchaseModal" class="modal" role="dialog" aria-modal="true">
+            <div class="modal-content">
+                <h3>Purchase</h3>
+                <p id="purchaseDetails" style="margin: 14px 0;"></p>
+                <button type="button" class="control-btn" onclick="closeModal('purchaseModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STRIPE_PUBLISHABLE_KEY = 'pk_test_replace_me';
+        let stripe = null;
+        try {
+            if (STRIPE_PUBLISHABLE_KEY && !STRIPE_PUBLISHABLE_KEY.includes('replace')) {
+                stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+            }
+        } catch (e) {
+            console.warn('Stripe init skipped', e);
+        }
+
+        let userTracks = [];
+        const marketplaceTracks = [
+            { id: 1, title: 'Neon Dreams', artist: 'AI Collective', price: 2.99, duration: '3:45', preview: '' },
+            { id: 2, title: 'Ocean Waves', artist: 'Synthwave Pro', price: 1.49, duration: '4:12', preview: '' },
+            { id: 3, title: 'Epic Journey', artist: 'Cinematic AI', price: 4.99, duration: '8:20', preview: '' }
+        ];
+
+        function showTab(name, tabButton) {
+            document.querySelectorAll('.tab-content').forEach(function (c) {
+                c.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(function (t) {
+                t.classList.remove('active');
+            });
+            var panel = document.getElementById(name);
+            if (panel) panel.classList.add('active');
+            if (tabButton) tabButton.classList.add('active');
+            if (name === 'marketplace') renderMarketplace();
+            if (name === 'mytracks') renderMyTracks();
+        }
+
+        function openModal(id) {
+            var el = document.getElementById(id);
+            if (el) el.classList.add('open');
+        }
+        function closeModal(id) {
+            var el = document.getElementById(id);
+            if (el) el.classList.remove('open');
+        }
+
+        /** Draft-only stacked sines — not cloud vocals. */
+        function synthesizeDraftBuffer() {
+            var sampleRate = 44100;
+            var duration = 6;
+            var bufferSize = sampleRate * duration;
+            var buffer = new Float32Array(bufferSize);
+            for (var layer = 0; layer < 5; layer++) {
+                for (var i = 0; i < bufferSize; i++) {
+                    var t = i / sampleRate;
+                    var freq = 110 + layer * 28 + Math.sin(t * 0.8) * 6;
+                    buffer[i] += 0.08 * Math.sin(2 * Math.PI * freq * t) * Math.exp(-layer * 0.15);
+                }
+            }
+            return buffer;
+        }
+
+        async function generateTrack(btn) {
+            var promptEl = document.getElementById('musicPrompt');
+            var prompt = (promptEl && promptEl.value) ? promptEl.value : 'untitled';
+            if (btn) {
+                btn.disabled = true;
+                var prev = btn.textContent;
+                btn.textContent = 'Working…';
+            }
+            try {
+                if (window.tf && tf.ready) await tf.ready();
+                synthesizeDraftBuffer();
+            } catch (err) {
+                console.warn(err);
+            }
+            var trackId = Date.now();
+            userTracks.push({
+                id: trackId,
+                title: prompt.length > 36 ? prompt.slice(0, 34) + '…' : prompt,
+                duration: '0:06 draft',
+                note: 'Browser draft tone only'
+            });
+            renderMyTracks();
+            if (btn) {
+                btn.textContent = 'Added draft to My Tracks';
+                btn.disabled = false;
+                setTimeout(function () { btn.textContent = prev; }, 2000);
+            }
+        }
+
+        async function generateStems(btn) {
+            if (btn) {
+                btn.disabled = true;
+                var p = btn.textContent;
+                btn.textContent = '…';
+            }
+            await new Promise(function (r) { setTimeout(r, 400); });
+            alert('Placeholder: real stems would come from your Dieter / Mureka pipeline. No TF model loaded in this mock.');
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = p;
+            }
+        }
+
+        function renderMarketplace() {
+            var container = document.getElementById('marketplaceTracks');
+            if (!container) return;
+            container.innerHTML = '';
+            marketplaceTracks.forEach(function (track) {
+                var card = document.createElement('div');
+                card.className = 'track-card';
+                var audioHtml = track.preview
+                    ? '<audio class="track-player" controls src="' + track.preview + '"></audio>'
+                    : '<p class="hint">No preview URL configured.</p>';
+                card.innerHTML =
+                    '<h3>' + escapeHtml(track.title) + '</h3>' +
+                    '<p>' + escapeHtml(track.artist) + ' · ' + escapeHtml(track.duration) + '</p>' +
+                    audioHtml +
+                    '<div class="price-tag">' +
+                    '<span>$' + track.price.toFixed(2) + '</span>' +
+                    '<button type="button" class="buy-btn" onclick="buyTrack(' + track.id + ', ' + track.price + ')">Buy</button>' +
+                    '<button type="button" class="rent-btn" onclick="rentTrack(' + track.id + ', 0.99)">Rent $0.99</button>' +
+                    '</div>';
+                container.appendChild(card);
+            });
+        }
+
+        function escapeHtml(s) {
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        async function buyTrack(id, price) {
+            if (!stripe) {
+                alert('Configure STRIPE_PUBLISHABLE_KEY in this file to test Checkout. Demo price id also required.');
+                return;
+            }
+            try {
+                var err = (await stripe.redirectToCheckout({
+                    lineItems: [{ price: 'price_replace_me', quantity: 1 }],
+                    mode: 'payment',
+                    successUrl: window.location.origin + window.location.pathname + '?success=1',
+                    cancelUrl: window.location.origin + window.location.pathname + '?cancel=1'
+                })).error;
+                if (err) console.error(err);
+            } catch (e) {
+                console.error(e);
+                alert('Checkout failed');
+            }
+        }
+
+        function rentTrack(id, price) {
+            var t = marketplaceTracks.find(function (x) { return x.id === id; });
+            alert('Rent demo: "' + (t ? t.title : id) + '" for $' + price);
+        }
+
+        function renderMyTracks() {
+            var container = document.getElementById('myTracksList');
+            if (!container) return;
+            container.innerHTML = '';
+            if (userTracks.length === 0) {
+                container.innerHTML = '<p class="hint">Generate a draft track to see it here.</p>';
+                return;
+            }
+            userTracks.forEach(function (track) {
+                var div = document.createElement('div');
+                div.style.cssText = 'background: var(--glass); padding: 18px; border-radius: 20px; margin-bottom: 12px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; border: 1px solid rgba(255,255,255,0.1);';
+                div.innerHTML =
+                    '<div><h4>' + escapeHtml(track.title) + '</h4><p class="hint">' + escapeHtml(track.note || '') + '</p></div>' +
+                    '<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">' +
+                    '<input type="number" min="0" step="0.01" placeholder="Price" id="price_' + track.id + '" style="width: 88px; padding: 8px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.35); color: #fff;">' +
+                    '<button type="button" class="control-btn" onclick="listForSale(' + track.id + ')">List</button>' +
+                    '</div>';
+                container.appendChild(div);
+            });
+        }
+
+        function listForSale(trackId) {
+            var input = document.getElementById('price_' + trackId);
+            var price = input && input.value ? parseFloat(input.value) : NaN;
+            if (!(price >= 0)) {
+                alert('Set a valid price');
+                return;
+            }
+            var ut = userTracks.find(function (t) { return t.id === trackId; });
+            if (!ut) return;
+            marketplaceTracks.push({
+                id: trackId,
+                title: ut.title,
+                artist: 'You',
+                price: price,
+                duration: ut.duration || '—',
+                preview: ''
+            });
+            renderMarketplace();
+            alert('Listed locally for $' + price.toFixed(2) + ' (mock only).');
+        }
+
+        function uploadReference() {
+            alert('Wire to file upload + reference track analysis in production.');
+        }
+        function uploadMyTrack() {
+            alert('Wire to storage + metadata in production.');
+        }
+
+        function addFunds() {
+            document.getElementById('walletBalance').textContent = '$34.50';
+            document.getElementById('balancePill').textContent = '$34.50';
+            closeModal('walletModal');
+        }
+
+        document.getElementById('bpmSlider').addEventListener('input', function () {
+            document.getElementById('bpmDisplay').textContent = this.value;
+        });
+
+        renderMarketplace();
+        renderMyTracks();
+    </script>
+</body>
+</html>

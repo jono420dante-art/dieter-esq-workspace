@@ -2,7 +2,7 @@
   "name": "mureka-clone-v2",
   "private": true,
   "version": "2.0.0",
-  "description": "Mureka Clone V2 — React studio (Create, Local, Beat lab, Voice, V5, Cover) wired to Dieter FastAPI.",
+  "description": "Mureka Clone V2 — React studio (Create, Teal Voices, Local, Beat lab, Voice, V5, Cover) wired to Dieter FastAPI.",
   "type": "module",
   "scripts": {
     "dev": "npx vite",
@@ -25,6 +25,7 @@
     "web-audio-api": "^1.0.0"
   },
   "devDependencies": {
+    "esbuild": "^0.27.0",
     "@eslint/js": "^9.39.4",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

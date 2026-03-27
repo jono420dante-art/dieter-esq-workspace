@@ -3,6 +3,7 @@
 import * as state from '../state.js';
 import { navigate } from '../router.js';
 import { icon, iconXl } from '../icons.js';
+import { mountHomeEdge } from '../dieterEdge.js';
 
 export function render() {
   const lib = state.get('library');
@@ -12,6 +13,14 @@ export function render() {
       <div class="dash-hero">
         <h2>Welcome to DIETER PRO</h2>
         <p>Your complete music production platform — create, analyze, distribute, all connected.</p>
+        <p style="font-size:.72rem;opacity:.9;max-width:52rem;margin-top:10px;line-height:1.55">
+          Dieter is built to <strong>outclass closed garden UIs</strong> on <em>ownership</em>, <em>stem workflows</em>, and <em>multi-engine routing</em> — use Mureka or any API when you want frontier vocals, while your pipeline stays yours.
+        </p>
+      </div>
+
+      <div class="panel" style="margin-bottom:20px;border-color:rgba(45,212,191,.35);background:linear-gradient(135deg,rgba(13,148,136,.1),transparent)">
+        <div class="panel-header">${icon('zap', 16)} Live studio manifest</div>
+        <div id="home-dieter-edge" style="max-height:420px;overflow-y:auto"></div>
       </div>
 
       <div class="dash-grid">
@@ -93,4 +102,5 @@ export function init() {
   document.querySelectorAll('[data-goto]').forEach(el => {
     el.addEventListener('click', () => navigate(el.dataset.goto));
   });
+  void mountHomeEdge(document.getElementById('home-dieter-edge'));
 }

@@ -1,6 +1,6 @@
 # Vocal engine, real tone, and training path
 
-This stack treats **“real tone”** as audio that is produced by **models and DSP you control** (cloud generation + server-side FFmpeg / Librosa), not as a browser sine-wave placeholder.
+This stack treats **“real tone”** for **lead vocals** as **Mureka (or future gateway-mounted voice models)**—trained models that sing your lyrics. Server **procedural** stems and browser buffers are **draft / layout tools only**, not substitutes for that vocal AI.
 
 ## What ships today (production-quality path)
 

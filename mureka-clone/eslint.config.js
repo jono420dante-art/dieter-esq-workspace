@@ -11,6 +11,19 @@ export default defineConfig([
     languageOptions: { globals: globals.node },
   },
   {
+    files: ['api/**/*.js', 'middleware.js', 'scripts/**/*.mjs'],
+    languageOptions: { globals: globals.node },
+  },
+  {
+    files: ['netlify/edge-functions/**/*.js'],
+    languageOptions: {
+      globals: {
+        ...(globals.deno || {}),
+        Deno: 'readonly',
+      },
+    },
+  },
+  {
     files: ['**/*.{js,jsx}'],
     extends: [
       js.configs.recommended,

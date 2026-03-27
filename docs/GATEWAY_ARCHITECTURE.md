@@ -8,7 +8,14 @@ This document describes how the **React UI** (`mureka-clone/`), **FastAPI gatewa
 |--------|------|
 | **Browser** | Orchestration UI, waveform playback, localStorage for optional user keys in dev. No in-tab “toy” synthesis for the main Create flow — audio comes from URLs returned by the API / Mureka. |
 | **Gateway (FastAPI)** | Single origin when deployed as one Docker image: `/api/*` proxies and normalizes provider calls, retries, timeouts, and file paths for labs. |
-| **Providers** | **Mureka** (song + vocal models), optional **OpenAI** (lyrics), ffmpeg/librosa/rubberband stacks for **Local / Beat lab** pipelines. |
+| **Providers** | **Mureka** (song + vocal models), optional **OpenAI** + **Anthropic Claude** (lyrics via `lyrics_service`), ffmpeg/librosa/rubberband for **Local / Beat lab** pipelines. |
+
+## Lyrics helpers
+
+- **`POST /api/lyrics/analyze`** — Lint, section tags, rough bar/syllable density (optional BPM).
+- **`POST /api/lyrics/prosody`** — Optional per-line syllable sketch + naive rhyme letters (composition aid; not ASR).
+
+Unhandled non-HTTP errors return **JSON** `500` with a stable `{ "detail", "path" }` shape (see `main.py` fallback handler).
 
 ## Vocal analysis (training / QC)
 
@@ -54,6 +61,7 @@ There is no GPU training loop bundled in Docker. A practical foundation:
 
 ## Related docs
 
+- [`APP_UNDERSTANDING.md`](./APP_UNDERSTANDING.md) — UI tabs, LLM lyrics order, production Vite build
 - [`DIETER_ESQ_START.md`](../DIETER_ESQ_START.md) — run and deploy
 - [`VOCAL_ENGINE_AND_TRAINING.md`](./VOCAL_ENGINE_AND_TRAINING.md) — real tone path, Mureka + DSP, dataset labeling
 - [`ICLOUD_AND_STORAGE.md`](./ICLOUD_AND_STORAGE.md) — where files actually live vs iCloud expectations

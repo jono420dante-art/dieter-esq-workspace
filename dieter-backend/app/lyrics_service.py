@@ -1,16 +1,21 @@
 """
-Lyrics generation + optimization: OpenAI when a key is available (env or request),
-otherwise deterministic local templates (same spirit as mureka-clone lyricsHelpers).
+Lyrics generation + optimization: OpenAI and/or Anthropic (Claude) when keys are available
+(env or request), otherwise deterministic local templates (same spirit as mureka-clone lyricsHelpers).
+
+Order: ``DIETER_LYRICS_AI_ORDER`` (default ``openai,anthropic``) — first successful provider wins.
 """
 
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import urllib.error
 import urllib.request
 from typing import Literal, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 VERSE_LINES = [
     "Walking through the static of a midnight dream",
@@ -125,6 +130,43 @@ def _openai_chat(api_key: str, system: str, user: str) -> str:
     return text.strip()
 
 
+def _anthropic_messages(api_key: str, system: str, user: str) -> str:
+    """Claude Messages API (no extra Python deps)."""
+    url = "https://api.anthropic.com/v1/messages"
+    model = os.environ.get("ANTHROPIC_MODEL", "claude-3-5-haiku-20241022").strip()
+    body = {
+        "model": model,
+        "max_tokens": 2048,
+        "system": system,
+        "messages": [{"role": "user", "content": user}],
+    }
+    data = json.dumps(body).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={
+            "Content-Type": "application/json",
+            "x-api-key": api_key.strip(),
+            "anthropic-version": "2023-06-01",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            raw = resp.read().decode("utf-8")
+    except urllib.error.HTTPError as e:
+        err = e.read().decode("utf-8", errors="replace")
+        raise ValueError(err or f"Anthropic HTTP {e.code}") from e
+    j = json.loads(raw)
+    blocks = j.get("content")
+    if not isinstance(blocks, list) or not blocks:
+        raise ValueError("empty Anthropic response")
+    text = blocks[0].get("text") if isinstance(blocks[0], dict) else None
+    if not isinstance(text, str) or not text.strip():
+        raise ValueError("empty Anthropic text")
+    return text.strip()
+
+
 def _resolve_openai_key(explicit: Optional[str]) -> Optional[str]:
     if explicit and explicit.strip():
         return explicit.strip()
@@ -132,41 +174,94 @@ def _resolve_openai_key(explicit: Optional[str]) -> Optional[str]:
     return env or None
 
 
+def _resolve_anthropic_key(explicit: Optional[str]) -> Optional[str]:
+    if explicit and explicit.strip():
+        return explicit.strip()
+    return os.environ.get("ANTHROPIC_API_KEY", "").strip() or None
+
+
+LyricsSource = Literal["openai", "anthropic", "local"]
+
+
+def _lyrics_provider_order() -> list[str]:
+    raw = os.environ.get("DIETER_LYRICS_AI_ORDER", "openai,anthropic")
+    return [p.strip().lower() for p in raw.split(",") if p.strip()]
+
+
+def _log_provider_fail(provider: str, exc: BaseException, warnings: list[str]) -> None:
+    detail = str(exc).strip().replace("\n", " ")[:240]
+    tag = f"{provider}_failed:{detail or type(exc).__name__}"
+    warnings.append(tag)
+    logger.warning("Lyrics provider %s failed: %s", provider, detail or type(exc).__name__)
+
+
 def generate_lyrics(
     style: str,
     title: str,
     vocal: str,
     openai_key: Optional[str],
-) -> Tuple[str, Literal["openai", "local"]]:
-    key = _resolve_openai_key(openai_key)
-    if key:
-        sys = (
-            "You write concise song lyrics with [Verse] / [Chorus] section tags. "
-            "No explanations, lyrics only."
-        )
-        user = f"Style: {style}. Title hint: {title or 'untitled'}. Vocal: {vocal}. Write 16–24 lines."
-        try:
-            return _openai_chat(key, sys, user), "openai"
-        except (ValueError, OSError, urllib.error.URLError, json.JSONDecodeError):
-            pass
-    return generate_local(style, title, vocal), "local"
+    anthropic_key: Optional[str] = None,
+) -> Tuple[str, LyricsSource, list[str]]:
+    warnings: list[str] = []
+    sys = (
+        "You write concise song lyrics with [Verse] / [Chorus] section tags. "
+        "No explanations, lyrics only."
+    )
+    user = f"Style: {style}. Title hint: {title or 'untitled'}. Vocal: {vocal}. Write 16–24 lines."
+    oa = _resolve_openai_key(openai_key)
+    an = _resolve_anthropic_key(anthropic_key)
+    for provider in _lyrics_provider_order():
+        if provider == "openai" and oa:
+            try:
+                return _openai_chat(oa, sys, user), "openai", warnings
+            except (ValueError, OSError, urllib.error.URLError, json.JSONDecodeError) as e:
+                _log_provider_fail("openai", e, warnings)
+                continue
+        if provider == "anthropic" and an:
+            try:
+                return _anthropic_messages(an, sys, user), "anthropic", warnings
+            except (ValueError, OSError, urllib.error.URLError, json.JSONDecodeError) as e:
+                _log_provider_fail("anthropic", e, warnings)
+                continue
+    text, src = generate_local(style, title, vocal), "local"
+    if warnings:
+        warnings.append("fallback:local_template_after_ai_errors")
+    elif not oa and not an:
+        warnings.append("fallback:local_no_openai_or_anthropic_key")
+    return text, src, warnings
 
 
 def optimize_lyrics(
     lyrics: str,
     openai_key: Optional[str],
-) -> Tuple[str, Literal["openai", "local"]]:
+    anthropic_key: Optional[str] = None,
+) -> Tuple[str, LyricsSource, list[str]]:
+    warnings: list[str] = []
     raw = lyrics.strip()
     if not raw:
-        return "", "local"
-    key = _resolve_openai_key(openai_key)
-    if key:
-        sys = (
-            "You improve song lyrics: tighter rhyme, clearer imagery, same language. "
-            "Keep [Section] tags. Output lyrics only."
-        )
-        try:
-            return _openai_chat(key, sys, raw), "openai"
-        except (ValueError, OSError, urllib.error.URLError, json.JSONDecodeError):
-            pass
-    return optimize_local(raw), "local"
+        return "", "local", warnings
+    sys = (
+        "You improve song lyrics: tighter rhyme, clearer imagery, same language. "
+        "Keep [Section] tags. Output lyrics only."
+    )
+    oa = _resolve_openai_key(openai_key)
+    an = _resolve_anthropic_key(anthropic_key)
+    for provider in _lyrics_provider_order():
+        if provider == "openai" and oa:
+            try:
+                return _openai_chat(oa, sys, raw), "openai", warnings
+            except (ValueError, OSError, urllib.error.URLError, json.JSONDecodeError) as e:
+                _log_provider_fail("openai", e, warnings)
+                continue
+        if provider == "anthropic" and an:
+            try:
+                return _anthropic_messages(an, sys, raw), "anthropic", warnings
+            except (ValueError, OSError, urllib.error.URLError, json.JSONDecodeError) as e:
+                _log_provider_fail("anthropic", e, warnings)
+                continue
+    out = optimize_local(raw)
+    if warnings:
+        warnings.append("fallback:local_formatter_after_ai_errors")
+    elif not oa and not an:
+        warnings.append("fallback:local_no_openai_or_anthropic_key")
+    return out, "local", warnings

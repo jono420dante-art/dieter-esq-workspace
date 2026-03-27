@@ -91,6 +91,24 @@ The `dieter-trpc` gateway exposes `lyricsGenerate` and `lyricsOptimize` mutation
 
 Storage is local filesystem under `storage/` (S3-compatible later).
 
+## Cloudflare Pages proxy checklist
+
+If your frontend is on Cloudflare Pages and backend is FastAPI elsewhere, use the included Pages Function:
+
+- File: `functions/api/[[path]].js` (proxies same-origin `/api/*` to FastAPI)
+- Dashboard path: **Cloudflare Dashboard -> Pages project -> Settings -> Environment variables**
+- Add variable:
+  - `DIETER_API_ORIGIN=https://your-fastapi-origin.com` (no trailing `/api`)
+- Redeploy (git push or manual deploy)
+- Verify:
+  - `curl https://<your-pages>.pages.dev/api/health`
+  - `curl -X POST https://<your-pages>.pages.dev/api/music/generate -H "content-type: application/json" -d "{\"prompt\":\"test\",\"durationSec\":10}"`
+
+Build-time alternative:
+
+- Set `VITE_API_BASE=https://your-fastapi-origin.com` before `npm run build`
+- UI calls FastAPI directly (CORS must allow your frontend origin)
+
 ### DistroKid (manual upload after master)
 
 There is **no DistroKid API** for uploads—use their dashboard. Step-by-step: **`DISTROKID_RELEASE.md`**.

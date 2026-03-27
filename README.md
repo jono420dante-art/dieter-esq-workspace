@@ -18,6 +18,7 @@ Main code:
 - **`dieter-backend/`** — FastAPI (`app/`), beat lab, pipelines  
 - **Architecture:** [`docs/GATEWAY_ARCHITECTURE.md`](./docs/GATEWAY_ARCHITECTURE.md) — gateway, sync/portal routing, plugin extension points  
 - **Vocals / training hooks:** [`docs/VOCAL_ENGINE_AND_TRAINING.md`](./docs/VOCAL_ENGINE_AND_TRAINING.md) — Mureka + DSP, `POST /api/vocal/analyze` for dataset labels  
+- **App map & perf:** [`docs/APP_UNDERSTANDING.md`](./docs/APP_UNDERSTANDING.md) — tabs, gateway, OpenAI + Claude lyrics, Vite production build  
 - **WAM ecosystem:** [`docs/WAM_ECOSYSTEM.md`](./docs/WAM_ECOSYSTEM.md) — community plugins, pedalboard, Open Studio DAW, Sequencer Party  
 - **Web audio stack (synths, Faust/LV2 caveats, snippets):** [`docs/DIETER_WEB_AUDIO_STACK.md`](./docs/DIETER_WEB_AUDIO_STACK.md)  
 

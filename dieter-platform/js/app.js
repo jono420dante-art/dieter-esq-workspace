@@ -22,6 +22,8 @@ import * as socialPage from './pages/social.js';
 import * as murekaPage from './pages/mureka.js';
 import * as coversPage from './pages/covers.js';
 import * as soldiersPage from './pages/soldiers.js';
+import * as settingsPage from './pages/settings.js';
+import { startBackendProbeLoop } from './studioConnectivity.js';
 
 /* ═══ BOOTSTRAP ═══ */
 (function boot() {
@@ -47,8 +49,11 @@ import * as soldiersPage from './pages/soldiers.js';
     router.register('mureka', murekaPage);
     router.register('covers', coversPage);
     router.register('soldiers', soldiersPage);
+    router.register('settings', settingsPage);
 
     router.init();
+
+    startBackendProbeLoop();
 
     agents.createAgents();
     agents.startAll();
@@ -120,6 +125,7 @@ function buildSidebar() {
       { page: 'portals', icon: 'globe', text: 'Portals' },
     ]},
     { label: 'System', items: [
+      { page: 'settings', icon: 'settings', text: 'Studio & API', badge: 'API', badgeColor: 'green' },
       { page: 'soldiers', icon: 'shield', text: 'Task Soldiers' },
     ]},
   ];

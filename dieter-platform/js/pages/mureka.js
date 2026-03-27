@@ -18,6 +18,7 @@ import {
   getOpenaiKey,
   setOpenaiKey,
 } from '../apiConfig.js';
+import { mountMurekaEdge } from '../dieterEdge.js';
 
 let importedFiles = [];
 let exportQueue = [];
@@ -57,6 +58,16 @@ export function render() {
   return `
     <div class="split">
       <div class="split-right">
+
+        <div class="panel" style="border-color:rgba(20,184,166,.4);background:linear-gradient(160deg,rgba(13,148,136,.14),rgba(8,10,22,.5))">
+          <div class="panel-header">${icon('shield', 16)} Dieter &gt; single-vendor lock-in
+            <span class="panel-header-right" style="font-size:.52rem;color:#5eead4">Live API</span>
+          </div>
+          <p style="font-size:.6rem;color:var(--text-secondary);margin:0 0 8px;line-height:1.5">
+            Mureka excels at closed-model song generation. Dieter wraps it (and others) so you still get <strong>stems</strong>, <strong>vocal QC</strong>, <strong>local demos</strong>, and <strong>your storage paths</strong> — the parts labels and pros actually need to win long-term.
+          </p>
+          <div id="mureka-dieter-edge-root"></div>
+        </div>
 
         <!-- MUREKA PORTAL -->
         <div class="panel" style="background:linear-gradient(135deg,rgba(168,85,247,.08),rgba(124,58,237,.04));border-color:rgba(168,85,247,.25)">
@@ -368,6 +379,8 @@ export function init() {
   document.getElementById('btn-toggle-embed')?.addEventListener('click', toggleEmbed);
 
   setupMurekaCloneUI();
+
+  void mountMurekaEdge(document.getElementById('mureka-dieter-edge-root'));
 
   // Export filters
   document.querySelectorAll('[data-expf]').forEach(el => {

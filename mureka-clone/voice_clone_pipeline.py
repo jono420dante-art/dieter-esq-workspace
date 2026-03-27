@@ -312,6 +312,81 @@ def generate_song_with_clone(
     }
 
 
+def _lyrics_plain_for_tts(lyrics: str, max_chars: int = 4000) -> str:
+    """Strip lone [Section] lines and collapse whitespace for neural TTS."""
+    raw = (lyrics or "").strip()
+    if not raw:
+        raise ValueError("Lyrics required")
+    lines_out: list[str] = []
+    for line in raw.splitlines():
+        s = line.strip()
+        if re.match(r"^\[[^\]]+\]$", s):
+            continue
+        if s:
+            lines_out.append(s)
+    text = " ".join(lines_out) if lines_out else raw
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) > max_chars:
+        text = text[: max_chars - 1] + "…"
+    return text
+
+
+def teal_sing_lyrics_wav(
+    lyrics: str,
+    *,
+    voice_id: str | None = None,
+    pitch_semitones: float = 0.0,
+    output_path: Path,
+) -> dict[str, Any]:
+    """
+    Render **acapella** WAV: Coqui Glow-TTS + optional registered clone F0 + semitone shift.
+    Same contract as ``dieter-backend/voice_clone_pipeline.py`` (keep in sync).
+    """
+    import librosa
+    import soundfile as sf
+
+    text = _lyrics_plain_for_tts(lyrics)
+    tts, sr_tts = get_coqui_tts()
+    try:
+        wav = tts.tts(text=text)
+    except TypeError:
+        wav = tts.tts(text)
+    if isinstance(wav, list):
+        wav = np.concatenate([np.asarray(x, dtype=np.float32).reshape(-1) for x in wav])
+    vocals = np.asarray(wav, dtype=np.float32).reshape(-1)
+
+    vid = (voice_id or "").strip() or None
+    meta_f0: float | None = None
+    if vid:
+        meta = VOICE_LIBRARY.get(vid)
+        if meta:
+            target_f0 = float(meta.get("f0_mean") or 150.0)
+            vocals = adjust_pitch_to_target(vocals, sr_tts, target_f0)
+            meta_f0 = target_f0
+
+    ps = float(np.clip(float(pitch_semitones), -12.0, 12.0))
+    if abs(ps) > 1e-6:
+        vocals = librosa.effects.pitch_shift(vocals, sr=sr_tts, n_steps=ps).astype(np.float32)
+
+    peak = float(np.max(np.abs(vocals))) if len(vocals) else 0.0
+    if peak > 1e-6:
+        vocals = np.clip(vocals / peak * 0.96, -1.0, 1.0).astype(np.float32)
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    sf.write(str(output_path), vocals, sr_tts, subtype="PCM_16")
+
+    return {
+        "filename": output_path.name,
+        "storageKey": f"local/{output_path.name}",
+        "sampleRate": sr_tts,
+        "engine": "tealvoices_coqui_glow_tts",
+        "voiceIdApplied": vid if meta_f0 is not None else None,
+        "f0MeanApplied": meta_f0,
+        "pitchSemitones": round(ps, 4),
+        "note": "Teal Voices uses on-server Coqui TTS + pitch shaping (speech-quality). For real sung productions use Create → Mureka.",
+    }
+
+
 def pipeline_available() -> bool:
     try:
         import TTS  # noqa: F401

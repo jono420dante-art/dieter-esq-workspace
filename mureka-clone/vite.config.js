@@ -32,8 +32,27 @@ function injectStripePublishableKey() {
 }
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react(), injectStripePublishableKey()],
+  build: {
+    target: 'es2022',
+    minify: 'esbuild',
+    cssMinify: true,
+    sourcemap: mode === 'development',
+    reportCompressedSize: true,
+    chunkSizeWarningLimit: 650,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined
+          if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/'))
+            return 'vendor-react'
+          if (id.includes('@trpc')) return 'vendor-trpc'
+          if (id.includes('wavesurfer')) return 'vendor-wavesurf'
+        },
+      },
+    },
+  },
   server: {
     proxy: {
       '/api': {
@@ -48,4 +67,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))

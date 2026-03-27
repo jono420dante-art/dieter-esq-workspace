@@ -15,8 +15,9 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Literal, Optional
 
-from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from .engines import get_engine
@@ -47,6 +48,7 @@ from .local_pipeline import (
     pitch_shift_semitones_preserve_duration,
     stretch_audio_to_bpm_ratio,
 )
+from .studio_edge import dieter_edge_manifest, studio_recommend_workflow
 from .cover_pipeline import decode_to_wav, mix_parallel, render_cover_two_takes
 from .suno_mureka_mix import build_suno_mureka_mix, preset_summary
 from .vocal_analysis import analyze_vocal_audio_bytes
@@ -201,6 +203,19 @@ app.include_router(beat_lab_router, prefix="/api")
 app.include_router(musicgen_router, prefix="/api")
 
 
+@app.exception_handler(Exception)
+async def _fallback_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """JSON 500 for unexpected errors. HTTPException and RequestValidationError use Starlette/FastAPI handlers first (MRO)."""
+    logger.exception("Unhandled exception %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "An unexpected server error occurred. Check API logs.",
+            "path": str(request.url.path),
+        },
+    )
+
+
 @app.get("/api/health")
 def health() -> dict[str, Any]:
     return {"ok": True, "time": time.time()}
@@ -281,6 +296,11 @@ class StudioGrowthEvent(BaseModel):
     note: str = Field("", max_length=500)
 
 
+class StudioRecommendBody(BaseModel):
+    goal: Literal["chart_vocal", "demo_fast", "private_stems", "train_voice", "instrumental_bed"] = "demo_fast"
+    privacyFirst: bool = False
+
+
 @app.get("/api/studio/growth")
 def api_studio_growth_get() -> dict[str, Any]:
     """Cumulative studio activity (lyrics, masters, beats, etc.) — grows with usage."""
@@ -315,6 +335,27 @@ def api_studio_growth_post(body: StudioGrowthEvent) -> dict[str, Any]:
         except OSError:
             logger.warning("Could not write %s", GROWTH_PATH)
     return {"ok": True, "counters": data.get("counters", {})}
+
+
+@app.get("/api/studio/dieter-edge")
+def api_studio_dieter_edge() -> dict[str, Any]:
+    """Live capability manifest + honest positioning for Dieter vs cloud-only workflows."""
+    return dieter_edge_manifest()
+
+
+@app.post("/api/studio/recommend-route")
+def api_studio_recommend_route(body: StudioRecommendBody) -> dict[str, Any]:
+    """Suggest a generation path from user goals — does not start jobs."""
+    m = dieter_edge_manifest()
+    live = m.get("live") or {}
+    mg = live.get("musicgen") or {}
+    return studio_recommend_workflow(
+        body.goal,
+        body.privacyFirst,
+        mureka=bool(live.get("murekaApiKeyConfigured")),
+        musicgen_on=bool(mg.get("enabled")),
+        coqui=bool(live.get("coquiTts")),
+    )
 
 
 def _record_perf(event: str, ok: bool, elapsed_ms: float, *, detail: str = "") -> None:
@@ -374,27 +415,54 @@ def api_perf_summary() -> dict[str, Any]:
 
 
 class LyricsGenerateBody(BaseModel):
-    """Generate draft lyrics (OpenAI when key present, else local template)."""
+    """Generate draft lyrics (OpenAI and/or Anthropic Claude when keys present, else local template)."""
 
     style: str = Field("pop")
     title: str = ""
     vocal: Literal["female", "male"] = "female"
     openaiApiKey: Optional[str] = None
+    anthropicApiKey: Optional[str] = None
 
 
 class LyricsOptimizeBody(BaseModel):
     lyrics: str = Field(..., min_length=1)
     openaiApiKey: Optional[str] = None
+    anthropicApiKey: Optional[str] = None
+
+
+@app.post("/api/lyrics/generate")
+def api_lyrics_generate(req: LyricsGenerateBody) -> dict[str, Any]:
+    text, source = generate_lyrics(
+        req.style,
+        req.title,
+        req.vocal,
+        req.openaiApiKey,
+        req.anthropicApiKey,
+    )
+    return {"text": text, "source": source}
+
+
+@app.post("/api/lyrics/optimize")
+def api_lyrics_optimize(req: LyricsOptimizeBody) -> dict[str, Any]:
+    text, source = optimize_lyrics(req.lyrics, req.openaiApiKey, req.anthropicApiKey)
+    return {"text": text, "source": source}
 
 
 class LyricsAnalyzeBody(BaseModel):
-    lyrics: str = Field(..., min_length=1)
+    """Lint lyrics + rough bar/syllable overflow hints (optional BPM)."""
+
+    lyrics: str = ""
+    bpm: Optional[int] = Field(None, ge=40, le=240)
+    beatsPerBar: int = Field(4, ge=1, le=16)
 
 
-def _count_syllables_rough(word: str) -> int:
-    """
-    Heuristic syllable counter (offline, dependency-free). Not perfect, but stable.
-    """
+@app.post("/api/lyrics/analyze")
+def api_lyrics_analyze(req: LyricsAnalyzeBody) -> dict[str, Any]:
+    return analyze_lyrics_text(req.lyrics or "", bpm=req.bpm, beats_per_bar=req.beatsPerBar)
+
+
+def _prosody_count_syllables_rough(word: str) -> int:
+    """Heuristic syllable count per word (offline sketch, not linguistic truth)."""
     w = re.sub(r"[^a-z]", "", (word or "").lower())
     if not w:
         return 0
@@ -406,33 +474,32 @@ def _count_syllables_rough(word: str) -> int:
         if is_v and not prev_vowel:
             count += 1
         prev_vowel = is_v
-    # silent e
     if w.endswith("e") and count > 1 and not w.endswith(("le", "ye")):
         count -= 1
     return max(1, count)
 
 
-def _rhyme_key_rough(line: str) -> str:
-    t = re.sub(r"[^a-zA-Z\\s']", " ", (line or "")).strip().lower()
-    if not t:
+def _prosody_rhyme_key_rough(line: str) -> str:
+    last_word = ""
+    t = re.sub(r"[^a-zA-Z\s']", " ", (line or "").strip().lower())
+    if t:
+        parts = t.split()
+        if parts:
+            last_word = re.sub(r"[^a-z]", "", parts[-1])
+    if not last_word:
         return ""
-    last = t.split()[-1]
-    last = re.sub(r"[^a-z]", "", last)
-    if not last:
-        return ""
-    # last vowel group + trailing consonants
-    m = re.search(r"[aeiouy]+[^aeiouy]*$", last)
-    return m.group(0) if m else last[-3:]
+    m = re.search(r"[aeiouy]+[^aeiouy]*$", last_word)
+    return m.group(0) if m else last_word[-3:]
 
 
-@app.post("/api/lyrics/analyze")
-def api_lyrics_analyze(req: LyricsAnalyzeBody) -> dict[str, Any]:
-    """
-    Offline lyric rhythm/prosody analysis:
-    - per-line syllable estimate
-    - rough stress guess (caps/!/? markers)
-    - naive rhyme scheme based on last word vowel group
-    """
+class LyricsProsodyBody(BaseModel):
+    """Optional rhyme / per-line syllable sketch (see also POST /api/lyrics/analyze for lint + BPM hints)."""
+
+    lyrics: str = Field(..., min_length=1)
+
+
+@app.post("/api/lyrics/prosody")
+def api_lyrics_prosody(req: LyricsProsodyBody) -> dict[str, Any]:
     text = (req.lyrics or "").strip()
     lines = [ln.rstrip() for ln in text.splitlines()]
     out_lines: list[dict[str, Any]] = []
@@ -440,9 +507,9 @@ def api_lyrics_analyze(req: LyricsAnalyzeBody) -> dict[str, Any]:
     next_letter = ord("A")
 
     for i, ln in enumerate(lines):
-        words = [w for w in re.split(r"\\s+", ln.strip()) if w]
-        syll = sum(_count_syllables_rough(w) for w in words)
-        rk = _rhyme_key_rough(ln)
+        words = [w for w in re.split(r"\s+", ln.strip()) if w]
+        syll = sum(_prosody_count_syllables_rough(w) for w in words)
+        rk = _prosody_rhyme_key_rough(ln)
         if rk and rk not in rhyme_map:
             rhyme_map[rk] = chr(next_letter)
             next_letter = min(next_letter + 1, ord("Z"))
@@ -466,31 +533,6 @@ def api_lyrics_analyze(req: LyricsAnalyzeBody) -> dict[str, Any]:
         "totalLines": len(out_lines),
         "totalSyllables": sum(int(l["syllables"]) for l in out_lines),
     }
-
-
-@app.post("/api/lyrics/generate")
-def api_lyrics_generate(req: LyricsGenerateBody) -> dict[str, Any]:
-    text, source = generate_lyrics(req.style, req.title, req.vocal, req.openaiApiKey)
-    return {"text": text, "source": source}
-
-
-@app.post("/api/lyrics/optimize")
-def api_lyrics_optimize(req: LyricsOptimizeBody) -> dict[str, Any]:
-    text, source = optimize_lyrics(req.lyrics, req.openaiApiKey)
-    return {"text": text, "source": source}
-
-
-class LyricsAnalyzeBody(BaseModel):
-    """Lint lyrics + rough bar/syllable overflow hints (optional BPM)."""
-
-    lyrics: str = ""
-    bpm: Optional[int] = Field(None, ge=40, le=240)
-    beatsPerBar: int = Field(4, ge=1, le=16)
-
-
-@app.post("/api/lyrics/analyze")
-def api_lyrics_analyze(req: LyricsAnalyzeBody) -> dict[str, Any]:
-    return analyze_lyrics_text(req.lyrics or "", bpm=req.bpm, beats_per_bar=req.beatsPerBar)
 
 
 class AgentRunBody(BaseModel):
@@ -2217,7 +2259,7 @@ def _procedural_vocal_layer_core(
         "engine": engine.name,
         "pitchSemitones": round(ps, 4),
         "duration_seconds": round(_wav_duration_seconds(dest), 4),
-        "note": "Procedural placeholder timbre — replace with RVC/Tortoise render for real voices. Other stems remain under storage/local/vocal_* on the server.",
+        "note": "Procedural placeholder timbre (not Mureka AI vocals). For real sung voice from lyrics use Mureka via /api/mureka/*. Stems remain under storage/local/vocal_* on the server.",
     }
     out.update(pitch_extra)
     return out
@@ -2327,6 +2369,86 @@ def api_local_vocal_status() -> dict[str, Any]:
             "note": "Speech synthesis; chain with RVC for singing voice conversion.",
         },
         "next": "Expose a small HTTP shim on your GPU host and set RVC_BASE_URL; optional body POST forwarder can be added next.",
+    }
+
+
+class TealVoicesSingBody(BaseModel):
+    """Lyrics → acapella WAV (Coqui TTS when installed; else procedural stem fallback)."""
+
+    lyrics: str = Field(..., min_length=1, max_length=12000)
+    voiceId: Optional[str] = None
+    pitchSemitones: float = Field(0.0, ge=-12.0, le=12.0)
+
+
+def _tealvoices_procedural_fallback(req: TealVoicesSingBody, out_id: str) -> dict[str, Any]:
+    preset = _sdc_voice_id_to_preset(req.voiceId or "woman2")
+    out = _procedural_vocal_layer_core(
+        prompt="Teal Voices (procedural fallback — install Coqui TTS for speech acapella)",
+        lyrics=(req.lyrics or "")[:3000],
+        bpm=108.0,
+        vocal_preset=preset,
+        duration_sec=45,
+        language="en",
+        pitch_semitones=float(req.pitchSemitones),
+    )
+    out["tealvoicesId"] = out_id
+    out["tealvoicesMode"] = "procedural_fallback"
+    base_note = out.get("note") or ""
+    out["note"] = (
+        f"{base_note} Teal Voices: Python package `TTS` (Coqui) not on this server — "
+        "you are hearing the procedural stem. Add `TTS` to the backend for speech-style vocal from lyrics."
+    ).strip()
+    return out
+
+
+@app.get("/api/tealvoices/status")
+def api_tealvoices_status() -> dict[str, Any]:
+    coqui = bool(vcp is not None and vcp.pipeline_available())
+    n_reg = len(vcp.VOICE_LIBRARY) if vcp is not None else 0
+    return {
+        "label": "Teal Voices",
+        "coquiAvailable": coqui,
+        "registeredCloneVoices": n_reg,
+        "endpoint": "POST /api/tealvoices/sing",
+        "hint": "Registers clone voices via the Voice studio / voice_clone paths when Coqui is enabled.",
+    }
+
+
+@app.post("/api/tealvoices/sing")
+def api_tealvoices_sing(req: TealVoicesSingBody) -> dict[str, Any]:
+    """
+    **Teal Voices:** render lyrics to a downloadable vocal WAV via the Dieter backend.
+    Primary path: Coqui Glow-TTS + optional clone F0 + pitch semitones. Falls back to procedural stem if TTS missing.
+    """
+    out_id = _new_id("teal")
+    if vcp is None or not vcp.pipeline_available():
+        return _tealvoices_procedural_fallback(req, out_id)
+    out_name = f"teal_{out_id}_sing.wav"
+    dest = STORAGE_DIR / "local" / out_name
+    try:
+        meta = vcp.teal_sing_lyrics_wav(
+            req.lyrics,
+            voice_id=(req.voiceId or "").strip() or None,
+            pitch_semitones=float(req.pitchSemitones),
+            output_path=dest,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.exception("tealvoices sing failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    return {
+        "tealvoicesId": out_id,
+        "tealvoicesMode": "coqui_tts",
+        "url": f"/api/storage/local/{meta['filename']}",
+        "key": meta["storageKey"],
+        "filename": meta["filename"],
+        "sampleRate": meta["sampleRate"],
+        "engine": meta["engine"],
+        "voiceIdApplied": meta.get("voiceIdApplied"),
+        "f0MeanApplied": meta.get("f0MeanApplied"),
+        "pitchSemitones": meta.get("pitchSemitones"),
+        "note": meta.get("note"),
     }
 
 

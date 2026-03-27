@@ -8,6 +8,7 @@
     "generate:image": "node ./scripts/generate-image.mjs"
   },
   "dependencies": {
+    "@vercel/edge": "^1.2.2",
     "replicate": "^1.4.0"
   }
 }

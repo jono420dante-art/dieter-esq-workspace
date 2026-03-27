@@ -12,7 +12,8 @@ export async function onRequest({ request, env }) {
   const raw = String(env.DIETER_API_ORIGIN || '')
     .trim()
     .replace(/\/$/, '')
-  if (!raw) {
+  const origin = raw.replace(/\/api$/i, '')
+  if (!origin) {
     return new Response(
       JSON.stringify({
         ok: false,
@@ -30,7 +31,7 @@ export async function onRequest({ request, env }) {
   }
 
   const u = new URL(request.url)
-  const target = `${raw}${u.pathname}${u.search}`
+  const target = `${origin}${u.pathname}${u.search}`
 
   try {
     return await fetch(new Request(target, request))
