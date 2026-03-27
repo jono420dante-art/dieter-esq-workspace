@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { parseFetchJson } from './apiResolve.js'
+import { absoluteFromApiPath, normalizeApiRoot, parseFetchJson } from './apiResolve.js'
 import { getSiteUrl } from './siteUrl.js'
 import { STUDIO_NAME } from './studioBrand.js'
 
@@ -39,8 +39,14 @@ export default function ReleaseMarketing({ apiBase }) {
   const [source, setSource] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+  const [artVideoBusy, setArtVideoBusy] = useState(false)
+  const [artVideoErr, setArtVideoErr] = useState('')
+  const [artVideoUrl, setArtVideoUrl] = useState('')
+  const [artAudio, setArtAudio] = useState(null)
+  const [artCover, setArtCover] = useState(null)
 
   const siteUrl = getSiteUrl()
+  const apiRoot = useMemo(() => normalizeApiRoot(apiBase || '/api'), [apiBase])
   const shareLink =
     siteUrl || (typeof window !== 'undefined' ? window.location.origin : '')
 
@@ -52,7 +58,7 @@ export default function ReleaseMarketing({ apiBase }) {
     setPack(null)
     setBusy(true)
     try {
-      const r = await fetch(`${apiBase.replace(/\/$/, '')}/seo/suggest`, {
+      const r = await fetch(`${apiRoot}/seo/suggest`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -73,7 +79,47 @@ export default function ReleaseMarketing({ apiBase }) {
     } finally {
       setBusy(false)
     }
-  }, [apiBase, title, genre, description, lyrics, tagsStr, openAiKey])
+  }, [apiRoot, title, genre, description, lyrics, tagsStr, openAiKey])
+
+  const runArtworkVideo = useCallback(async () => {
+    setArtVideoErr('')
+    setArtVideoUrl('')
+    if (!artAudio) {
+      setArtVideoErr('Choose an audio file (master or mix).')
+      return
+    }
+    if (!artCover) {
+      setArtVideoErr('Choose cover art (JPG, PNG, or WebP).')
+      return
+    }
+    setArtVideoBusy(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', artAudio, artAudio.name || 'track.mp3')
+      fd.append('cover_image', artCover, artCover.name || 'cover.jpg')
+      fd.append('beat_times_json', '[]')
+      fd.append('detect_beats', 'true')
+      const r = await fetch(`${apiRoot}/local/music-video`, { method: 'POST', body: fd })
+      const text = await r.text()
+      let j = {}
+      try {
+        j = text ? JSON.parse(text) : {}
+      } catch {
+        j = {}
+      }
+      if (!r.ok) {
+        const d = j?.detail
+        throw new Error(typeof d === 'string' ? d : text || r.statusText)
+      }
+      const u = j.url
+      if (!u) throw new Error('API returned no url')
+      setArtVideoUrl(absoluteFromApiPath(apiRoot, u))
+    } catch (e) {
+      setArtVideoErr(String(e?.message || e))
+    } finally {
+      setArtVideoBusy(false)
+    }
+  }, [apiRoot, artAudio, artCover])
 
   const tweetText = useMemo(() => {
     const yt = pack?.youtubeTitle || title
@@ -96,7 +142,7 @@ export default function ReleaseMarketing({ apiBase }) {
       <section className="release-card">
         <h2>SEO pack from API</h2>
         <p className="hint">
-          Calls <code>POST {apiBase}/seo/suggest</code>. Heuristics always work; OpenAI upgrades the pack when a key is
+          Calls <code>POST {apiRoot}/seo/suggest</code>. Heuristics always work; OpenAI upgrades the pack when a key is
           saved in Connections.
         </p>
         <div className="release-grid-form">
@@ -185,6 +231,51 @@ export default function ReleaseMarketing({ apiBase }) {
                 <p className="release-kw">{(pack.keywords || []).join(', ')}</p>
               </div>
             </div>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="release-card">
+        <h2>Artwork + audio → video</h2>
+        <p className="hint">
+          Builds an MP4 for YouTube / Shorts / TikTok: your <strong>cover image</strong> fills the frame for the length of
+          your <strong>track</strong>, with optional beat flashes (same API as Beat Lab). Requires{' '}
+          <code>ffmpeg</code> on your Dieter API server. Endpoint:{' '}
+          <code>POST {apiRoot}/local/music-video</code> with multipart fields <code>file</code> (audio) and{' '}
+          <code>cover_image</code>.
+        </p>
+        <div className="release-grid-form">
+          <label>
+            Audio file
+            <input
+              type="file"
+              accept="audio/*,.mp3,.wav,.flac,.m4a,.aac,.ogg"
+              onChange={(e) => setArtAudio(e.target.files?.[0] ?? null)}
+            />
+          </label>
+          <label>
+            Cover image
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+              onChange={(e) => setArtCover(e.target.files?.[0] ?? null)}
+            />
+          </label>
+        </div>
+        <div className="release-actions">
+          <button type="button" className="primary" disabled={artVideoBusy} onClick={() => void runArtworkVideo()}>
+            {artVideoBusy ? 'Rendering video…' : 'Merge cover + song to MP4'}
+          </button>
+        </div>
+        {artVideoErr ? (
+          <p className="bad" role="alert">
+            {artVideoErr}
+          </p>
+        ) : null}
+        {artVideoUrl ? (
+          <div className="fade-in" style={{ marginTop: 12 }}>
+            <p className="ok">Video ready — preview below (URL resolves via your API origin).</p>
+            <video src={artVideoUrl} controls style={{ width: '100%', maxWidth: 640, borderRadius: 8, marginTop: 8 }} />
           </div>
         ) : null}
       </section>

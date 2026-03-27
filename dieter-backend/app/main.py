@@ -31,7 +31,7 @@ from .musicgen_router import router as musicgen_router
 from .voices_router import router as voices_router
 from .pitch_presets import preset_semitones
 from .release_pipeline import generate_master_pipeline, save_distro_prep_upload
-from .music_video import generate_music_video
+from .music_video import generate_image_music_video, generate_music_video
 from .seo_service import build_seo_pack
 from .kling_video import (
     aiml_api_config,
@@ -2093,6 +2093,7 @@ async def api_pipeline_upload_distrokid_prep(
 @app.post("/api/local/music-video")
 async def api_local_music_video(
     file: UploadFile = File(...),
+    cover_image: UploadFile | None = File(None),
     beat_times_json: str = Form("[]"),
     detect_beats: str = Form("true"),
     width: int = Form(1920),
@@ -2100,11 +2101,14 @@ async def api_local_music_video(
     flash_sec: float = Form(0.07),
 ) -> dict[str, Any]:
     """
-    FFmpeg **showwaves** + optional white flash on each beat (seconds). HeyGen/MAIVE-style
-    AI video stays a separate integration; this route is offline and YouTube/TikTok–friendly (``+faststart``).
+    Offline music video (FFmpeg, ``+faststart``):
 
-    - Pass ``beat_times_json`` as a JSON array of floats, **or** leave ``[]`` and set ``detect_beats=true`` to use librosa.
-    - Set ``detect_beats=false`` and ``[]`` for waveform only (no flashes).
+    - **Default:** **showwaves** + optional white flash on each beat.
+    - **With ``cover_image``:** scales your artwork to the frame, loops it for the song length, muxes **your** audio,
+      and applies the same optional beat flashes (no waveform).
+
+    Pass ``beat_times_json`` as JSON floats, or ``[]`` + ``detect_beats=true`` for librosa.
+    Cover art: ``.jpg`` ``.jpeg`` ``.png`` ``.webp`` (max ~25MB).
     """
     raw = Path(file.filename or "audio.wav")
     suffix = raw.suffix.lower() or ".wav"
@@ -2116,6 +2120,26 @@ async def api_local_music_video(
     body = await file.read()
     if len(body) > 120 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="File too large (max ~120MB)")
+
+    use_cover = cover_image is not None and bool((cover_image.filename or "").strip())
+    tmp_img: str | None = None
+    img_suffix = ""
+    if use_cover:
+        iraw = Path(cover_image.filename or "cover.jpg")
+        img_suffix = iraw.suffix.lower() or ".jpg"
+        if img_suffix not in {".jpg", ".jpeg", ".png", ".webp"}:
+            raise HTTPException(
+                status_code=400,
+                detail="cover_image: use .jpg .jpeg .png or .webp",
+            )
+        img_body = await cover_image.read()
+        if len(img_body) > 25 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="cover_image too large (max ~25MB)")
+        if len(img_body) < 32:
+            raise HTTPException(status_code=400, detail="cover_image empty or too small")
+        fd_i, tmp_img = tempfile.mkstemp(suffix=img_suffix)
+        os.close(fd_i)
+        Path(tmp_img).write_bytes(img_body)
 
     w = max(320, min(3840, width))
     h = max(240, min(2160, height))
@@ -2152,18 +2176,31 @@ async def api_local_music_video(
         out_dir.mkdir(parents=True, exist_ok=True)
         out_path = out_dir / f"{out_id}_music_video.mp4"
         try:
-            generate_music_video(
-                Path(tmp_in),
-                beat_list,
-                out_path,
-                width=w,
-                height=h,
-                flash_sec=flash,
-            )
+            if tmp_img:
+                generate_image_music_video(
+                    Path(tmp_img),
+                    Path(tmp_in),
+                    beat_list,
+                    out_path,
+                    width=w,
+                    height=h,
+                    flash_sec=flash,
+                )
+            else:
+                generate_music_video(
+                    Path(tmp_in),
+                    beat_list,
+                    out_path,
+                    width=w,
+                    height=h,
+                    flash_sec=flash,
+                )
         except (RuntimeError, FileNotFoundError, ValueError) as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         Path(tmp_in).unlink(missing_ok=True)
+        if tmp_img:
+            Path(tmp_img).unlink(missing_ok=True)
 
     rel = f"local/{out_path.name}"
     return {
@@ -2172,7 +2209,8 @@ async def api_local_music_video(
         "url": f"/api/storage/local/{out_path.name}",
         "beatSource": source,
         "beatCount": len(beat_list),
-        "note": "H.264 + AAC, +faststart. For AI avatars/clips, wire HeyGen/Runway separately.",
+        "mode": "image_artwork" if use_cover else "waveform",
+        "note": "H.264 + AAC, +faststart. With cover_image, your still art fills the frame. AI motion: POST /api/video/from-song (Kling + key).",
     }
 
 

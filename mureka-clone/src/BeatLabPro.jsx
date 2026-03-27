@@ -22,6 +22,8 @@ export default function BeatLabPro({ apiBase }) {
   /** After master: FFmpeg showwaves + beat flashes (needs ffmpeg on server). */
   const [autoVideo, setAutoVideo] = useState(true)
   const [videoMsg, setVideoMsg] = useState('')
+  /** Optional cover art → still-image music video (POST multipart ``cover_image``). */
+  const [coverArtFile, setCoverArtFile] = useState(null)
   /** Fine-tune semitones; combined with optional preset on the server (±12 clamp). */
   const [pitch, setPitch] = useState(0)
   /** Optional: deep_male, male, neutral, female, bright_female — sent as `pitch_preset`. */
@@ -53,6 +55,9 @@ export default function BeatLabPro({ apiBase }) {
       const blob = await r.blob()
       const fd = new FormData()
       fd.append('file', new File([blob], 'master.mp3', { type: blob.type || 'audio/mpeg' }))
+      if (coverArtFile) {
+        fd.append('cover_image', coverArtFile, coverArtFile.name || 'cover.jpg')
+      }
       fd.append('beat_times_json', '[]')
       fd.append('detect_beats', 'true')
       const res = await fetch(`${base}/local/music-video`, { method: 'POST', body: fd })
@@ -64,7 +69,7 @@ export default function BeatLabPro({ apiBase }) {
       setVideoUrl(absoluteFromApiPath(base, u))
       return j
     },
-    [base],
+    [base, coverArtFile],
   )
 
   const generateSong = async () => {
@@ -269,7 +274,9 @@ export default function BeatLabPro({ apiBase }) {
           <li>
             Open DistroKid — metadata JSON + optional prep files; paste/upload in their dashboard (no DistroKid API).
           </li>
-          <li>Beat-synced waveform video (FFmpeg) — optional auto-run after master if enabled below.</li>
+          <li>
+            Beat-synced video (FFmpeg) — waveform, or optional <strong>cover art</strong> + song as a still-image clip.
+          </li>
           <li>Store go-live: set in DistroKid; timing varies by platform (often days, not instant).</li>
         </ol>
       </details>
@@ -293,6 +300,26 @@ export default function BeatLabPro({ apiBase }) {
         />{' '}
         Auto-generate beat-synced waveform video after master (requires ffmpeg on API server)
       </label>
+
+      <label style={{ display: 'block', marginTop: 12 }}>
+        Cover art for video (optional — JPG/PNG/WebP). When set, the export uses your still image + song instead of a
+        waveform.
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+          disabled={busy}
+          style={{ display: 'block', marginTop: 6 }}
+          onChange={(e) => setCoverArtFile(e.target.files?.[0] ?? null)}
+        />
+      </label>
+      {coverArtFile ? (
+        <p className="hint" style={{ marginTop: 4 }}>
+          Using: <strong>{coverArtFile.name}</strong>{' '}
+          <button type="button" className="btn-secondary" disabled={busy} onClick={() => setCoverArtFile(null)}>
+            Clear
+          </button>
+        </p>
+      ) : null}
 
       <button type="button" className="primary wide" disabled={busy} onClick={generateSong}>
         {busy ? 'Generating…' : 'Generate pro track'}

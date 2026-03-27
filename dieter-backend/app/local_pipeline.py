@@ -358,9 +358,11 @@ def local_capabilities() -> dict[str, Any]:
         madmom_ok = True
     except Exception:
         pass
+    ff_ok = _which_ffmpeg() is not None
     return {
         "librosa": True,
-        "ffmpeg": _which_ffmpeg() is not None,
+        "ffmpeg": ff_ok,
+        "musicVideoFromImage": ff_ok,
         "ffmpeg_rubberband_filter": _ffmpeg_has_rubberband_filter(),
         "pitch_presets": dict(PITCH_PRESETS),
         "pitch_engine_env": "DIETER_PITCH_ENGINE=auto|rubberband|librosa|ffmpeg_ps",
