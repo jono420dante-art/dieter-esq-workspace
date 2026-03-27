@@ -84,7 +84,7 @@ platform/
 # Shannon (https://github.com/KeygraphHQ/shannon) — cloned by npm run shannon:bootstrap
 third_party/shannon/
 
-.vercel
+**/.vercel
 
 # Vocal engine runtime / weights (keep .gitkeep dirs)
 vocal-engine-app/backend/cache/*.wav
