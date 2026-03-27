@@ -200,6 +200,9 @@ async def generate(req: SongRequest) -> dict[str, Any]:
         }
 
 
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+VOICES_DIR.mkdir(parents=True, exist_ok=True)
+
 app.mount(
     "/output",
     StaticFiles(directory=str(OUTPUT_DIR), html=False),
