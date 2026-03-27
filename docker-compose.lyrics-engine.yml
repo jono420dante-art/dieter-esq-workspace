@@ -1,0 +1,35 @@
+# Optional stack: small Mureka proxy + minimal Vite UI (ports 3001 / 3000).
+# Does NOT bundle GPU, MusicGen, Audiocraft, or RVC — those require a separate heavy image.
+#
+# Prep:
+#   export MUREKA_API_KEY=...   # or use a .env file in this directory
+#   mkdir -p lyrics-engine-output
+#
+# Run:
+#   docker compose -f docker-compose.lyrics-engine.yml build
+#   docker compose -f docker-compose.lyrics-engine.yml up
+#
+# Open http://localhost:3000 — engine health: http://localhost:3001/health
+
+services:
+  lyrics-engine:
+    build: ./engine
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./lyrics-engine-output:/app/output
+      - ./engine/voices:/app/voices
+    environment:
+      MUREKA_API_KEY: ${MUREKA_API_KEY:-}
+      MUREKA_API_BASE: ${MUREKA_API_BASE:-https://api.mureka.ai}
+
+  studio:
+    build:
+      context: ./studio
+      args:
+        VITE_ENGINE_URL: http://localhost:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      lyrics-engine:
+        condition: service_healthy

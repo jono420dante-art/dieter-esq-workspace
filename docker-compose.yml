@@ -1,9 +1,23 @@
-# FastAPI + static UI + tRPC (browser uses /trpc on port 8080 via API proxy).
-# From repo root:
-#   docker compose build
-#   docker compose up
+# Dieter stack — repo root
 #
-# Open http://localhost:8080  —  API: http://localhost:8080/api/health  —  tRPC: /trpc (proxied)
+# Default (API + static studio + tRPC):
+#   mkdir -p voices/man voices/woman storage
+#   docker compose build && docker compose up
+#   → Studio + API: http://localhost:8080  ·  GET /api/health  ·  tRPC: /trpc
+#
+# Optional MusicGen / Audiocraft (NVIDIA Container Toolkit + GPU; omit --profile on CPU-only hosts):
+#   docker compose --profile music up
+#   → http://localhost:8000 (set DIETER_PUBLIC_API_ORIGIN as needed)
+#
+# Hot-reload Vite against containers (API proxied to `web`):
+#   docker compose --profile dev up
+#   → http://localhost:5173
+#
+# Lyrics → sung vocals in production: set MUREKA_API_KEY (e.g. in .env) and use POST /api/mureka/song/generate
+# on the `web` service — same routes as documented for platform.mureka.ai. A separate "RVC + Tortoise +
+# MusicGen in one container" image is not part of this repo; use `dieter-music` + GPU or cloud Mureka.
+#
+# Slim Mureka worker + tiny Vite UI (ports 3001 / 3000): docker-compose.lyrics-engine.yml
 
 services:
   web:
@@ -21,6 +35,24 @@ services:
       WEB_CONCURRENCY: "2"
       DIETER_AUDIO_ENGINE: procedural
       DIETER_TRPC_UPSTREAM: http://trpc:8790
+      MUREKA_API_KEY: ${MUREKA_API_KEY:-}
+    volumes:
+      # Host WAV library → GET /api/voices/list, static /voices/...
+      - ./voices:/app/voices
+      # Jobs, uploads, generated audio (persists across restarts)
+      - ./storage:/app/storage
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=5)",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
 
   trpc:
     build:
@@ -31,4 +63,56 @@ services:
     expose:
       - "8790"
     depends_on:
-      - web
+      web:
+        condition: service_healthy
+
+  # MusicGen: same image as `web`, different port + storage layout. Requires NVIDIA + `--profile music`.
+  dieter-music:
+    profiles: ["music"]
+    build:
+      context: .
+      dockerfile: dieter-backend/Dockerfile
+      args:
+        VITE_API_BASE: /api
+        VITE_USE_TRPC: "false"
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: "8000"
+      WEB_CONCURRENCY: "1"
+      DIETER_AUDIO_ENGINE: procedural
+      DIETER_ENABLE_MUSICGEN: "1"
+      DIETER_PUBLIC_API_ORIGIN: "http://localhost:8000"
+      MUREKA_API_KEY: ${MUREKA_API_KEY:-}
+    volumes:
+      - ./output:/app/storage
+    gpus: all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # Vite dev server; proxies /api and /voices to `web` (set API_PROXY_TARGET in container).
+  vite-dev:
+    profiles: ["dev"]
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./mureka-clone:/app
+      - vite_dev_node_modules:/app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      API_PROXY_TARGET: http://web:8080
+      TRPC_PROXY_TARGET: http://trpc:8790
+    command: >-
+      sh -c "npm ci && npm run dev -- --host 0.0.0.0 --port 5173"
+    depends_on:
+      web:
+        condition: service_healthy
+
+volumes:
+  vite_dev_node_modules:
