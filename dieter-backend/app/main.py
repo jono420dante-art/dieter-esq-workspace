@@ -226,9 +226,11 @@ app.include_router(musicgen_router, prefix="/api")
 app.include_router(voices_router, prefix="/api")
 
 if os.environ.get("DIETER_ENABLE_BARK", "").strip().lower() in ("1", "true", "yes"):
+    from .bark_router import compat_router as bark_compat_router
     from .bark_router import router as bark_router
 
     app.include_router(bark_router, prefix="/api")
+    app.include_router(bark_compat_router)
 
 
 @app.exception_handler(Exception)
