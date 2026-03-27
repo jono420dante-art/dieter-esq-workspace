@@ -1226,6 +1226,30 @@ textarea {
   margin-top: 0.65rem;
   font-size: 0.88rem;
 }
+.runtime-mode {
+  margin-top: 0.75rem;
+  margin-bottom: 0;
+  font-size: 0.8rem;
+  display: inline-block;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+.runtime-mode-self-run {
+  color: #93c5fd;
+  background: rgba(30, 64, 175, 0.2);
+  border-color: rgba(59, 130, 246, 0.45);
+}
+.runtime-mode-external {
+  color: #86efac;
+  background: rgba(20, 83, 45, 0.22);
+  border-color: rgba(74, 222, 128, 0.45);
+}
+.runtime-mode-fallback {
+  color: #fde68a;
+  background: rgba(120, 53, 15, 0.25);
+  border-color: rgba(245, 158, 11, 0.45);
+}
 .hint {
   font-size: 0.78rem;
   color: #9ca3af;

@@ -268,6 +268,7 @@ export default function App() {
   const [showAuth, setShowAuth] = useState(false)
   const [status, setStatus] = useState('')
   const [err, setErr] = useState('')
+  const [runtimeMode, setRuntimeMode] = useState('self-run')
   const [audioUrl, setAudioUrl] = useState('')
   const [lyricsBusy, setLyricsBusy] = useState(false)
   const [procBusy, setProcBusy] = useState(false)
@@ -491,101 +492,11 @@ export default function App() {
     }
   }, [instrumental, openaiKey, anthropicKey, lyrics, base])
 
-  const submit = useCallback(async () => {
-    setErr('')
-    setStatus('')
-    if (!apiKey.trim()) {
-      setErr(
-        'Add a Mureka API key (Connections → Save) or set MUREKA_API_KEY on the server for real AI vocals from your lyrics. Without it, Create cannot call Mureka—use the separate draft button below only if you accept a simple synthesized placeholder vocal.',
-      )
-      setStatus('')
-      return
-    }
-    /** Blank lyrics ⇒ instrumental (product default); checkbox forces instrumental and ignores typed lyrics. */
-    const effectiveInstrumental = instrumental || !lyrics.trim()
-    const prompt = buildCreationPrompt({
-      instrumental: effectiveInstrumental,
-      lyrics,
-      style,
-      vocal,
-      title,
-    })
-    const lyricPayload = effectiveInstrumental ? '' : lyrics.trim()
-    const key = apiKey.trim()
-    setStatus(USE_TRPC ? 'Starting Mureka (via tRPC)…' : 'Starting Mureka (REST)…')
-    try {
-      let j
-      if (USE_TRPC) {
-        j = await trpc.murekaSongGenerate.mutate({
-          lyrics: lyricPayload,
-          model: 'auto',
-          prompt,
-          murekaApiKey: key,
-        })
-      } else {
-        j = await withMurekaRetries(
-          async () => {
-            const r = await fetch(`${base}/mureka/song/generate`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${key}`,
-              },
-              body: JSON.stringify({ lyrics: lyricPayload, model: 'auto', prompt }),
-            })
-            return parseFetchJson(r)
-          },
-          { attempts: 4, baseMs: 800 },
-        )
-      }
-      if (!j || typeof j !== 'object') throw new Error('Invalid or empty response from Mureka (generate). Check gateway logs.')
-      const taskId = String(j.id || j.task_id || j.taskId || '')
-      if (!taskId) throw new Error('No task id: ' + JSON.stringify(j))
-      for (let i = 0; i < 90; i++) {
-        setStatus(`Polling ${taskId} (${i + 1}/90)${USE_TRPC ? ' [tRPC]' : ''}…`)
-        let qj
-        if (USE_TRPC) {
-          qj = await trpc.murekaSongQuery.query({
-            taskId,
-            murekaApiKey: key,
-          })
-        } else {
-          const q = await fetch(`${base}/mureka/song/query/${encodeURIComponent(taskId)}`, {
-            headers: { Authorization: `Bearer ${key}` },
-          })
-          qj = await parseFetchJson(q)
-        }
-        if (!qj || typeof qj !== 'object') {
-          await new Promise((res) => setTimeout(res, 2000))
-          continue
-        }
-        const url = extractAudioUrl(qj)
-        if (url) {
-          setAudioUrl(url)
-          void postStudioGrowth(base, 'mureka_song_ready', taskId)
-          void fetchStudioGrowth(base).then((g) => g && setStudioPulse(g))
-          setStatus('Ready — Mureka render (real model vocals). Press play.')
-          return
-        }
-        const st = (qj.status || qj.state || '').toString().toLowerCase()
-        if (st.includes('fail') || st.includes('error'))
-          throw new Error(JSON.stringify(qj.error || qj))
-        await new Promise((res) => setTimeout(res, 2000))
-      }
-      throw new Error('Timeout waiting for Mureka')
-    } catch (e) {
-      const why = String(e?.message || e)
-      setErr(
-        `${why} — no audio from Mureka. Check your key, network, and quota. For real tone from your lyrics you need a successful Mureka run; use “Generate draft WAV” below only for a non-vocal-AI test mix.`,
-      )
-      setStatus('')
-    }
-  }, [apiKey, base, instrumental, lyrics, style, title, vocal])
-
   /** Procedural multitrack WAV from the DIETER engine (FastAPI job); uses tRPC when enabled — real .wav mix + stems on disk. */
-  const submitProceduralWav = useCallback(async () => {
+  const runProceduralWav = useCallback(async (mode = 'self-run') => {
     setErr('')
     setProcBusy(true)
+    setRuntimeMode(mode)
     setStatus('')
     const effectiveInstrumental = instrumental || !lyrics.trim()
     const prompt = buildCreationPrompt({
@@ -668,6 +579,100 @@ export default function App() {
     }
   }, [base, instrumental, lyrics, style, title, vocal])
 
+  const submit = useCallback(async () => {
+    setErr('')
+    setStatus('')
+    if (!apiKey.trim()) {
+      setStatus('No external key found. Running built-in engine in fallback mode…')
+      await runProceduralWav('fallback')
+      return
+    }
+    /** Blank lyrics ⇒ instrumental (product default); checkbox forces instrumental and ignores typed lyrics. */
+    const effectiveInstrumental = instrumental || !lyrics.trim()
+    const prompt = buildCreationPrompt({
+      instrumental: effectiveInstrumental,
+      lyrics,
+      style,
+      vocal,
+      title,
+    })
+    const lyricPayload = effectiveInstrumental ? '' : lyrics.trim()
+    const key = apiKey.trim()
+    setRuntimeMode('external')
+    setStatus(USE_TRPC ? 'Starting Mureka (via tRPC)…' : 'Starting Mureka (REST)…')
+    try {
+      let j
+      if (USE_TRPC) {
+        j = await trpc.murekaSongGenerate.mutate({
+          lyrics: lyricPayload,
+          model: 'auto',
+          prompt,
+          murekaApiKey: key,
+        })
+      } else {
+        j = await withMurekaRetries(
+          async () => {
+            const r = await fetch(`${base}/mureka/song/generate`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${key}`,
+              },
+              body: JSON.stringify({ lyrics: lyricPayload, model: 'auto', prompt }),
+            })
+            return parseFetchJson(r)
+          },
+          { attempts: 4, baseMs: 800 },
+        )
+      }
+      if (!j || typeof j !== 'object') throw new Error('Invalid or empty response from Mureka (generate). Check gateway logs.')
+      const taskId = String(j.id || j.task_id || j.taskId || '')
+      if (!taskId) throw new Error('No task id: ' + JSON.stringify(j))
+      for (let i = 0; i < 90; i++) {
+        setStatus(`Polling ${taskId} (${i + 1}/90)${USE_TRPC ? ' [tRPC]' : ''}…`)
+        let qj
+        if (USE_TRPC) {
+          qj = await trpc.murekaSongQuery.query({
+            taskId,
+            murekaApiKey: key,
+          })
+        } else {
+          const q = await fetch(`${base}/mureka/song/query/${encodeURIComponent(taskId)}`, {
+            headers: { Authorization: `Bearer ${key}` },
+          })
+          qj = await parseFetchJson(q)
+        }
+        if (!qj || typeof qj !== 'object') {
+          await new Promise((res) => setTimeout(res, 2000))
+          continue
+        }
+        const url = extractAudioUrl(qj)
+        if (url) {
+          setAudioUrl(url)
+          void postStudioGrowth(base, 'mureka_song_ready', taskId)
+          void fetchStudioGrowth(base).then((g) => g && setStudioPulse(g))
+          setStatus('Ready — Mureka render (real model vocals). Press play.')
+          setRuntimeMode('external')
+          return
+        }
+        const st = (qj.status || qj.state || '').toString().toLowerCase()
+        if (st.includes('fail') || st.includes('error'))
+          throw new Error(JSON.stringify(qj.error || qj))
+        await new Promise((res) => setTimeout(res, 2000))
+      }
+      throw new Error('Timeout waiting for Mureka')
+    } catch (e) {
+      const why = String(e?.message || e)
+      setErr(`${why} — external failed; falling back to built-in engine.`)
+      setStatus('External provider unavailable. Running internal engine now…')
+      await runProceduralWav('fallback')
+    }
+  }, [apiKey, base, instrumental, lyrics, runProceduralWav, style, title, vocal])
+
+  const submitProceduralWav = useCallback(async () => {
+    await runProceduralWav('self-run')
+  }, [runProceduralWav])
+
   const recordVideo = useCallback(() => {
     const canvas = canvasRef.current
     const audio = audioRef.current
@@ -728,6 +733,9 @@ export default function App() {
     appMode === 'voicestudio' ||
     appMode === 'tealvoices' ||
     appMode === 'portal'
+
+  const runtimeModeLabel =
+    runtimeMode === 'external' ? 'External' : runtimeMode === 'fallback' ? 'Fallback' : 'Self-Run'
 
   return (
     <div className="app">
@@ -1096,6 +1104,9 @@ export default function App() {
         <button type="button" className="btn-secondary wide" disabled={procBusy} onClick={submitProceduralWav}>
           {procBusy ? '…' : 'Generate draft WAV (procedural vocal only)'}
         </button>
+        <p className={`runtime-mode runtime-mode-${runtimeMode}`}>
+          Runtime mode: <strong>{runtimeModeLabel}</strong>
+        </p>
         {status && <p className="ok">{status}</p>}
         {err && <p className="bad">{err}</p>}
 
