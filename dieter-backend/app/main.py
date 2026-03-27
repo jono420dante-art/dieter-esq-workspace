@@ -1498,6 +1498,33 @@ def api_mureka_song_query(task_id: str, authorization: str | None = Header(None)
     return _mureka_http("GET", f"/v1/song/query/{task_id}", None, token)
 
 
+class MurekaCompatBody(BaseModel):
+    """Railway/template body: maps to official ``POST /v1/song/generate`` (prompt + lyrics + model)."""
+
+    lyrics: str = Field("", max_length=12000)
+    style: str = Field("pop", max_length=500)
+    model: str = Field("auto", max_length=80)
+
+
+@app.post("/api/mureka")
+def api_mureka_short_compat(
+    body: MurekaCompatBody,
+    authorization: str | None = Header(None),
+) -> dict[str, Any]:
+    """
+    One-shot alias for frontends that call ``POST /api/mureka`` with ``{ lyrics, style }``.
+    Returns Mureka JSON (typically includes a task id — poll ``GET /api/mureka/song/query/{task_id}``).
+    """
+    token = _mureka_token(authorization)
+    prompt = (body.style or "pop").strip() or "pop song"
+    return _mureka_http(
+        "POST",
+        "/v1/song/generate",
+        {"lyrics": body.lyrics or "", "model": body.model, "prompt": prompt},
+        token,
+    )
+
+
 @app.post("/api/pure-song-mureka")
 async def api_pure_song_mureka(
     beat: UploadFile = File(...),

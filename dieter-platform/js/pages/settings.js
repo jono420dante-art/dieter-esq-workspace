@@ -32,7 +32,7 @@ export function render() {
           <li><strong>Create Music</strong> — <code>POST /api/music/generate</code> + poll job → real WAV in the Web Audio engine.</li>
           <li><strong>One-shot API</strong> — <code>POST /api/song</code> (vocals + optional MusicGen), <code>POST /api/vocals</code>, <code>POST /api/music</code>; health: <code>GET /health</code> or <code>/api/health</code>.</li>
           <li><strong>Lyrics Studio</strong> — browser voices (sing/speak) + <strong>Backend vocal WAV</strong> via Teal/Coqui or procedural fallback.</li>
-          <li><strong>Mureka AI</strong> — optional cloud vocals when <code>MUREKA_API_KEY</code> is set on the server.</li>
+          <li><strong>Mureka AI</strong> — <code>POST /api/mureka</code> (lyrics + style) or <code>/api/mureka/song/generate</code> when <code>MUREKA_API_KEY</code> is set; poll <code>/api/mureka/song/query/&lt;task_id&gt;</code>.</li>
           <li><strong>MusicGen</strong> — optional local Audiocraft when <code>DIETER_ENABLE_MUSICGEN=1</code> on the server.</li>
         </ul>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">
