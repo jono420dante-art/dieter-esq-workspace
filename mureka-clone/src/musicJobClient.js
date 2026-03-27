@@ -56,7 +56,7 @@ export async function generateFromLyrics(lyrics, opts = {}) {
     const err = await res.text()
     throw new Error(`generate ${res.status}: ${err}`)
   }
-  const { jobId, status } = await res.json()
+  const { jobId } = await res.json()
   const job = await pollJobUntilDone(jobId)
   return jobWithPlaybackUrls(job)
 }

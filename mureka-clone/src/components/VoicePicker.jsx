@@ -19,7 +19,7 @@ export default function VoicePicker({ onVoiceSelect }) {
     try {
       const data = await trpc.voicesList.query()
       setVoices({ man: data.man || [], woman: data.woman || [] })
-    } catch (e) {
+    } catch {
       const api = normalizeApiRoot(import.meta.env.VITE_API_BASE || '/api')
       const r = await fetch(`${api}/voices/list`)
       if (!r.ok) throw new Error(await r.text())
