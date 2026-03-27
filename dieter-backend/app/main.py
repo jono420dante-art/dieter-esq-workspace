@@ -19,7 +19,7 @@ from typing import Any, Literal, Optional
 from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from .engines import get_engine
 from .lyrics_service import generate_lyrics, optimize_lyrics
@@ -28,6 +28,7 @@ from .agents import list_agents, run_agent as run_studio_agent
 from .audio_master import pro_master_audio
 from .beat_lab import router as beat_lab_router
 from .musicgen_router import router as musicgen_router
+from .voices_router import router as voices_router
 from .pitch_presets import preset_semitones
 from .release_pipeline import generate_master_pipeline, save_distro_prep_upload
 from .music_video import generate_music_video
@@ -71,6 +72,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 STORAGE_DIR = BASE_DIR / "storage"
 JOBS_PATH = DATA_DIR / "jobs.json"
+
+
+def _public_audio_url(relative_api_path: str) -> str:
+    """Prefix ``DIETER_PUBLIC_API_ORIGIN`` for browser playback when API is on another host."""
+    origin = os.environ.get("DIETER_PUBLIC_API_ORIGIN", "").strip().rstrip("/")
+    if origin:
+        return f"{origin}{relative_api_path}"
+    return relative_api_path
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 STORAGE_DIR.mkdir(parents=True, exist_ok=True)
@@ -151,8 +160,10 @@ class PlanRequest(BaseModel):
 
 
 class GenerateRequest(BaseModel):
-    prompt: str = Field(..., min_length=1)
-    lyrics: Optional[str] = None
+    """Async music job: provide ``prompt`` and/or ``lyrics`` (lyrics-only is OK)."""
+
+    prompt: str = Field("", max_length=12000)
+    lyrics: Optional[str] = Field(None, max_length=12000)
     bpm: int = Field(128, ge=40, le=240)
     mood: str = Field("—")
     style: str = Field("Cinematic")
@@ -162,6 +173,16 @@ class GenerateRequest(BaseModel):
     tier: Literal["free", "creator", "pro", "studio"] = "pro"
     stems: bool = True
     durationSec: int = Field(45, ge=5, le=240)
+
+    @model_validator(mode="after")
+    def require_prompt_or_lyrics(self) -> GenerateRequest:
+        p = (self.prompt or "").strip()
+        l = (self.lyrics or "").strip()
+        if not p and not l:
+            raise ValueError("Provide `prompt` and/or non-empty `lyrics`")
+        if not p:
+            object.__setattr__(self, "prompt", l)
+        return self
 
 
 class JobStatusResponse(BaseModel):
@@ -202,6 +223,12 @@ else:
 
 app.include_router(beat_lab_router, prefix="/api")
 app.include_router(musicgen_router, prefix="/api")
+app.include_router(voices_router, prefix="/api")
+
+if os.environ.get("DIETER_ENABLE_BARK", "").strip().lower() in ("1", "true", "yes"):
+    from .bark_router import router as bark_router
+
+    app.include_router(bark_router, prefix="/api")
 
 
 @app.exception_handler(Exception)
@@ -1185,13 +1212,17 @@ def _run_generate_job(job_id: str) -> None:
         )
         mix_path, stem_paths, stats = res.mix_path, res.stem_paths, res.stats
 
+        mix_rel = f"/api/storage/{asset_id}/{mix_path.name}"
         output: dict[str, Any] = {
             "assetId": asset_id,
             "engine": {"name": engine.name},
             "mix": {
                 "wavKey": f"{asset_id}/{mix_path.name}",
-                "wavUrl": f"/api/storage/{asset_id}/{mix_path.name}",
+                "wavUrl": mix_rel,
+                "wavUrlAbsolute": _public_audio_url(mix_rel),
             },
+            "wavUrl": mix_rel,
+            "wavUrlAbsolute": _public_audio_url(mix_rel),
             "stems": [],
             "meta": {
                 "bpm": bpm,
@@ -1212,11 +1243,13 @@ def _run_generate_job(job_id: str) -> None:
 
         if stems:
             for name, p in stem_paths.items():
+                stem_rel = f"/api/storage/{asset_id}/{p.name}"
                 output["stems"].append(
                     {
                         "name": name,
                         "wavKey": f"{asset_id}/{p.name}",
-                        "wavUrl": f"/api/storage/{asset_id}/{p.name}",
+                        "wavUrl": stem_rel,
+                        "wavUrlAbsolute": _public_audio_url(stem_rel),
                     }
                 )
 
@@ -2439,12 +2472,15 @@ def _tealvoices_procedural_fallback(req: TealVoicesSingBody, out_id: str) -> dic
 def api_tealvoices_status() -> dict[str, Any]:
     coqui = bool(vcp is not None and vcp.pipeline_available())
     n_reg = len(vcp.VOICE_LIBRARY) if vcp is not None else 0
+    bark_on = os.environ.get("DIETER_ENABLE_BARK", "").strip().lower() in ("1", "true", "yes")
     return {
         "label": "Teal Voices",
         "coquiAvailable": coqui,
         "registeredCloneVoices": n_reg,
         "endpoint": "POST /api/tealvoices/sing",
         "hint": "Registers clone voices via the Voice studio / voice_clone paths when Coqui is enabled.",
+        "barkEnabled": bark_on,
+        "barkStatusPath": "/api/bark/status" if bark_on else None,
     }
 
 
@@ -2631,6 +2667,25 @@ if _TRPC_UPSTREAM:
             if h in r.headers:
                 pass_headers[h] = r.headers[h]
         return Response(content=r.content, status_code=r.status_code, headers=pass_headers)
+
+
+# --- Sample voices: WAV library at /voices (API: /api/voices/*) ---
+def _mount_voices_static() -> None:
+    from starlette.staticfiles import StaticFiles
+
+    from .voices_router import VOICES_DIR as _voices_root
+
+    _voices_root.mkdir(parents=True, exist_ok=True)
+    (_voices_root / "man").mkdir(exist_ok=True)
+    (_voices_root / "woman").mkdir(exist_ok=True)
+    app.mount(
+        "/voices",
+        StaticFiles(directory=str(_voices_root), html=False),
+        name="voices_static",
+    )
+
+
+_mount_voices_static()
 
 
 # --- Production: React SPA from static/ (see Dockerfile + DEPLOY_RENDER.md) ---
