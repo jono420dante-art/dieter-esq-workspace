@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -219,6 +220,12 @@ async def _fallback_exception_handler(request: Request, exc: Exception) -> JSONR
 @app.get("/api/health")
 def health() -> dict[str, Any]:
     return {"ok": True, "time": time.time()}
+
+
+@app.get("/health")
+def health_root_compat() -> dict[str, Any]:
+    """Templates that probe ``GET /health`` (not ``/api/health``)."""
+    return {"ok": True, "time": time.time(), "docs": "/api/health"}
 
 
 _VOCAL_ANALYZE_MAX_BYTES = int(os.environ.get("DIETER_VOCAL_ANALYZE_MAX_MB", "32")) * 1024 * 1024
@@ -2449,6 +2456,121 @@ def api_tealvoices_sing(req: TealVoicesSingBody) -> dict[str, Any]:
         "f0MeanApplied": meta.get("f0MeanApplied"),
         "pitchSemitones": meta.get("pitchSemitones"),
         "note": meta.get("note"),
+    }
+
+
+class ProductionSimpleSongBody(BaseModel):
+    """Compatibility body for Railway/template frontends expecting ``/api/vocals`` · ``/api/music`` · ``/api/song``."""
+
+    lyrics: str = Field(..., min_length=1, max_length=12000)
+    style: str = Field("pop", max_length=200)
+
+
+def _supabase_production_client() -> Any:
+    url = (os.environ.get("SUPABASE_URL") or "").strip()
+    key = (os.environ.get("SUPABASE_KEY") or os.environ.get("SUPABASE_SERVICE_KEY") or "").strip()
+    if not url or not key:
+        return None
+    try:
+        from supabase import create_client
+
+        return create_client(url, key)
+    except Exception as e:
+        logger.warning("Supabase client unavailable: %s", e)
+        return None
+
+
+@app.post("/api/vocals")
+def api_production_vocals_compat(body: ProductionSimpleSongBody) -> dict[str, Any]:
+    """Railway-style alias — same pipeline as ``POST /api/tealvoices/sing`` (Coqui / procedural)."""
+    out = api_tealvoices_sing(
+        TealVoicesSingBody(lyrics=body.lyrics, voiceId=None, pitchSemitones=0.0),
+    )
+    url = out.get("url")
+    return {
+        "vocals_url": url,
+        "url": url,
+        "engine": out.get("tealvoicesMode") or out.get("engine"),
+        "note": out.get("note"),
+    }
+
+
+_MUSICGEN_DEFAULT_PRODUCTION_SEC = 30
+
+
+@app.post("/api/music")
+async def api_production_music_compat(body: ProductionSimpleSongBody) -> dict[str, Any]:
+    """Instrumental-ish bed via MusicGen when ``DIETER_ENABLE_MUSICGEN=1`` and Audiocraft is installed."""
+    from .musicgen_engine import get_musicgen_engine, get_musicgen_load_error, musicgen_enabled
+
+    if not musicgen_enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="MusicGen disabled. Set DIETER_ENABLE_MUSICGEN=1 and install audiocraft (see requirements.txt).",
+        )
+    eng = get_musicgen_engine()
+    if eng is None:
+        raise HTTPException(
+            status_code=503,
+            detail=get_musicgen_load_error() or "MusicGen failed to load",
+        )
+    dur = int(os.environ.get("DIETER_PRODUCTION_MUSIC_SEC", str(_MUSICGEN_DEFAULT_PRODUCTION_SEC)))
+    hint = (body.lyrics or "")[:500]
+    prompt_lyrics = (
+        f"[Instrumental backing — minimal lead vocal in mix]. Style: {body.style}. Context: {hint}"
+    )
+    try:
+        job_id, rel = await asyncio.to_thread(
+            lambda: eng.lyrics_to_song(
+                prompt_lyrics,
+                body.style,
+                dur,
+                storage_dir=STORAGE_DIR,
+            ),
+        )
+    except Exception as e:
+        logger.exception("production music compat failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    return {"music_url": rel, "jobId": job_id}
+
+
+@app.post("/api/song")
+async def api_production_full_song(body: ProductionSimpleSongBody) -> dict[str, Any]:
+    """Generate vocals (Teal) + optional MusicGen bed; optionally record metadata in Supabase."""
+    voc = api_production_vocals_compat(body)
+    music_url: str | None = None
+    job_id: str | None = None
+    music_detail: Any = None
+    try:
+        mus = await api_production_music_compat(body)
+        music_url = mus.get("music_url")
+        job_id = mus.get("jobId")
+    except HTTPException as e:
+        music_detail = e.detail
+
+    song_id = str(uuid.uuid4())
+    row = {
+        "id": song_id,
+        "lyrics": body.lyrics[:5000],
+        "style": body.style,
+        "vocals_url": voc.get("vocals_url"),
+        "music_url": music_url,
+    }
+    cli = _supabase_production_client()
+    if cli:
+        table = (os.environ.get("SUPABASE_SONGS_TABLE") or "songs").strip() or "songs"
+        try:
+            cli.table(table).insert(row).execute()
+        except Exception as e:
+            logger.warning("Supabase insert to %s failed: %s", table, e)
+
+    return {
+        "song_id": song_id,
+        "vocals": voc.get("vocals_url"),
+        "music": music_url,
+        "musicJobId": job_id,
+        "vocals_note": voc.get("note"),
+        "music_detail": music_detail,
     }
 
 

@@ -30,6 +30,7 @@ export function render() {
         <div class="panel-header">${icon('zap', 16)} Audio &amp; voice features (when API is OK)</div>
         <ul style="font-size:.62rem;color:var(--dim);line-height:1.7;margin:0;padding-left:18px">
           <li><strong>Create Music</strong> — <code>POST /api/music/generate</code> + poll job → real WAV in the Web Audio engine.</li>
+          <li><strong>One-shot API</strong> — <code>POST /api/song</code> (vocals + optional MusicGen), <code>POST /api/vocals</code>, <code>POST /api/music</code>; health: <code>GET /health</code> or <code>/api/health</code>.</li>
           <li><strong>Lyrics Studio</strong> — browser voices (sing/speak) + <strong>Backend vocal WAV</strong> via Teal/Coqui or procedural fallback.</li>
           <li><strong>Mureka AI</strong> — optional cloud vocals when <code>MUREKA_API_KEY</code> is set on the server.</li>
           <li><strong>MusicGen</strong> — optional local Audiocraft when <code>DIETER_ENABLE_MUSICGEN=1</code> on the server.</li>

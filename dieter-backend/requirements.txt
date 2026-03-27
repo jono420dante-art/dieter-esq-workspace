@@ -1,10 +1,14 @@
-# Web API
-fastapi
-httpx
-uvicorn[standard]
-gunicorn
-pydantic
-python-multipart
+# Web API (pinned friendly to Railway/Render; bump as needed)
+fastapi>=0.104.1,<0.116
+httpx>=0.25.0,<1
+uvicorn[standard]>=0.24.0
+gunicorn>=21.0
+pydantic>=2.4,<3
+python-multipart>=0.0.6
+
+# Optional: production metadata / auth templates
+supabase>=2.4.0
+# python-jose[cryptography]  # enable when implementing HTTPBearer auth
 
 # Hugging Face (MusicGen / optional stacks)
 transformers>=4.33.0,<5
