@@ -23,6 +23,9 @@ audioread
 # FFmpeg bindings (optional helpers; production mixing also uses `ffmpeg` binary on PATH)
 ffmpeg-python
 
+# Optional: Spotify Pedalboard vocal chain on Bark output (DIETER_VOCAL_PEDALBOARD=1)
+pedalboard>=0.7.0
+
 # --- Pure Song: Coqui TTS + torch (large; CPU OK on MacBook Air / Windows) ---
 # If install fails, use CPU wheels: https://pytorch.org/get-started/locally/
 TTS==0.22.0
