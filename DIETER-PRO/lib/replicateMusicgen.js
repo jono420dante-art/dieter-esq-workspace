@@ -20,6 +20,7 @@ export async function fetchLatestVersion(owner, model, token) {
 export async function createMusicgenPrediction(body, token) {
   const {
     prompt = '',
+    lyrics = '',
     genre = 'electronic',
     mood = 'uplifting',
     bpm = 120,
@@ -33,12 +34,18 @@ export async function createMusicgenPrediction(body, token) {
   const keyScale =
     key && scale ? `key of ${key} ${scale}` : key ? `key of ${key}` : '';
 
+  const lyricLine = (lyrics || '').trim();
+  const lyricClause = lyricLine
+    ? `Vocal melody and emotional arc inspired by these lyrics (words may not match exactly): ${lyricLine.replace(/\s+/g, ' ').slice(0, 1200)}`
+    : '';
+
   const fullPrompt = [
     `${genre} music`,
     mood,
     `${bpm} BPM`,
     keyScale,
     voiceHint || voice || '',
+    lyricClause,
     prompt,
   ]
     .filter(Boolean)

@@ -7,6 +7,7 @@
  */
 import { Router } from 'express';
 import multer from 'multer';
+import { dieterApiBaseUrl, dieterPublicOrigin, rewriteMurekaPayloadUrls } from '../../lib/dieterEnv.js';
 
 const router = Router();
 const upload = multer({
@@ -15,17 +16,12 @@ const upload = multer({
 });
 
 export function fastApiBaseUrl() {
-  const raw = (process.env.DIETER_FASTAPI_URL || '').trim().replace(/\/$/, '');
-  if (!raw) return null;
-  return raw.endsWith('/api') ? raw : `${raw}/api`;
+  return dieterApiBaseUrl();
 }
 
 /** Origin for rewriting relative playback paths from FastAPI (e.g. /api/storage/...). */
 export function upstreamPublicOrigin() {
-  const raw = (process.env.DIETER_FASTAPI_URL || '').trim().replace(/\/$/, '');
-  if (!raw) return '';
-  if (raw.endsWith('/api')) return raw.slice(0, -4).replace(/\/$/, '');
-  return raw;
+  return dieterPublicOrigin();
 }
 
 function requireUpstream(res) {
@@ -118,5 +114,62 @@ router.post(
     }
   },
 );
+
+/** POST JSON → FastAPI POST /api/mureka/song/generate (requires MUREKA_API_KEY on Dieter). */
+router.post('/mureka/song/generate', async (req, res) => {
+  const base = requireUpstream(res);
+  if (!base) return;
+  try {
+    const r = await fetch(`${base}/mureka/song/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(req.body || {}),
+    });
+    const text = await r.text();
+    let j = null;
+    try {
+      j = text ? JSON.parse(text) : null;
+    } catch {
+      /* passthrough */
+    }
+    const origin = upstreamPublicOrigin();
+    if (r.ok && j && typeof j === 'object' && origin) rewriteMurekaPayloadUrls(j, origin);
+    if (j != null && (text.trim().startsWith('{') || text.trim().startsWith('['))) {
+      res.status(r.status).json(j);
+      return;
+    }
+    res.status(r.status).type('application/json').send(text);
+  } catch (e) {
+    res.status(502).json({ error: String(e?.message || e) });
+  }
+});
+
+/** GET → FastAPI GET /api/mureka/song/query/{task_id} */
+router.get('/mureka/song/query/:taskId', async (req, res) => {
+  const base = requireUpstream(res);
+  if (!base) return;
+  const tid = encodeURIComponent(req.params.taskId);
+  try {
+    const r = await fetch(`${base}/mureka/song/query/${tid}`, {
+      headers: { Accept: 'application/json' },
+    });
+    const text = await r.text();
+    let j = null;
+    try {
+      j = text ? JSON.parse(text) : null;
+    } catch {
+      /* passthrough */
+    }
+    const origin = upstreamPublicOrigin();
+    if (r.ok && j && typeof j === 'object' && origin) rewriteMurekaPayloadUrls(j, origin);
+    if (j != null && (text.trim().startsWith('{') || text.trim().startsWith('['))) {
+      res.status(r.status).json(j);
+      return;
+    }
+    res.status(r.status).type('application/json').send(text);
+  } catch (e) {
+    res.status(502).json({ error: String(e?.message || e) });
+  }
+});
 
 export default router;
