@@ -1,7 +1,7 @@
 {
   "name": "ed-geerdes-workspace",
   "private": true,
-  "description": "ED-GEERDES studio — monorepo: mureka-clone (Vite) + dieter-backend (FastAPI).",
+  "description": "ED-GEERDES studio — mureka-clone + dieter-backend + DIETER-PRO + vocal-engine-app.",
   "dependencies": {
     "@vercel/edge": "^1.2.2"
   },
@@ -11,6 +11,8 @@
     "platform:build": "node scripts/platform-build.mjs",
     "platform:up": "docker compose up --build",
     "platform:docker-build": "docker compose build",
+    "dieter-pro:build": "npm --prefix DIETER-PRO ci && npm --prefix DIETER-PRO run build",
+    "workspace:build": "npm run platform:build && npm run dieter-pro:build",
     "deploy:vercel": "npx vercel deploy --prod --yes",
     "deploy:vercel:preview": "npx vercel deploy --yes",
     "shannon:bootstrap": "node scripts/shannon/bootstrap.mjs"

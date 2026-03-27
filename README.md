@@ -16,6 +16,8 @@ Main code:
 
 - **`mureka-clone/`** — Vite + React app  
 - **`dieter-backend/`** — FastAPI (`app/`), beat lab, pipelines  
+- **`DIETER-PRO/`** — Express + Vite “pro” studio; **Video Suite** proxies cover+audio MP4 to the same FastAPI as mureka (`POST /api/local/music-video` via **`DIETER_FASTAPI_URL`**). Build: `npm run dieter-pro:build` from repo root. Deploy: [`DIETER-PRO/render.yaml`](./DIETER-PRO/render.yaml).  
+- **`vocal-engine-app/`** — Bark / vocal pipeline API + Vocal Box UI ([`vocal-engine-app/DEPLOY.md`](./vocal-engine-app/DEPLOY.md))  
 - **Architecture:** [`docs/GATEWAY_ARCHITECTURE.md`](./docs/GATEWAY_ARCHITECTURE.md) — gateway, sync/portal routing, plugin extension points  
 - **Vocals / training hooks:** [`docs/VOCAL_ENGINE_AND_TRAINING.md`](./docs/VOCAL_ENGINE_AND_TRAINING.md) — Mureka + DSP, `POST /api/vocal/analyze` for dataset labels  
 - **App map & perf:** [`docs/APP_UNDERSTANDING.md`](./docs/APP_UNDERSTANDING.md) — tabs, gateway, OpenAI + Claude lyrics, Vite production build  
@@ -24,4 +26,6 @@ Main code:
 
 ## Other tools in this folder
 
+- **Dieter Pro (Node + React)**: [`DIETER-PRO/`](./DIETER-PRO/) — run `npm run dev` inside that folder; set **`DIETER_FASTAPI_URL`** to your `dieter-backend` origin so `/api/dieter/*` proxies match mureka-clone behaviour.  
+- **One-shot builds (CI / sanity):** `npm run workspace:build` — main studio static + DIETER-PRO `dist`.  
 - **Dieter Tower (Three.js)**: [`docs/dieter-tower-README.md`](./docs/dieter-tower-README.md)
