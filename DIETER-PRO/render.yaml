@@ -1,17 +1,24 @@
+# Blueprint: set Root Directory to DIETER-PRO in dashboard if this file lives in a monorepo root,
+# or deploy from the DIETER-PRO folder as the service root.
 services:
   - type: web
     name: dieter-pro
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: "20"
       - key: PORT
-        value: 3001
-      # Dieter FastAPI origin (no trailing slash), e.g. https://dieter-beat-lab.onrender.com
+        value: "3001"
       - key: DIETER_FASTAPI_URL
+        sync: false
+      - key: REPLICATE_API_TOKEN
+        sync: false
+      - key: AUDIO_PROXY_ALLOW_HOSTS
         sync: false
     healthCheckPath: /api/health
     autoDeploy: true

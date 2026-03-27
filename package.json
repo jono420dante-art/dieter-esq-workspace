@@ -15,6 +15,8 @@
     "workspace:build": "npm run platform:build && npm run dieter-pro:build",
     "deploy:vercel": "npx vercel deploy --prod --yes",
     "deploy:vercel:preview": "npx vercel deploy --yes",
+    "deploy:vercel:dieter-pro": "npx vercel --cwd DIETER-PRO deploy --prod --yes",
+    "deploy:vercel:dieter-pro:preview": "npx vercel --cwd DIETER-PRO deploy --yes",
     "shannon:bootstrap": "node scripts/shannon/bootstrap.mjs"
   }
 }
