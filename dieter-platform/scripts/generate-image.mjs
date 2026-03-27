@@ -7,18 +7,21 @@ if (!token) {
   process.exit(1);
 }
 
+/** Override with e.g. black-forest-labs/flux-1.1-pro — must exist on Replicate. */
+const modelRef = (process.env.REPLICATE_MODEL || "black-forest-labs/flux-schnell").trim();
+
 const replicate = new Replicate({ auth: token });
 
 const input = {
-  prompt: "How engineers see the San Francisco Bridge",
-  aspect_ratio: "4:3",
-  output_format: "png",
+  prompt: process.env.PROMPT || "How engineers see the San Francisco Bridge",
+  aspect_ratio: process.env.ASPECT_RATIO || "4:3",
+  output_format: (process.env.OUTPUT_FORMAT || "png").replace("jpg", "jpeg"),
+  output_quality: Math.min(100, Math.max(1, Number(process.env.OUTPUT_QUALITY) || 90)),
 };
 
 try {
-  const output = await replicate.run("google/nano-banana-pro", { input });
+  const output = await replicate.run(modelRef, { input });
 
-  // Some models return a single file-like object; others return arrays.
   const first = Array.isArray(output) ? output[0] : output;
   const fileUrl = typeof first?.url === "function" ? first.url() : first;
 
@@ -34,8 +37,9 @@ try {
   }
 
   const bytes = Buffer.from(await response.arrayBuffer());
-  await writeFile("output.png", bytes);
-  console.log("Saved output.png");
+  const outFile = process.env.OUT_FILE || "output.png";
+  await writeFile(outFile, bytes);
+  console.log("Saved", outFile);
 } catch (error) {
   console.error("Generation failed:", error?.message || error);
   process.exit(1);

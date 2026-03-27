@@ -108,7 +108,7 @@ export function render() {
 
       <div class="split-sidebar">
         <div class="panel">
-          <div class="panel-header">${icon('zap', 16)} AI Image Generator <span class="panel-header-right" id="ai-model-badge" style="color:#22c55e">FLUX 2 PRO</span></div>
+          <div class="panel-header">${icon('zap', 16)} AI Image Generator <span class="panel-header-right" id="ai-model-badge" style="color:#22c55e">FLUX SCHNELL</span></div>
           <div style="margin-bottom:6px">
             <label>Describe your image / video frame</label>
             <textarea id="ai-vid-prompt" placeholder="A cinematic sunset over neon-lit city rooftops, volumetric lighting, 8K..." style="min-height:100px;font-size:.7rem;line-height:1.6"></textarea>
@@ -116,8 +116,9 @@ export function render() {
           <div style="margin-bottom:6px">
             <label>AI Model</label>
             <select id="ai-vid-model">
-              <option value="flux-2-pro" selected>Flux 2 Pro (Best Quality)</option>
-              <option value="flux-dev">Flux Dev (Fast / Free Tier)</option>
+              <option value="flux-schnell" selected>Flux Schnell (fast, reliable)</option>
+              <option value="flux-1.1-pro">Flux 1.1 Pro (quality)</option>
+              <option value="flux-dev">Flux Dev</option>
             </select>
           </div>
           <div class="grid-2" style="margin-bottom:6px">
@@ -189,11 +190,11 @@ export function render() {
             </div>
           </div>
           <div style="margin-bottom:8px">
-            <label>Replicate API Token</label>
-            <input type="password" id="ai-vid-token" placeholder="r8_xxxxxxxx..." style="width:100%;font-size:.68rem" value="${(() => { try { return localStorage.getItem('dp-replicate-token') || ''; } catch { return ''; } })()}"/>
-            <div style="font-size:.5rem;color:var(--dim);margin-top:2px">Get your token at <a href="https://replicate.com/account/api-tokens" target="_blank" style="color:var(--purple)">replicate.com/account</a> — stored locally only</div>
+            <label>Replicate API Token <span style="font-size:.48rem;color:var(--dim)">(optional — leave empty to use free Pollinations only)</span></label>
+            <input type="password" id="ai-vid-token" placeholder="r8_xxxxxxxx... or leave blank for Pollinations" style="width:100%;font-size:.68rem" value="${(() => { try { return localStorage.getItem('dp-replicate-token') || ''; } catch { return ''; } })()}"/>
+            <div style="font-size:.5rem;color:var(--dim);margin-top:2px">With a token: Replicate resolves the correct model <strong>version</strong> automatically (fixes 422). Without token: <a href="https://pollinations.ai/" target="_blank" style="color:var(--purple)">Pollinations</a> image URL (preview).</div>
           </div>
-          <button class="action-btn" id="btn-ai-generate" style="width:100%;margin-bottom:4px">${icon('zap', 14)} Generate with Flux 2 Pro</button>
+          <button class="action-btn" id="btn-ai-generate" style="width:100%;margin-bottom:4px">${icon('zap', 14)} Generate image</button>
           <div class="status-text" id="ai-vid-status"></div>
           <div id="ai-vid-results" style="margin-top:8px"></div>
         </div>
@@ -264,15 +265,20 @@ export function init() {
   }
 
   document.getElementById('ai-vid-model')?.addEventListener('change', (e) => {
-    const isPro = e.target.value === 'flux-2-pro';
+    const key = e.target.value;
+    const isDev = key === 'flux-dev';
     const devSettings = document.getElementById('ai-flux-dev-settings');
     const proSettings = document.getElementById('ai-flux-pro-settings');
     const badge = document.getElementById('ai-model-badge');
     const btn = document.getElementById('btn-ai-generate');
-    if (devSettings) devSettings.style.display = isPro ? 'none' : 'block';
-    if (proSettings) proSettings.style.display = isPro ? 'block' : 'none';
-    if (badge) { badge.textContent = isPro ? 'FLUX 2 PRO' : 'FLUX DEV'; badge.style.color = isPro ? '#22c55e' : '#38bdf8'; }
-    if (btn) btn.innerHTML = `${icon('zap', 14)} Generate with ${isPro ? 'Flux 2 Pro' : 'Flux Dev'}`;
+    const meta = AI_MODELS[key];
+    if (devSettings) devSettings.style.display = isDev ? 'block' : 'none';
+    if (proSettings) proSettings.style.display = isDev ? 'none' : 'block';
+    if (badge && meta) {
+      badge.textContent = meta.name.toUpperCase();
+      badge.style.color = isDev ? '#38bdf8' : '#22c55e';
+    }
+    if (btn && meta) btn.innerHTML = `${icon('zap', 14)} Generate (${meta.name})`;
   });
 
   document.getElementById('ai-vid-token')?.addEventListener('change', (e) => {
@@ -740,37 +746,106 @@ function renderVideoList() {
   `).join('') : '<div style="text-align:center;color:var(--dim);padding:14px;font-size:.66rem">No rendered videos yet</div>';
 }
 
-/* ═══ AI IMAGE GENERATION (Replicate Flux Dev + Flux 2 Pro) ═══ */
+/* ═══ AI IMAGE: Replicate (version resolved at runtime) + Pollinations fallback ═══ */
 const AI_MODELS = {
-  'flux-2-pro': {
-    name: 'Flux 2 Pro',
-    endpoint: 'https://api.replicate.com/v1/models/black-forest-labs/flux-2-pro/predictions',
+  'flux-schnell': {
+    name: 'Flux Schnell',
+    owner: 'black-forest-labs',
+    model: 'flux-schnell',
     buildInput(prompt, opts) {
       return {
         prompt,
-        aspect_ratio: opts.ratio || '1:1',
-        resolution: opts.megapixels || '1 MP',
-        output_format: opts.format || 'webp',
-        output_quality: +(opts.quality || 80),
-        safety_tolerance: +(opts.safety || 2),
-        input_images: [],
+        aspect_ratio: opts.ratio || '16:9',
+        output_format: (opts.format || 'webp').replace('jpg', 'jpeg'),
+        output_quality: Math.min(100, Math.max(1, +(opts.quality || 80))),
+        num_inference_steps: 4,
+      };
+    },
+  },
+  'flux-1.1-pro': {
+    name: 'Flux 1.1 Pro',
+    owner: 'black-forest-labs',
+    model: 'flux-1.1-pro',
+    buildInput(prompt, opts) {
+      return {
+        prompt,
+        aspect_ratio: opts.ratio || '16:9',
+        output_format: (opts.format || 'webp').replace('jpg', 'jpeg'),
+        output_quality: Math.min(100, Math.max(1, +(opts.quality || 80))),
+        safety_tolerance: Math.min(5, Math.max(1, +(opts.safety || 2))),
       };
     },
   },
   'flux-dev': {
     name: 'Flux Dev',
-    endpoint: 'https://api.replicate.com/v1/models/black-forest-labs/flux-dev/predictions',
+    owner: 'black-forest-labs',
+    model: 'flux-dev',
     buildInput(prompt, opts) {
       const input = {
         prompt,
-        num_inference_steps: +(opts.steps || 35),
-        guidance_scale: +(opts.guidance || 7),
+        num_inference_steps: +(opts.steps || 28),
+        guidance_scale: +(opts.guidance || 3.5),
+        aspect_ratio: opts.ratio || '16:9',
+        output_format: (opts.format || 'webp').replace('jpg', 'jpeg'),
+        output_quality: Math.min(100, Math.max(1, +(opts.quality || 80))),
       };
-      if (opts.ratio) input.aspect_ratio = opts.ratio;
       return input;
     },
   },
 };
+
+async function replicateFetchLatestVersion(owner, model, token) {
+  const r = await fetch(`https://api.replicate.com/v1/models/${owner}/${model}`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+  });
+  const text = await r.text();
+  if (!r.ok) throw new Error(`Replicate model ${owner}/${model}: ${r.status} ${text.slice(0, 400)}`);
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(`Replicate model ${owner}/${model}: invalid JSON`);
+  }
+  const vid = data.latest_version?.id;
+  if (!vid) throw new Error(`No latest_version for ${owner}/${model}`);
+  return vid;
+}
+
+async function replicateRunPrediction(version, input, token) {
+  const resp = await fetch('https://api.replicate.com/v1/predictions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Prefer: 'wait',
+    },
+    body: JSON.stringify({ version, input }),
+  });
+  const text = await resp.text();
+  if (!resp.ok) throw new Error(`Replicate ${resp.status}: ${text.slice(0, 500)}`);
+  const data = JSON.parse(text);
+  if (data.status === 'failed') throw new Error(data.error || 'Replicate prediction failed');
+  let out = data.output;
+  if (!out && data.urls?.get) {
+    out = await pollPrediction(data.urls.get, token, 'Replicate');
+  }
+  const imageUrl = Array.isArray(out) ? out[0] : out;
+  if (!imageUrl || typeof imageUrl !== 'string') throw new Error('Replicate returned no image URL');
+  return imageUrl;
+}
+
+/** No API key — lower quality, good for previews. https://pollinations.ai/ */
+function pollinationsImageUrl(prompt, opts) {
+  const ratio = opts.ratio || '16:9';
+  let w = 1280;
+  let h = 720;
+  if (ratio === '1:1') { w = h = 1024; }
+  else if (ratio === '9:16') { w = 720; h = 1280; }
+  else if (ratio === '4:3') { w = 1280; h = 960; }
+  else if (ratio === '21:9') { w = 1680; h = 720; }
+  const model = 'flux';
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${w}&height=${h}&model=${model}&nologo=true`;
+}
 
 async function generateAIImage() {
   if (aiGenerating) return;
@@ -780,11 +855,8 @@ async function generateAIImage() {
 
   let token = document.getElementById('ai-vid-token')?.value?.trim();
   if (!token) { try { token = localStorage.getItem('dp-replicate-token') || ''; } catch {} }
-  if (!token) { setAIStatus('Enter your Replicate API token above'); return; }
 
-  try { localStorage.setItem('dp-replicate-token', token); } catch {}
-
-  const modelKey = document.getElementById('ai-vid-model')?.value || 'flux-2-pro';
+  const modelKey = document.getElementById('ai-vid-model')?.value || 'flux-schnell';
   const model = AI_MODELS[modelKey];
   if (!model) { setAIStatus('Unknown model'); return; }
 
@@ -803,61 +875,55 @@ async function generateAIImage() {
   aiGenerating = true;
   const btn = document.getElementById('btn-ai-generate');
   if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
-  setAIStatus(`Sending to ${model.name} — may take 10–60 seconds...`);
+
+  if (token) {
+    try { localStorage.setItem('dp-replicate-token', token); } catch {}
+  }
+
+  setAIStatus(token ? `${model.name} via Replicate…` : `${model.name} via Pollinations (no token)…`);
 
   try {
-    const resp = await fetch(model.endpoint, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'wait',
-      },
-      body: JSON.stringify({ input }),
-    });
-
-    if (!resp.ok) {
-      const errText = await resp.text().catch(() => resp.statusText);
-      throw new Error(`API ${resp.status}: ${errText}`);
-    }
-
-    const data = await resp.json();
-
-    if (data.status === 'failed') {
-      throw new Error(data.error || 'Generation failed');
-    }
-
     let imageUrl = null;
-    if (data.output) {
-      imageUrl = Array.isArray(data.output) ? data.output[0] : data.output;
-    } else if (data.urls?.get) {
-      setAIStatus(`${model.name}: Waiting for result — polling...`);
-      imageUrl = await pollPrediction(data.urls.get, token, model.name);
+    let used = model.name;
+
+    if (token) {
+      try {
+        const version = await replicateFetchLatestVersion(model.owner, model.model, token);
+        imageUrl = await replicateRunPrediction(version, input, token);
+        used = `${model.name} (Replicate)`;
+      } catch (repErr) {
+        setAIStatus(`Replicate: ${repErr.message} — trying Pollinations…`);
+        state.log('AI Generator', `Replicate fallback: ${repErr.message}`);
+        imageUrl = pollinationsImageUrl(prompt, opts);
+        used = 'Pollinations (fallback)';
+      }
+    } else {
+      imageUrl = pollinationsImageUrl(prompt, opts);
+      used = 'Pollinations';
     }
 
-    if (!imageUrl) throw new Error('No image in response');
+    if (!imageUrl) throw new Error('No image URL');
 
     const ext = opts.format || 'webp';
     aiResults.unshift({
       id: crypto.randomUUID(),
       prompt: prompt.slice(0, 80),
       url: imageUrl,
-      model: model.name,
+      model: used,
       ratio: opts.ratio || 'default',
       format: ext,
       ts: Date.now(),
     });
     renderAIResults();
-    setAIStatus(`${model.name} — Done! Click "Use as BG" or save the image.`);
-    state.log('AI Generator', `${model.name}: "${prompt.slice(0, 50)}..."`);
-
+    setAIStatus(`${used} — Done! Click "Use as BG" or save the image.`);
+    state.log('AI Generator', `${used}: "${prompt.slice(0, 50)}..."`);
   } catch (e) {
     setAIStatus('Error: ' + e.message);
     state.log('AI Generator', `Error: ${e.message}`);
   }
 
   aiGenerating = false;
-  if (btn) { btn.disabled = false; btn.innerHTML = `${icon('zap', 14)} Generate with ${model.name}`; }
+  if (btn) { btn.disabled = false; btn.innerHTML = `${icon('zap', 14)} Generate image`; }
 }
 
 async function pollPrediction(url, token, modelName = 'AI') {
