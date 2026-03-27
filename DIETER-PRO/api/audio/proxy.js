@@ -1,12 +1,22 @@
 import { isAudioProxyUrlAllowed } from '../../lib/audioProxyAllowlist.js';
+import { applyAudioProxyCors } from '../../lib/audioProxyCors.js';
 
 const MAX_BYTES = 60 * 1024 * 1024;
 
 export default async function handler(req, res) {
+  applyAudioProxyCors(res);
+
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Max-Age', '86400');
+    res.status(204).end();
+    return;
+  }
+
   if (req.method !== 'GET') {
     res.status(405).json({ error: 'Method not allowed' });
     return;
   }
+
   const raw = req.query?.url;
   if (!raw || typeof raw !== 'string') {
     res.status(400).json({ error: 'Missing url' });

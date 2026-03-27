@@ -9,6 +9,7 @@ export function isAudioProxyHostAllowed(hostname, env = process.env) {
   if (h === 'replicate.delivery' || h.endsWith('.replicate.delivery')) return true;
   if (h === 'replicate.com' || h.endsWith('.replicate.com')) return true;
   if (h === 'mureka.ai' || h.endsWith('.mureka.ai')) return true;
+  if (h === 'blob.vercel-storage.com' || h.endsWith('.blob.vercel-storage.com')) return true;
   const raw = env.AUDIO_PROXY_ALLOW_HOSTS || '';
   const extra = raw.split(/[,;\s]+/).map((s) => s.trim().toLowerCase()).filter(Boolean);
   for (const e of extra) {

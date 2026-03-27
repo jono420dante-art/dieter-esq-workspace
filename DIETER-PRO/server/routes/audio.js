@@ -3,11 +3,20 @@
  */
 import express from 'express';
 import { isAudioProxyUrlAllowed } from '../../lib/audioProxyAllowlist.js';
+import { applyAudioProxyCors } from '../../lib/audioProxyCors.js';
 
 const router = express.Router();
 const MAX_BYTES = 60 * 1024 * 1024;
 
+router.options('/proxy', (_req, res) => {
+  applyAudioProxyCors(res);
+  res.setHeader('Access-Control-Max-Age', '86400');
+  res.status(204).end();
+});
+
 router.get('/proxy', async (req, res) => {
+  applyAudioProxyCors(res);
+
   const raw = req.query.url;
   if (!raw || typeof raw !== 'string') {
     res.status(400).json({ error: 'Missing url query parameter' });

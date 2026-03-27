@@ -68,5 +68,6 @@ app.listen(PORT, () => {
       ? '  🎵 Music Studio: Replicate MusicGen enabled (REPLICATE_API_TOKEN set).'
       : '  ⚠️  REPLICATE_API_TOKEN not set — /api/music/* returns 503 until configured.',
   );
+  console.log('  🔊 Audio proxy: GET /api/audio/proxy?url=… (Node + same pattern on Vercel serverless).');
   console.log('');
 });
