@@ -12,6 +12,7 @@ import seoRouter from './routes/seo.js';
 import commerceRouter from './routes/commerce.js';
 import portalsRouter from './routes/portals.js';
 import dieterRouter from './routes/dieter.js';
+import audioRouter from './routes/audio.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -41,6 +42,7 @@ app.use('/api/seo', seoRouter);
 app.use('/api/commerce', commerceRouter);
 app.use('/api/portals', portalsRouter);
 app.use('/api/dieter', dieterRouter);
+app.use('/api/audio', audioRouter);
 
 app.get('/{*splat}', (req, res) => {
   res.sendFile(join(__dirname, '..', 'dist', 'index.html'));

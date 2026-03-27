@@ -3,7 +3,7 @@ import { useAudioEngine } from '../context/AudioEngineContext';
 
 export default function WaveformAnalyzer({ buffer, width = 600, height = 120, color = '#a855f7', style }) {
   const canvasRef = useRef(null);
-  const { analyserRef, isReady } = useAudioEngine();
+  const { analyserRef, isReady, ensureRunning } = useAudioEngine();
   const animRef = useRef(null);
 
   const drawStatic = useCallback(() => {
@@ -82,12 +82,16 @@ export default function WaveformAnalyzer({ buffer, width = 600, height = 120, co
   return (
     <canvas
       ref={canvasRef}
+      role="presentation"
+      onClick={() => void ensureRunning()}
+      title="Click to unlock audio meter"
       style={{
         width: '100%',
         height: height,
         borderRadius: 8,
         background: 'rgba(18, 22, 42, 0.5)',
         display: 'block',
+        cursor: 'pointer',
         ...style,
       }}
     />

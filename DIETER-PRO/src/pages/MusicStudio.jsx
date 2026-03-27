@@ -11,6 +11,7 @@ import {
   extractMurekaAudioUrl,
   murekaStatusLower,
 } from '../../lib/murekaClient.js';
+import { proxiedAudioSrc } from '../lib/audioProxyClient.js';
 
 const KEYS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const SCALES = ['major', 'minor', 'dorian', 'mixolydian', 'phrygian', 'pentatonic'];
@@ -43,7 +44,7 @@ function formatApiError(data, fallback) {
 
 export default function MusicStudio() {
   const studio = useStudio();
-  const { playBuffer, decodeAudio } = useAudioEngine();
+  const { playBuffer, decodeAudio, ensureRunning, stopSource } = useAudioEngine();
   const [prompt, setPrompt] = useState('');
   const [lyrics, setLyrics] = useState('');
   const [genMode, setGenMode] = useState('musicgen');
@@ -82,6 +83,23 @@ export default function MusicStudio() {
       .join(', ')
       .slice(0, 500);
   }, [studio, prompt]);
+
+  const fetchAndPlayRemote = useCallback(
+    async (audioUrl, bufferId) => {
+      await ensureRunning();
+      stopSource(bufferId);
+      const proxied = proxiedAudioSrc(audioUrl);
+      let r = await fetch(proxied);
+      if (!r.ok) {
+        r = await fetch(audioUrl, { mode: 'cors' });
+      }
+      if (!r.ok) throw new Error(`Could not load audio (${r.status})`);
+      const buf = await r.arrayBuffer();
+      const ab = await decodeAudio(buf.slice(0));
+      playBuffer(ab, bufferId, { volume: 0.95 });
+    },
+    [ensureRunning, stopSource, decodeAudio, playBuffer],
+  );
 
   const generate = useCallback(async () => {
     const lyricTrim = lyrics.trim();
@@ -125,6 +143,8 @@ export default function MusicStudio() {
     setGeneratedTracks((prev) => [trackBase, ...prev]);
 
     try {
+      await ensureRunning();
+
       if (genMode === 'mureka') {
         const stylePrompt = buildMurekaPrompt() || `${studio.selectedGenre} song`;
         const res = await fetch('/api/dieter/mureka/song/generate', {
@@ -193,12 +213,9 @@ export default function MusicStudio() {
           prev.map((t) => (t.id === trackBase.id ? { ...t, status: 'ready', audioUrl } : t)),
         );
         try {
-          const acResp = await fetch(audioUrl, { mode: 'cors' });
-          const buf = await acResp.arrayBuffer();
-          const ab = await decodeAudio(buf.slice(0));
-          playBuffer(ab, `gen-${trackBase.id}`, { volume: 0.95 });
-        } catch {
-          /* `<audio>` still works */
+          await fetchAndPlayRemote(audioUrl, `gen-${trackBase.id}`);
+        } catch (playErr) {
+          console.warn('[MusicStudio] Web Audio playback:', playErr);
         }
       } else {
         const res = await fetch('/api/music/generate', {
@@ -268,12 +285,9 @@ export default function MusicStudio() {
         );
 
         try {
-          const acResp = await fetch(audioUrl, { mode: 'cors' });
-          const buf = await acResp.arrayBuffer();
-          const ab = await decodeAudio(buf.slice(0));
-          playBuffer(ab, `gen-${trackBase.id}`, { volume: 0.95 });
-        } catch {
-          /* `<audio>` still works */
+          await fetchAndPlayRemote(audioUrl, `gen-${trackBase.id}`);
+        } catch (playErr) {
+          console.warn('[MusicStudio] Web Audio playback:', playErr);
         }
       }
     } catch (e) {
@@ -293,9 +307,9 @@ export default function MusicStudio() {
     dieterAvailable,
     studio,
     duration,
-    decodeAudio,
-    playBuffer,
     buildMurekaPrompt,
+    ensureRunning,
+    fetchAndPlayRemote,
   ]);
 
   return (
@@ -457,7 +471,23 @@ export default function MusicStudio() {
                   )}
                 </div>
                 {t.audioUrl && (
-                  <audio controls src={t.audioUrl} style={{ width: '100%', height: 32 }} preload="metadata" />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <audio
+                      controls
+                      playsInline
+                      src={proxiedAudioSrc(t.audioUrl)}
+                      style={{ width: '100%', height: 36 }}
+                      preload="metadata"
+                    />
+                    <button
+                      type="button"
+                      className="btn"
+                      style={{ fontSize: '0.65rem', padding: '6px 10px', alignSelf: 'flex-start' }}
+                      onClick={() => fetchAndPlayRemote(t.audioUrl, `gen-${t.id}`).catch((e) => console.warn(e))}
+                    >
+                      ▶ Play through studio (Web Audio + spectrum)
+                    </button>
+                  </div>
                 )}
                 {t.error && (
                   <div style={{ fontSize: '0.58rem', color: '#f87171' }}>{t.error}</div>

@@ -16,7 +16,8 @@ export function AudioEngineProvider({ children }) {
       if (ctxRef.current.state === 'suspended') ctxRef.current.resume();
       return ctxRef.current;
     }
-    const ac = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ac = new AC();
     const master = ac.createGain();
     master.gain.value = 0.8;
     const analyser = ac.createAnalyser();
@@ -46,11 +47,19 @@ export function AudioEngineProvider({ children }) {
 
   const decodeAudio = useCallback(async (arrayBuffer) => {
     const ac = init();
-    return ac.decodeAudioData(arrayBuffer);
+    const copy = arrayBuffer.slice(0);
+    return ac.decodeAudioData(copy);
+  }, [init]);
+
+  /** Call from a user gesture before long async work so playback still works after generation. */
+  const ensureRunning = useCallback(async () => {
+    const ac = init();
+    if (ac.state === 'suspended') await ac.resume();
   }, [init]);
 
   const playBuffer = useCallback((buffer, id, options = {}) => {
     const ac = init();
+    if (ac.state === 'suspended') void ac.resume();
     const src = ac.createBufferSource();
     src.buffer = buffer;
     const gain = ac.createGain();
@@ -90,6 +99,7 @@ export function AudioEngineProvider({ children }) {
     <AudioEngineContext.Provider
       value={{
         init,
+        ensureRunning,
         ctxRef,
         masterGainRef,
         analyserRef,
