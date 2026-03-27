@@ -24,6 +24,9 @@ mcps/
 Thumbs.db
 Desktop.ini
 
+# Vercel: root vercel.json copies mureka-clone/dist → ./public at build time
+/public/
+
 # Built UI copied for local prod-style runs (Docker builds from mureka-clone instead)
 dieter-backend/static/
 
