@@ -25,6 +25,7 @@ services:
         sync: false
 
   # Vocal Engine (Bark + RVC API) — optional second service; remove if you do not need it.
+  # After deploy, set Vercel env VITE_API_URL=https://<this-service>.onrender.com (no slash).
   - type: web
     name: vocal-engine-api
     runtime: docker

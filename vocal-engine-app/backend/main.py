@@ -54,14 +54,37 @@ BARK_VOICE_PRESETS: list[dict[str, str]] = [
 ]
 
 
-def _cors_origins() -> list[str]:
+def _install_cors(app: FastAPI) -> None:
+    """Public deployments: set VOCAL_CORS_ORIGINS=* for any web origin (credentials off per CORS spec)."""
     import os
 
     raw = os.environ.get(
         "VOCAL_CORS_ORIGINS",
         "http://localhost:5173,http://127.0.0.1:5173,http://127.0.0.1:3000",
+    ).strip()
+    if raw in ("*", "all") or raw.lower() == "allow_all":
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=False,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+        return
+    origins = [o.strip() for o in raw.split(",") if o.strip()]
+    if not origins:
+        origins = [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://127.0.0.1:3000",
+        ]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
-    return [o.strip() for o in raw.split(",") if o.strip()]
 
 
 def _torch_device_label() -> str:
@@ -74,13 +97,7 @@ def _torch_device_label() -> str:
 
 app = FastAPI(title="Vocal Engine", version="0.3.0")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=_cors_origins(),
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+_install_cors(app)
 
 
 class GenerateSingingBody(BaseModel):
