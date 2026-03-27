@@ -1,0 +1,95 @@
+x-platform-volumes: &platform-vols
+  - ./voices:/app/voices:delegated
+  - ./output:/app/output:delegated
+  - ./models:/app/models:delegated
+
+services:
+  dieter-orchestrator:
+    build:
+      context: ./dieter-backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./voices:/app/voices:delegated
+      - ./output:/app/output:delegated
+      - ./models:/app/models:delegated
+      - ./dieter-backend/storage:/app/storage
+    environment:
+      PLATFORM_NAME: DIETER-PRO
+      PLATFORM: DIETER-PRO
+      MODE: production
+      PORT: "8000"
+      TTS_API: http://tts-clone:7862
+      MUSICGEN_API: http://musicgen:7861
+      COMFYUI_API: http://comfyui:8188
+      VOICES_DIR: /app/voices
+      OUTPUT_DIR: /app/output
+      DIETER_PUBLIC_API_ORIGIN: http://localhost:8000
+    depends_on:
+      - musicgen
+      - tts-clone
+      - comfyui
+    command: >
+      sh -c "python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  musicgen:
+    image: ghcr.io/facebookresearch/audiocraft:latest
+    command: python -m audiocraft.demo.gradio_app --listen 0.0.0.0:7861
+    ports:
+      - "7861:7861"
+    volumes: *platform-vols
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  tts-clone:
+    image: ghcr.io/rsxdalv/tts-generation-webui:main
+    command: --api --listen 0.0.0.0:7862
+    ports:
+      - "7862:7862"
+    volumes: *platform-vols
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  comfyui:
+    image: ghcr.io/comfyanonymous/comfyui:latest
+    ports:
+      - "8188:8188"
+    volumes:
+      - ./output:/input
+      - ./models:/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  frontend:
+    # Uses existing mureka-clone Vite app in this repository.
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./mureka-clone:/app
+    ports:
+      - "3000:5173"
+    depends_on:
+      - dieter-orchestrator
+    environment:
+      NEXT_PUBLIC_API_BASE: http://localhost:8000
+      VITE_API_BASE: http://localhost:8000/api
+      VITE_PLATFORM: DIETER-PRO
+    command: >
+      sh -c "npm ci && npm run dev -- --host 0.0.0.0 --port 5173"
+

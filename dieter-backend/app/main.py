@@ -71,6 +71,8 @@ logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 STORAGE_DIR = BASE_DIR / "storage"
+VOICES_DIR = Path(os.environ.get("VOICES_DIR", str(BASE_DIR / "voices")))
+OUTPUT_DIR = Path(os.environ.get("OUTPUT_DIR", str(BASE_DIR / "output")))
 JOBS_PATH = DATA_DIR / "jobs.json"
 
 
@@ -83,6 +85,8 @@ def _public_audio_url(relative_api_path: str) -> str:
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+VOICES_DIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 (BASE_DIR / "temp_voice_clone").mkdir(parents=True, exist_ok=True)
 (STORAGE_DIR / "voice_clone").mkdir(parents=True, exist_ok=True)
 
@@ -626,6 +630,283 @@ def api_voices() -> dict[str, Any]:
     return {
         "voicePresets": VOICE_PRESETS,
         "languages": ["en", "af", "de", "es", "fr", "ja", "ko"],
+    }
+
+
+@app.get("/api/voices/files")
+def api_voice_files() -> dict[str, Any]:
+    items: list[dict[str, Any]] = []
+    for p in sorted(VOICES_DIR.glob("*")):
+        if p.is_file():
+            items.append({"voiceId": p.stem, "file": p.name, "sizeBytes": p.stat().st_size})
+    return {"voicesDir": str(VOICES_DIR), "voices": items}
+
+
+@app.get("/api/output/{filename}")
+def api_output_file(filename: str):
+    from fastapi.responses import FileResponse
+
+    if "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=400, detail="invalid filename")
+    p = OUTPUT_DIR / filename
+    if not p.is_file():
+        raise HTTPException(status_code=404, detail="file not found")
+    return FileResponse(str(p), media_type="audio/wav", filename=filename)
+
+
+@app.post("/api/generate-vocal")
+async def api_generate_vocal(
+    lyrics: str = Form(...),
+    voice_id: str = Form("reference_voice.wav"),
+    language: str = Form("en"),
+) -> dict[str, Any]:
+    vid = Path(voice_id).name
+    voice_path = VOICES_DIR / vid
+    if not voice_path.exists():
+        raise HTTPException(status_code=404, detail=f"Voice file not found: {vid}")
+    if not lyrics.strip():
+        raise HTTPException(status_code=400, detail="lyrics is required")
+
+    out_name = f"vocal_{uuid.uuid4().hex[:12]}.wav"
+    out_path = OUTPUT_DIR / out_name
+
+    # Prefer XTTS voice cloning when available; fall back to procedural vocal layer.
+    try:
+        from TTS.api import TTS  # type: ignore
+
+        model_name = (os.environ.get("COQUI_MODEL") or "tts_models/multilingual/multi-dataset/xtts_v2").strip()
+        tts = TTS(model_name=model_name)
+        try:
+            tts = tts.to("cuda")
+        except Exception:
+            # CPU fallback if CUDA is unavailable.
+            pass
+        tts.tts_to_file(text=lyrics, speaker_wav=str(voice_path), language=language, file_path=str(out_path))
+        return {
+            "ok": True,
+            "engine": "coqui_xtts",
+            "voice_file": str(voice_path),
+            "vocal_file": str(out_path),
+            "vocal_url": f"/api/output/{out_name}",
+        }
+    except Exception as e:
+        logger.warning("XTTS clone failed, using procedural fallback: %s", e)
+        fallback = _procedural_vocal_layer_core(
+            prompt="generate-vocal fallback",
+            lyrics=lyrics,
+            bpm=120.0,
+            vocal_preset="Man-2" if "male" in vid.lower() else "Woman-2",
+            duration_sec=max(10, min(120, int(len(lyrics) / 12) + 12)),
+            language=language,
+            pitch_semitones=0.0,
+        )
+        src = STORAGE_DIR / fallback["key"]
+        if src.is_file():
+            shutil.copy2(src, out_path)
+        return {
+            "ok": True,
+            "engine": "procedural_fallback",
+            "voice_file": str(voice_path),
+            "vocal_file": str(out_path),
+            "vocal_url": f"/api/output/{out_name}",
+            "note": "Install Coqui XTTS (TTS + torch + model) for real voice cloning.",
+        }
+
+
+class ProduceSongRequest(BaseModel):
+    lyrics: str = Field(..., min_length=1, max_length=12000)
+    voice_id: str = Field(..., min_length=1, max_length=255)
+    style: str = Field("afrobeat")
+    language: str = Field("en-za")
+    bpm_hint: int = Field(120, ge=40, le=240)
+    duration_sec: int = Field(60, ge=10, le=240)
+
+
+@app.post("/api/produce-song")
+async def api_produce_song(req: ProduceSongRequest) -> dict[str, Any]:
+    """
+    DIETER-PRO orchestration endpoint:
+    lyrics + voice reference -> vocal + instrumental -> mixed mp3 + metadata json.
+    """
+    song_id = uuid.uuid4().hex[:12]
+    platform_name = os.environ.get("PLATFORM_NAME", "DIETER-PRO").strip() or "DIETER-PRO"
+
+    # 1) Generate vocal track (XTTS when available, procedural fallback otherwise).
+    vocal = await api_generate_vocal(lyrics=req.lyrics, voice_id=req.voice_id, language=req.language)
+    vocal_file = Path(vocal["vocal_file"])
+    if not vocal_file.is_file():
+        raise HTTPException(status_code=500, detail="vocal generation failed (missing file)")
+
+    # 2) Best-effort signal to external services (non-blocking, for docker sidecars).
+    for env_name, route in (("TTS_API", "xtts"), ("MUSICGEN_API", "musicgen")):
+        base = (os.environ.get(env_name) or "").strip().rstrip("/")
+        if not base:
+            continue
+        try:
+            payload = json.dumps(
+                {
+                    "text": req.lyrics,
+                    "speaker": f"{VOICES_DIR}/{Path(req.voice_id).name}",
+                    "prompt": f"{req.style} instrumental",
+                }
+            ).encode("utf-8")
+            upstream_req = urllib.request.Request(
+                f"{base}/{route}",
+                data=payload,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            urllib.request.urlopen(upstream_req, timeout=8).read(256)
+        except Exception:
+            # Sidecars vary by API shape; local fallback remains authoritative.
+            pass
+
+    # 3) Local instrumental generation via built-in engine.
+    inst_dir = STORAGE_DIR / "local" / f"prod_{song_id}"
+    inst_dir.mkdir(parents=True, exist_ok=True)
+    seed = abs(hash((req.lyrics, req.style, req.bpm_hint))) % (16**8)
+    engine_name = os.getenv("DIETER_AUDIO_ENGINE", "procedural")
+    engine = get_engine(engine_name)
+    eng = engine.generate(
+        out_dir=inst_dir,
+        prompt=f"{req.style} instrumental",
+        lyrics="",
+        language=req.language,
+        vocal_preset="Instrumental",
+        bpm=int(req.bpm_hint),
+        duration_s=int(req.duration_sec),
+        seed=seed,
+        render_stems=True,
+    )
+    music_path = eng.mix_path
+    if not music_path.is_file():
+        raise HTTPException(status_code=500, detail="instrumental generation failed")
+
+    # 4) Beat analysis and mixdown.
+    beat_info = detect_beats_from_path(music_path)
+    bpm = float(beat_info.get("tempo_bpm") or req.bpm_hint)
+    song_name = f"song_{song_id}.mp3"
+    song_path = OUTPUT_DIR / song_name
+    try:
+        merge_two_audio_mp3(music_path, vocal_file, song_path, vocal_gain_db=-2.0, beat_gain_db=-5.0)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"mix failed: {e}") from e
+
+    # 5) Metadata export.
+    lyric_seed = "".join(ch for ch in req.lyrics.upper() if ch.isalpha())[:6].ljust(6, "X")
+    metadata = {
+        "platform": platform_name,
+        "songId": song_id,
+        "isrc": f"ZA123{lyric_seed}",
+        "style": req.style,
+        "language": req.language,
+        "bpm": bpm,
+        "stems": [
+            song_name,
+            vocal_file.name,
+            music_path.name,
+        ],
+        "vocalEngine": vocal.get("engine", "unknown"),
+        "musicEngine": engine.name,
+    }
+    meta_name = f"meta_{song_id}.json"
+    (OUTPUT_DIR / meta_name).write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    return {
+        "ok": True,
+        "download": f"/api/output/{song_name}",
+        "metadata": metadata,
+        "files": {
+            "song": str(song_path),
+            "vocal": str(vocal_file),
+            "music": str(music_path),
+            "meta": str(OUTPUT_DIR / meta_name),
+        },
+    }
+
+
+class FullProduceRequest(BaseModel):
+    lyrics: str = Field(..., min_length=1, max_length=12000)
+    voice_id: str = Field(..., min_length=1, max_length=255)
+    style: str = Field("afrobeat")
+    video_prompt: str = Field("neon Johannesburg nightlife sync to beats")
+    language: str = Field("en-za")
+
+
+@app.post("/api/full-produce")
+async def api_full_produce(req: FullProduceRequest) -> dict[str, Any]:
+    """
+    End-to-end song + video orchestration (DIETER-PRO).
+    Produces song assets locally; attempts ComfyUI prompt submission when available.
+    """
+    song_req = ProduceSongRequest(
+        lyrics=req.lyrics,
+        voice_id=req.voice_id,
+        style=req.style,
+        language=req.language,
+        bpm_hint=120,
+        duration_sec=60,
+    )
+    song = await api_produce_song(song_req)
+    meta = dict(song.get("metadata") or {})
+    files = dict(song.get("files") or {})
+    song_path = Path(files.get("song") or "")
+    vocal_path = Path(files.get("vocal") or "")
+
+    beats_t: list[float] = []
+    bpm = float(meta.get("bpm") or 120.0)
+    if song_path.is_file():
+        try:
+            det = detect_beats_from_path(song_path)
+            bpm = float(det.get("tempo_bpm") or bpm)
+            beats_t = [float(x) for x in det.get("beat_times_seconds", [])[:2048]]
+        except Exception:
+            pass
+
+    video_name = f"video_{uuid.uuid4().hex[:12]}.mp4"
+    video_path = OUTPUT_DIR / video_name
+    comfy = (os.environ.get("COMFYUI_API") or "http://comfyui:8188").strip().rstrip("/")
+    comfy_result: dict[str, Any] = {}
+    try:
+        workflow = {
+            "prompt": req.video_prompt,
+            "audio": str(song_path),
+            "beats": beats_t,
+            "lip_sync": str(vocal_path),
+        }
+        c_req = urllib.request.Request(
+            f"{comfy}/prompt",
+            data=json.dumps({"prompt": workflow}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        raw = urllib.request.urlopen(c_req, timeout=10).read().decode("utf-8", errors="ignore")
+        comfy_result = {"ok": True, "response": raw[:2000]}
+    except Exception as e:
+        comfy_result = {"ok": False, "error": str(e)}
+
+    # We return deterministic path even if ComfyUI render completes asynchronously.
+    full_meta = dict(meta)
+    full_meta.update(
+        {
+            "platform": os.environ.get("PLATFORM_NAME", os.environ.get("PLATFORM", "DIETER-PRO")),
+            "bpm": bpm,
+            "beats": beats_t[:512],
+            "videoPrompt": req.video_prompt,
+            "videoFile": video_name,
+            "comfyui": comfy_result,
+        }
+    )
+    meta_name = f"meta_full_{uuid.uuid4().hex[:10]}.json"
+    (OUTPUT_DIR / meta_name).write_text(json.dumps(full_meta, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    return {
+        "ok": True,
+        "song": song.get("download"),
+        "video": f"/api/output/{video_name}",
+        "stems": [files.get("music"), files.get("vocal")],
+        "meta": full_meta,
+        "metadataFile": f"/api/output/{meta_name}",
     }
 
 

@@ -36,12 +36,17 @@ services:
       WEB_CONCURRENCY: "2"
       DIETER_AUDIO_ENGINE: procedural
       DIETER_TRPC_UPSTREAM: http://trpc:8790
+      VOICES_DIR: /app/voices
+      OUTPUT_DIR: /app/output
       MUREKA_API_KEY: ${MUREKA_API_KEY:-}
     volumes:
       # Host WAV library → GET /api/voices/list (matches app/voices_router.py: dieter-backend/voices)
       - ./dieter-backend/voices:/app/voices
       # Jobs, uploads, generated audio (same path as local uvicorn: dieter-backend/storage)
       - ./dieter-backend/storage:/app/storage
+      # Coqui / XTTS model cache and generated vocal files.
+      - ./models:/app/models
+      - ./output:/app/output
     healthcheck:
       test:
         [
@@ -84,9 +89,14 @@ services:
       DIETER_AUDIO_ENGINE: procedural
       DIETER_ENABLE_MUSICGEN: "1"
       DIETER_PUBLIC_API_ORIGIN: "http://localhost:8000"
+      VOICES_DIR: /app/voices
+      OUTPUT_DIR: /app/output
       MUREKA_API_KEY: ${MUREKA_API_KEY:-}
     volumes:
       - ./output:/app/storage
+      - ./voices:/app/voices
+      - ./models:/app/models
+      - ./output:/app/output
     gpus: all
     deploy:
       resources:
