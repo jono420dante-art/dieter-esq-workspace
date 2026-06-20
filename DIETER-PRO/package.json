@@ -24,7 +24,7 @@
     "cors": "^2.8.5",
     "compression": "^1.8.0",
     "uuid": "^11.1.0",
-    "multer": "^2.0.0"
+    "multer": "^2.2.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.4.1",
